@@ -10,12 +10,13 @@ import {
   MapPin,
   Menu,
   PawPrint,
+  Plus,
   X
 } from "lucide-react";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type Screen = "welcome" | "location" | "walks" | "pet";
+type Screen = "welcome" | "location" | "walks" | "pet" | "announce";
 type Period = "Все" | "Утро" | "День" | "Вечер";
 
 type Location = {
@@ -33,12 +34,39 @@ type Walk = {
   image: string;
 };
 
+type Pet = {
+  id: string;
+  name: string;
+  ownerName: string;
+  photoUrl: string;
+  createdAt: string;
+};
+
 const STORAGE_KEY = "dogwalk.location.v1";
+const complexOptions = ["Дзен-кварталы", "Москвичка"];
 const defaultLocation: Location = {
   city: "Москва",
-  district: "Хамовники",
-  complex: "Садовые кварталы"
+  district: "Коммунарка",
+  complex: "Дзен-кварталы"
 };
+
+function getInitialLocation(): Location {
+  if (typeof window === "undefined") return defaultLocation;
+
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const storedLocation = stored ? JSON.parse(stored) as Partial<Location> : {};
+    return {
+      city: "Москва",
+      district: "Коммунарка",
+      complex: storedLocation.complex && complexOptions.includes(storedLocation.complex)
+        ? storedLocation.complex
+        : "Дзен-кварталы"
+    };
+  } catch {
+    return defaultLocation;
+  }
+}
 
 const walks: Walk[] = [
   {
@@ -69,21 +97,30 @@ const walks: Walk[] = [
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("welcome");
-  const [location, setLocation] = useState<Location>(defaultLocation);
+  const [location, setLocation] = useState<Location>(getInitialLocation);
   const [period, setPeriod] = useState<Period>("Все");
   const [menuOpen, setMenuOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
+  const [petSubmitError, setPetSubmitError] = useState("");
   const [petSaved, setPetSaved] = useState(false);
+  const [petSaving, setPetSaving] = useState(false);
+  const [savedPets, setSavedPets] = useState<Pet[]>([]);
+  const [walkSaved, setWalkSaved] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) setLocation({ ...defaultLocation, ...JSON.parse(stored) });
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
+    let active = true;
+
+    fetch("/api/pets")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json() as { pets?: Pet[] };
+        if (active && Array.isArray(data.pets)) setSavedPets(data.pets);
+      })
+      .catch(() => undefined);
+
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -116,6 +153,7 @@ export default function Home() {
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setPhotoError("");
+    setPetSubmitError("");
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setPhotoError("Выберите изображение в формате JPEG, PNG или WebP.");
@@ -129,15 +167,47 @@ export default function Home() {
     setPhotoUrl(URL.createObjectURL(file));
   }
 
-  function savePet(event: FormEvent<HTMLFormElement>) {
+  async function savePet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!photoUrl || photoError) {
       setPhotoError("Добавьте фотографию питомца.");
       return;
     }
-    setPetSaved(true);
+
+    setPetSaving(true);
+    setPetSubmitError("");
+
+    try {
+      const response = await fetch("/api/pets", {
+        method: "POST",
+        body: new FormData(form)
+      });
+      const data = await response.json() as { pet?: Pet; error?: string };
+      if (!response.ok || !data.pet) {
+        throw new Error(data.error || "Не удалось сохранить питомца.");
+      }
+
+      setSavedPets((current) => [data.pet!, ...current.filter((pet) => pet.id !== data.pet!.id)]);
+      setPetSaved(true);
+      form.reset();
+      setPhotoUrl(null);
+      window.setTimeout(() => {
+        setPetSaved(false);
+        setScreen("walks");
+      }, 900);
+    } catch (error) {
+      setPetSubmitError(error instanceof Error ? error.message : "Не удалось сохранить питомца.");
+    } finally {
+      setPetSaving(false);
+    }
+  }
+
+  function saveWalk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWalkSaved(true);
     window.setTimeout(() => {
-      setPetSaved(false);
+      setWalkSaved(false);
       setScreen("walks");
     }, 900);
   }
@@ -182,8 +252,6 @@ export default function Home() {
                 <span className="select-wrap">
                   <select value={location.city} onChange={(event) => setLocation({ ...location, city: event.target.value })}>
                     <option>Москва</option>
-                    <option>Санкт-Петербург</option>
-                    <option>Казань</option>
                   </select>
                   <ChevronDown aria-hidden="true" />
                 </span>
@@ -192,9 +260,7 @@ export default function Home() {
                 <span>Район</span>
                 <span className="select-wrap">
                   <select value={location.district} onChange={(event) => setLocation({ ...location, district: event.target.value })}>
-                    <option>Хамовники</option>
-                    <option>Арбат</option>
-                    <option>Пресненский</option>
+                    <option>Коммунарка</option>
                   </select>
                   <ChevronDown aria-hidden="true" />
                 </span>
@@ -203,9 +269,8 @@ export default function Home() {
                 <span>Жилой комплекс</span>
                 <span className="select-wrap">
                   <select value={location.complex} onChange={(event) => setLocation({ ...location, complex: event.target.value })}>
-                    <option>Садовые кварталы</option>
-                    <option>Кленовые аллеи</option>
-                    <option>Резиденция Монэ</option>
+                    <option>Дзен-кварталы</option>
+                    <option>Москвичка</option>
                   </select>
                   <ChevronDown aria-hidden="true" />
                 </span>
@@ -249,6 +314,13 @@ export default function Home() {
               ))}
             </div>
 
+            {!menuOpen && (
+              <button className="primary-button floating-walk-button" type="button" onClick={() => setScreen("announce")}>
+                <Plus aria-hidden="true" />
+                Сообщить о прогулке
+              </button>
+            )}
+
             {menuOpen && (
               <div className="menu-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setMenuOpen(false); }}>
                 <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -285,7 +357,7 @@ export default function Home() {
             </div>
             <form className="pet-form" onSubmit={savePet}>
               <label className={`photo-upload ${photoUrl ? "has-photo" : ""}`}>
-                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} required />
+                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} required />
                 {photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={photoUrl} alt="Предпросмотр фотографии питомца" />
@@ -293,7 +365,7 @@ export default function Home() {
                   <><Camera aria-hidden="true" /><span>Загрузить фото</span></>
                 )}
               </label>
-              {photoError && <p className="error-message" role="alert">{photoError}</p>}
+              {(photoError || petSubmitError) && <p className="error-message" role="alert">{photoError || petSubmitError}</p>}
               <label className="field text-field">
                 <span>Имя питомца</span>
                 <input name="petName" required maxLength={40} placeholder="Например, Боня" />
@@ -302,8 +374,50 @@ export default function Home() {
                 <span>Имя хозяйки</span>
                 <input name="ownerName" required maxLength={60} placeholder="Например, Анна" />
               </label>
+              <button className="primary-button form-submit" type="submit" disabled={petSaving || petSaved}>
+                {petSaved ? <><CheckCircle2 /> Питомец добавлен</> : petSaving ? "Сохраняем…" : "Сохранить"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {screen === "announce" && (
+          <div className="screen form-screen announce-screen">
+            <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => setScreen("walks")}>
+              <ArrowLeft />
+            </button>
+            <div className="screen-heading">
+              <h1>Сообщить о прогулке</h1>
+              <p>Укажите, с кем, где и когда вы будете гулять</p>
+            </div>
+            <form className="announce-form" onSubmit={saveWalk}>
+              <label className="field">
+                <span>Ваш питомец</span>
+                <span className="select-wrap">
+                  <select name="pet" defaultValue={savedPets[0]?.name ?? "Боня"} required>
+                    {savedPets.length > 0 ? savedPets.map((pet) => (
+                      <option key={pet.id} value={pet.name}>{pet.name}</option>
+                    )) : (
+                      <>
+                        <option>Боня</option>
+                        <option>Ричи</option>
+                        <option>Луна</option>
+                      </>
+                    )}
+                  </select>
+                  <ChevronDown aria-hidden="true" />
+                </span>
+              </label>
+              <label className="field text-field">
+                <span>Место прогулки</span>
+                <input name="place" required maxLength={100} placeholder="Например, сквер у фонтана" />
+              </label>
+              <label className="field text-field">
+                <span>Дата и время</span>
+                <input name="dateTime" type="datetime-local" required />
+              </label>
               <button className="primary-button form-submit" type="submit">
-                {petSaved ? <><CheckCircle2 /> Питомец добавлен</> : "Сохранить"}
+                {walkSaved ? <><CheckCircle2 /> Прогулка добавлена</> : "Сообщить о прогулке"}
               </button>
             </form>
           </div>

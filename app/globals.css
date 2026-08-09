@@ -74,6 +74,11 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes walks-screen-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 h1,
 h2,
 p {
@@ -174,6 +179,11 @@ h1 {
   transform: scale(0.985);
 }
 
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .primary-button svg {
   width: 21px;
 }
@@ -209,7 +219,8 @@ h1 {
 }
 
 .location-form,
-.pet-form {
+.pet-form,
+.announce-form {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -269,11 +280,17 @@ h1 {
 }
 
 .walks-screen {
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+  animation-name: walks-screen-in;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
   padding-top: max(38px, env(safe-area-inset-top));
 }
 
 .walks-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
@@ -297,6 +314,7 @@ h1 {
 
 .filters {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: repeat(4, 1fr);
   gap: 9px;
   margin: 30px 0 24px;
@@ -324,17 +342,40 @@ h1 {
 
 .walk-list {
   display: grid;
-  gap: 16px;
-  padding-bottom: 8px;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 5px 80px 0;
+  scrollbar-color: rgba(40, 90, 59, 0.35) transparent;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.floating-walk-button {
+  position: fixed;
+  z-index: 10;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(calc(100% - 48px), 382px);
+  min-height: 60px;
+  transform: translateX(-50%);
+  box-shadow: 0 12px 28px rgba(31, 76, 49, 0.3);
+}
+
+.floating-walk-button:active {
+  transform: translateX(-50%) scale(0.985);
 }
 
 .walk-card {
   display: grid;
-  grid-template-columns: 116px minmax(0, 1fr);
-  min-height: 174px;
+  grid-template-columns: 94px minmax(0, 1fr);
+  min-height: 148px;
   align-items: center;
-  gap: 18px;
-  padding: 16px;
+  gap: 14px;
+  padding: 12px 14px;
   border: 1px solid #ece8df;
   border-radius: 18px;
   background: var(--card);
@@ -342,8 +383,8 @@ h1 {
 }
 
 .dog-avatar {
-  width: 116px;
-  height: 116px;
+  width: 94px;
+  height: 94px;
   border-radius: 50%;
   object-fit: cover;
   background: #e5e1cc;
@@ -354,30 +395,30 @@ h1 {
 }
 
 .walk-info h2 {
-  margin-bottom: 5px;
-  font-size: 1.55rem;
+  margin-bottom: 3px;
+  font-size: 1.4rem;
   line-height: 1.1;
 }
 
 .walk-info .owner {
-  margin-bottom: 11px;
+  margin-bottom: 7px;
   color: #4f534e;
-  font-size: 1.02rem;
+  font-size: 0.95rem;
 }
 
 .walk-info p:not(.owner) {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 7px;
+  margin-top: 6px;
   color: #3f433e;
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   line-height: 1.25;
 }
 
 .walk-info svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   color: var(--green);
   fill: var(--green);
@@ -406,11 +447,11 @@ h1 {
 }
 
 .drawer {
-  width: min(84%, 360px);
+  width: 100%;
   min-height: 100%;
   padding: max(34px, env(safe-area-inset-top)) 22px 24px;
   background: var(--paper);
-  box-shadow: -18px 0 45px rgba(16, 30, 20, 0.18);
+  box-shadow: none;
   animation: drawer-in 220ms cubic-bezier(.2,.8,.2,1) both;
 }
 
@@ -513,6 +554,15 @@ h1 {
   font-size: clamp(2rem, 9vw, 2.4rem);
 }
 
+.announce-screen .screen-heading h1 {
+  max-width: 350px;
+  font-size: clamp(2rem, 8.6vw, 2.35rem);
+}
+
+.announce-form {
+  margin-top: 42px;
+}
+
 .pet-form {
   margin-top: 30px;
 }
@@ -596,12 +646,13 @@ select:focus-visible,
   .hero-wrap { margin-inline: -18px; }
   .welcome-copy h1 { white-space: normal; }
   .walk-card {
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 14px;
-    padding: 14px;
+    grid-template-columns: 82px minmax(0, 1fr);
+    min-height: 132px;
+    gap: 12px;
+    padding: 10px 12px;
   }
-  .dog-avatar { width: 96px; height: 96px; }
-  .walk-info p:not(.owner) { font-size: 0.9rem; }
+  .dog-avatar { width: 82px; height: 82px; }
+  .walk-info p:not(.owner) { font-size: 0.86rem; }
 }
 
 @media (min-width: 600px) {
@@ -619,6 +670,9 @@ select:focus-visible,
   }
   .screen {
     min-height: min(882px, calc(100svh - 56px));
+  }
+  .walks-screen {
+    height: min(882px, calc(100svh - 56px));
   }
 }
 
