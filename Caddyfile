@@ -1,0 +1,19 @@
+{
+	email {$ACME_EMAIL}
+}
+
+www.dogmeet.ru {
+	redir https://dogmeet.ru{uri} permanent
+}
+
+dogmeet.ru {
+	encode zstd gzip
+	reverse_proxy app:3000
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(self), geolocation=(), microphone=()"
+		-Server
+	}
+}

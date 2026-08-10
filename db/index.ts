@@ -1,20 +1,15 @@
-import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 import * as schema from "./schema";
 
-type StorageEnv = {
-  DATABASE_URL?: string;
-};
-
-const storageEnv = env as unknown as StorageEnv;
-
 function getConnectionString() {
-  if (!storageEnv.DATABASE_URL) {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
     throw new Error("Не задана строка подключения DATABASE_URL.");
   }
 
-  return storageEnv.DATABASE_URL;
+  return connectionString;
 }
 
 function createDb(client: Client) {

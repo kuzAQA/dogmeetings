@@ -56,6 +56,73 @@ pnpm lint
 pnpm build
 ```
 
+## Развёртывание на VDS
+
+Production-конфигурация рассчитана на Ubuntu 24.04, Docker Compose, домен
+`dogmeet.ru` и PostgreSQL 16. Caddy автоматически получает и обновляет TLS-сертификаты.
+
+1. Установите Docker на сервер и клонируйте репозиторий:
+
+   ```bash
+   apt update
+   apt install -y ca-certificates curl git
+   install -m 0755 -d /etc/apt/keyrings
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+   chmod a+r /etc/apt/keyrings/docker.asc
+   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" > /etc/apt/sources.list.d/docker.list
+   apt update
+   apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   git clone https://github.com/kuzAQA/dogmeetings.git /opt/dogmeet
+   cd /opt/dogmeet
+   ```
+
+2. Создайте production-окружение. Пароль генерируется в URL-безопасном формате:
+
+   ```bash
+   cp .env.production.example .env.production
+   sed -i "s/replace_with_a_long_random_hex_password/$(openssl rand -hex 24)/" .env.production
+   nano .env.production
+   chmod 600 .env.production
+   ```
+
+   В `ACME_EMAIL` укажите свой настоящий адрес электронной почты.
+
+3. Убедитесь, что A-записи `dogmeet.ru` и `www.dogmeet.ru` указывают на IP
+   сервера, а порты 80 и 443 разрешены в сетевом и системном файрволах.
+
+4. Соберите и запустите сервисы:
+
+   ```bash
+   docker compose --env-file .env.production -f compose.production.yml up -d --build
+   docker compose --env-file .env.production -f compose.production.yml ps
+   docker compose --env-file .env.production -f compose.production.yml logs --tail=100 app caddy
+   ```
+
+   SQL-миграции применяются автоматически и повторно не выполняются. После
+   успешного запуска сайт будет доступен на [https://dogmeet.ru](https://dogmeet.ru).
+
+### Обновление
+
+```bash
+cd /opt/dogmeet
+git pull --ff-only
+docker compose --env-file .env.production -f compose.production.yml up -d --build
+```
+
+### Резервные копии PostgreSQL
+
+```bash
+cd /opt/dogmeet
+./scripts/backup.sh
+```
+
+Копии сохраняются в `/opt/dogmeet/backups`; файлы старше 14 дней удаляются.
+Для ежедневного запуска добавьте в `crontab -e`:
+
+```cron
+15 3 * * * cd /opt/dogmeet && ./scripts/backup.sh >> /var/log/dogmeet-backup.log 2>&1
+```
+
 ## Переменные окружения
 
 | Переменная | Назначение |
@@ -67,6 +134,7 @@ pnpm build
 ## Основные API-маршруты
 
 - `GET /api/locations` — доступные города, районы и жилые комплексы
+- `GET /api/health` — готовность приложения и подключение к PostgreSQL
 - `GET/POST/DELETE /api/pets` — питомцы пользователя
 - `GET /api/pet-photo` — фотография питомца
 - `GET /api/places` — общие места прогулок
