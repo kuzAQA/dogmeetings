@@ -1,6 +1,6 @@
 {
-  "id": "5f26b79e-f677-480e-8ded-d7feab0d69e3",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "97c8e223-817b-4dc9-b79b-50ec6582fa5f",
+  "prevId": "65307099-8065-4e8e-ac20-b7e679207134",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13,6 +13,13 @@
           "type": "uuid",
           "primaryKey": true,
           "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "name": {
           "name": "name",
@@ -30,13 +37,13 @@
           "name": "photo",
           "type": "bytea",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "photo_type": {
           "name": "photo_type",
           "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -52,6 +59,21 @@
           "columns": [
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pets_client_id_idx": {
+          "name": "pets_client_id_idx",
+          "columns": [
+            {
+              "expression": "client_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -110,6 +132,27 @@
           "primaryKey": false,
           "notNull": true
         },
+        "schedule_type": {
+          "name": "schedule_type",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'today'"
+        },
+        "walk_date": {
+          "name": "walk_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_DATE"
+        },
+        "walk_time": {
+          "name": "walk_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'12:00:00'"
+        },
         "starts_at": {
           "name": "starts_at",
           "type": "timestamp with time zone",
@@ -130,6 +173,33 @@
           "columns": [
             {
               "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "walks_schedule_idx": {
+          "name": "walks_schedule_idx",
+          "columns": [
+            {
+              "expression": "schedule_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "walk_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "walk_time",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -1,55 +1,38 @@
 import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Client } from "pg";
 import * as schema from "./schema";
 
 type StorageEnv = {
-  DB: D1Database;
-  PET_PHOTOS: R2Bucket;
+  DATABASE_URL?: string;
 };
 
 const storageEnv = env as unknown as StorageEnv;
-let schemaReady: Promise<void> | undefined;
 
-export async function ensurePetStorage() {
-  if (!storageEnv.DB) {
-    throw new Error("Хранилище питомцев временно недоступно.");
+function getConnectionString() {
+  if (!storageEnv.DATABASE_URL) {
+    throw new Error("Не задана строка подключения DATABASE_URL.");
   }
 
-  schemaReady ??= storageEnv.DB
-    .batch([
-      storageEnv.DB.prepare(`
-        CREATE TABLE IF NOT EXISTS pets (
-          id TEXT PRIMARY KEY NOT NULL,
-          name TEXT NOT NULL,
-          owner_name TEXT NOT NULL,
-          photo_key TEXT NOT NULL,
-          photo_type TEXT NOT NULL,
-          created_at INTEGER DEFAULT (unixepoch() * 1000) NOT NULL
-        )
-      `),
-      storageEnv.DB.prepare("CREATE INDEX IF NOT EXISTS pets_created_at_idx ON pets (created_at)")
-    ])
-    .then(() => undefined)
-    .catch((error) => {
-      schemaReady = undefined;
-      throw error;
-    });
-
-  return schemaReady;
+  return storageEnv.DATABASE_URL;
 }
 
-export function getDb() {
-  if (!storageEnv.DB) {
-    throw new Error("Хранилище питомцев временно недоступно.");
-  }
-
-  return drizzle(storageEnv.DB, { schema });
+function createDb(client: Client) {
+  return drizzle(client, { schema });
 }
 
-export function getPhotoBucket() {
-  if (!storageEnv.PET_PHOTOS) {
-    throw new Error("Хранилище фотографий временно недоступно.");
-  }
+type Database = ReturnType<typeof createDb>;
 
-  return storageEnv.PET_PHOTOS;
+export async function withDb<T>(operation: (db: Database) => Promise<T>) {
+  const client = new Client({
+    connectionString: getConnectionString(),
+    connectionTimeoutMillis: 5000
+  });
+  await client.connect();
+
+  try {
+    return await operation(createDb(client));
+  } finally {
+    await client.end();
+  }
 }

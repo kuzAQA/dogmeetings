@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ensurePetStorage, getDb, getPhotoBucket } from "../../../db";
+import { withDb } from "../../../db";
 import { pets } from "../../../db/schema";
 
 export async function GET(request: Request) {
@@ -9,27 +9,30 @@ export async function GET(request: Request) {
   }
 
   try {
-    await ensurePetStorage();
-    const [pet] = await getDb()
-      .select({ photoKey: pets.photoKey, photoType: pets.photoType })
-      .from(pets)
-      .where(eq(pets.id, id))
-      .limit(1);
+    const [pet] = await withDb((db) => db
+        .select({ photo: pets.photo, photoType: pets.photoType })
+        .from(pets)
+        .where(eq(pets.id, id))
+        .limit(1));
 
     if (!pet) {
       return Response.json({ error: "Фотография не найдена." }, { status: 404 });
     }
 
-    const object = await getPhotoBucket().get(pet.photoKey);
-    if (!object) {
-      return Response.json({ error: "Фотография не найдена." }, { status: 404 });
+    if (!pet.photo || !pet.photoType) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Location": new URL("/dog-placeholder.webp", request.url).toString(),
+          "Cache-Control": "public, max-age=86400"
+        }
+      });
     }
 
-    return new Response(object.body, {
+    return new Response(new Uint8Array(pet.photo), {
       headers: {
         "Content-Type": pet.photoType,
-        "Cache-Control": "public, max-age=86400",
-        ETag: object.httpEtag
+        "Cache-Control": "public, max-age=86400"
       }
     });
   } catch {

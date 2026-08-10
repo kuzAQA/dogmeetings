@@ -1,6 +1,6 @@
 {
-  "id": "5f26b79e-f677-480e-8ded-d7feab0d69e3",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "32997907-c2a9-40ba-93ef-a5d322f7b215",
+  "prevId": "5f26b79e-f677-480e-8ded-d7feab0d69e3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13,6 +13,13 @@
           "type": "uuid",
           "primaryKey": true,
           "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "name": {
           "name": "name",
@@ -52,6 +59,21 @@
           "columns": [
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pets_client_id_idx": {
+          "name": "pets_client_id_idx",
+          "columns": [
+            {
+              "expression": "client_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

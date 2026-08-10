@@ -1,12 +1,54 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1786293651833,
-      "tag": "0000_violet_lady_deathstrike",
+      "version": "7",
+      "when": 1786352488216,
+      "tag": "0000_free_sinister_six",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786353030486,
+      "tag": "0001_nostalgic_the_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786354339515,
+      "tag": "0002_mixed_carnage",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786355422710,
+      "tag": "0003_shocking_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786355846000,
+      "tag": "0004_faithful_bloodstorm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786361433852,
+      "tag": "0005_ordinary_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786365988542,
+      "tag": "0006_shocking_kree",
       "breakpoints": true
     }
   ]
