@@ -99,14 +99,14 @@ const containsLetter = /\p{L}/u;
 const periodOptions: Period[] = ["Все", "Утро", "День", "Вечер"];
 const filterIndicatorLeft: Record<Period, string> = {
   "Все": "0",
-  "Утро": "calc(25% + 2.25px)",
-  "День": "calc(50% + 4.5px)",
-  "Вечер": "calc(75% + 6.75px)"
+  "Утро": "calc(25% + 2px)",
+  "День": "calc(50% + 4px)",
+  "Вечер": "calc(75% + 6px)"
 };
 const scheduleIndicatorLeft: Record<ScheduleType, string> = {
   today: "0",
-  tomorrow: "calc(33.333333% + 3px)",
-  always: "calc(66.666667% + 6px)"
+  tomorrow: "calc(33.333333% + 2.666667px)",
+  always: "calc(66.666667% + 5.333333px)"
 };
 const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
 const minuteOptions = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
