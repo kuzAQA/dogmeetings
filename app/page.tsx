@@ -1436,7 +1436,6 @@ export default function Home() {
                   <><Camera aria-hidden="true" /><span>Добавить фото</span><small>Необязательно</small></>
                 )}
               </label>
-              {photoUrl && !photoError && <p className="photo-hint">Перед сохранением фото будет автоматически сжато</p>}
               {(photoError || petSubmitError) && <p className="error-message" role="alert">{photoError || petSubmitError}</p>}
               <label className="field text-field">
                 <span>Имя питомца</span>

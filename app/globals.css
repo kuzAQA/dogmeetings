@@ -1578,13 +1578,6 @@ h1 {
   border-style: solid;
 }
 
-.photo-hint {
-  margin: -18px auto 24px;
-  color: var(--muted);
-  font-size: 0.8rem;
-  text-align: center;
-}
-
 .pet-screen {
   padding-top: max(20px, env(safe-area-inset-top));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
