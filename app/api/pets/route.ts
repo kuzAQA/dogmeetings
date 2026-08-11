@@ -8,6 +8,15 @@ const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const containsLetter = /\p{L}/u;
 
+function normalizeName(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "")
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
+}
+
 type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt">;
 
 function publicPet(pet: PetSummary) {
@@ -61,9 +70,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const name = String(formData.get("petName") ?? "").trim();
+    const name = normalizeName(formData.get("petName"));
     const breed = String(formData.get("breed") ?? "").trim();
-    const ownerName = String(formData.get("ownerName") ?? "").trim();
+    const ownerName = normalizeName(formData.get("ownerName"));
     const clientId = String(formData.get("clientId") ?? "").trim();
     const photo = formData.get("photo");
 
@@ -76,8 +85,11 @@ export async function POST(request: Request) {
     if (!containsLetter.test(name)) {
       return Response.json({ error: "Имя питомца должно содержать хотя бы одну букву." }, { status: 400 });
     }
-    if (breed.length > 80) {
-      return Response.json({ error: "Порода должна быть не длиннее 80 символов." }, { status: 400 });
+    if (!breed || breed.length > 80) {
+      return Response.json({ error: "Укажите породу до 80 символов." }, { status: 400 });
+    }
+    if (!containsLetter.test(breed)) {
+      return Response.json({ error: "Порода должна содержать хотя бы одну букву." }, { status: 400 });
     }
     if (!ownerName || ownerName.length > 60) {
       return Response.json({ error: "Укажите имя хозяина до 60 символов." }, { status: 400 });
@@ -104,7 +116,7 @@ export async function POST(request: Request) {
           id,
           clientId,
           name,
-          breed: breed || null,
+          breed,
           ownerName,
           photo: photoBytes,
           photoType: hasPhoto ? photo.type : null

@@ -12,7 +12,9 @@ import {
   House,
   MapPin,
   Menu,
+  MessageCircle,
   PawPrint,
+  Pencil,
   Plus,
   Trash2,
   UserRound,
@@ -41,6 +43,7 @@ type Walk = {
   owner: string;
   time: string;
   point: string;
+  comment: string;
   period: Exclude<Period, "Все">;
   image: string;
 };
@@ -48,7 +51,7 @@ type Walk = {
 type Pet = {
   id: string;
   name: string;
-  breed: string | null;
+  breed: string;
   ownerName: string;
   photoUrl: string;
   createdAt: string;
@@ -74,16 +77,18 @@ type ApiWalk = {
   id: string;
   petId: string;
   pet: string;
-  breed: string | null;
+  breed: string;
   owner: string;
   city: string;
   district: string;
   complex: string;
   placeId: string;
   point: string;
+  comment: string | null;
   walkDate: string;
   walkTime: string;
   scheduleType: ScheduleType;
+  updatedAt: string;
   image: string;
 };
 
@@ -93,6 +98,7 @@ const CLIENT_ID_KEY = "dogwalk.clientId.v1";
 const MAX_SOURCE_PHOTO_SIZE = 10 * 1024 * 1024;
 const MAX_COMPRESSED_PHOTO_SIZE = 700 * 1024;
 const MAX_PHOTO_DIMENSION = 1024;
+const MAX_WALK_COMMENT_LENGTH = 50;
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const containsLetter = /\p{L}/u;
@@ -185,9 +191,10 @@ function apiWalkToCard(walk: ApiWalk): Walk {
     id: walk.id,
     petId: walk.petId,
     pet: walk.pet,
-    breed: walk.breed ?? "",
+    breed: walk.breed,
     owner: walk.owner,
     point: walk.point,
+    comment: walk.comment?.trim() ?? "",
     period,
     image: walk.image,
     time: `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`
@@ -575,6 +582,7 @@ export default function Home() {
   const [petSaving, setPetSaving] = useState(false);
   const [petNameInput, setPetNameInput] = useState("");
   const [ownerNameInput, setOwnerNameInput] = useState("");
+  const [breedInput, setBreedInput] = useState("");
   const [savedPets, setSavedPets] = useState<Pet[]>([]);
   const [petsLoaded, setPetsLoaded] = useState(false);
   const [petReturnTarget, setPetReturnTarget] = useState<PetReturnTarget>("my-pets");
@@ -591,6 +599,7 @@ export default function Home() {
   const [walksLoaded, setWalksLoaded] = useState(false);
   const [myWalks, setMyWalks] = useState<ApiWalk[]>([]);
   const [myWalksLoaded, setMyWalksLoaded] = useState(false);
+  const [walkBeingEdited, setWalkBeingEdited] = useState<ApiWalk | null>(null);
   const [walkPendingDelete, setWalkPendingDelete] = useState<ApiWalk | null>(null);
   const [walkDeleting, setWalkDeleting] = useState(false);
   const [walkDeleteError, setWalkDeleteError] = useState("");
@@ -600,6 +609,7 @@ export default function Home() {
   const [scheduleType, setScheduleType] = useState<ScheduleType>("today");
   const [selectedPetId, setSelectedPetId] = useState("");
   const [walkTime, setWalkTime] = useState("");
+  const [walkComment, setWalkComment] = useState("");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
@@ -785,7 +795,8 @@ export default function Home() {
   );
   const petNameIsValid = containsLetter.test(petNameInput.trim());
   const ownerNameIsValid = containsLetter.test(ownerNameInput.trim());
-  const petFormIsValid = petNameIsValid && ownerNameIsValid;
+  const breedIsValid = containsLetter.test(breedInput.trim());
+  const petFormIsValid = petNameIsValid && ownerNameIsValid && breedIsValid;
   const placeIsValid = containsLetter.test(placeInput.trim());
   const timeIsValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime);
   const walkFormIsValid = Boolean(selectedPetId && placeIsValid && timeIsValid);
@@ -902,6 +913,7 @@ export default function Home() {
     setPetSubmitError("");
     setPetNameInput("");
     setOwnerNameInput("");
+    setBreedInput("");
     setTouchedFields({});
     if (petReturnTarget === "announce") {
       setPetReturnTarget("my-pets");
@@ -917,10 +929,42 @@ export default function Home() {
       setShowPetRequiredPopup(true);
       return;
     }
+    setWalkBeingEdited(null);
     setGuidedWalkFlow(false);
     setTouchedFields({});
     setSelectedPetId(savedPets.length === 1 ? savedPets[0].id : "");
+    setPlaceInput("");
+    setScheduleType("today");
+    setWalkTime("");
+    setWalkComment("");
     setScreen("announce");
+  }
+
+  function editWalk(walk: ApiWalk) {
+    setWalkBeingEdited(walk);
+    setGuidedWalkFlow(false);
+    setTouchedFields({});
+    setWalkSubmitError("");
+    setSelectedPetId(walk.petId);
+    setPlaceInput(walk.point);
+    setPlaceMenuOpen(false);
+    setScheduleType(walk.scheduleType);
+    setWalkTime(walk.walkTime.slice(0, 5));
+    setWalkComment(walk.comment?.slice(0, MAX_WALK_COMMENT_LENGTH) ?? "");
+    setScreen("announce");
+  }
+
+  function leaveWalkScreen() {
+    setPlaceMenuOpen(false);
+    setTouchedFields({});
+    setWalkSubmitError("");
+    setGuidedWalkFlow(false);
+    if (walkBeingEdited) {
+      setWalkBeingEdited(null);
+      setScreen("my-walks");
+      return;
+    }
+    setScreen("walks");
   }
 
   function continueToRequiredPet() {
@@ -928,6 +972,7 @@ export default function Home() {
     setTouchedFields({});
     setPetNameInput("");
     setOwnerNameInput("");
+    setBreedInput("");
     setPetReturnTarget("announce");
     setGuidedWalkFlow(true);
     setScreen("pet");
@@ -981,6 +1026,10 @@ export default function Home() {
       touchField("owner-name");
       return;
     }
+    if (!containsLetter.test(String(formData.get("breed") ?? "").trim())) {
+      touchField("pet-breed");
+      return;
+    }
     setPetSaving(true);
 
     try {
@@ -1008,6 +1057,7 @@ export default function Home() {
         form.reset();
         setPetNameInput("");
         setOwnerNameInput("");
+        setBreedInput("");
         setTouchedFields({});
         setPhotoUrl(null);
         setPetSaved(false);
@@ -1029,6 +1079,7 @@ export default function Home() {
   async function saveWalk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
+    const editedWalk = walkBeingEdited;
     const formData = new FormData(form);
     const petId = formData.get("pet");
     const submittedPlace = String(formData.get("place") ?? "").trim();
@@ -1054,16 +1105,18 @@ export default function Home() {
 
     try {
       const response = await fetch("/api/walks", {
-        method: "POST",
+        method: editedWalk ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          walkId: editedWalk?.id,
           petId,
           place: submittedPlace,
+          comment: walkComment.trim(),
           scheduleType,
           walkTime: submittedWalkTime,
-          city: location.city,
-          district: location.district,
-          complex: location.complex,
+          city: editedWalk?.city ?? location.city,
+          district: editedWalk?.district ?? location.district,
+          complex: editedWalk?.complex ?? location.complex,
           clientId
         })
       });
@@ -1072,9 +1125,16 @@ export default function Home() {
         throw new Error(data.error || "Не удалось сохранить прогулку.");
       }
 
-      if (scheduleType === "today" || scheduleType === "always") {
-        setSavedWalks((current) => [apiWalkToCard(data.walk!), ...current]);
-      }
+      const belongsToSavedLocation = data.walk.city === location.city &&
+        data.walk.district === location.district &&
+        data.walk.complex === location.complex;
+      const appearsToday = scheduleType === "today" || scheduleType === "always";
+      setSavedWalks((current) => {
+        const withoutEditedWalk = current.filter((walk) => walk.id !== data.walk!.id);
+        return belongsToSavedLocation && appearsToday
+          ? [apiWalkToCard(data.walk!), ...withoutEditedWalk]
+          : withoutEditedWalk;
+      });
       setSharedPlaces((current) => current.some((place) => place.id === data.walk!.placeId)
         ? current
         : [...current, { id: data.walk!.placeId, name: data.walk!.point }]
@@ -1086,13 +1146,15 @@ export default function Home() {
         form.reset();
         setScheduleType("today");
         setWalkTime("");
+        setWalkComment("");
         setPlaceInput("");
         setPlaceMenuOpen(false);
         setTouchedFields({});
         setWalkSaved(false);
         setWalkSaving(false);
         setGuidedWalkFlow(false);
-        setScreen("walks");
+        setWalkBeingEdited(null);
+        setScreen(editedWalk ? "my-walks" : "walks");
       }, remainingLoaderTime);
     } catch (error) {
       setWalkSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
@@ -1292,7 +1354,7 @@ export default function Home() {
                   <article className="walk-card" key={walk.id}>
                     <div className="walk-pet-visual">
                       <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
-                      <p className="walk-pet-breed"><Dog aria-hidden="true" /><span>{walk.breed || "Порода не указана"}</span></p>
+                      <p className="walk-pet-breed"><Dog aria-hidden="true" /><span>{walk.breed}</span></p>
                     </div>
                     <div className="walk-info">
                       <h2>{walk.pet}</h2>
@@ -1300,6 +1362,12 @@ export default function Home() {
                       <p><Clock3 className="time-icon" aria-hidden="true" />{walk.time}</p>
                       <p><span className="walk-card-icon walk-card-icon--pin" aria-hidden="true" />{walk.point}</p>
                     </div>
+                    {walk.comment && (
+                      <p className="walk-comment">
+                        <MessageCircle aria-hidden="true" />
+                        <span>{walk.comment}</span>
+                      </p>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1396,14 +1464,24 @@ export default function Home() {
                     <small className="collection-place"><MapPin aria-hidden="true" />{walk.point}</small>
                     <small className="collection-date"><CalendarDays aria-hidden="true" />{formatWalkDate(walk)} · {walk.walkTime}</small>
                   </span>
-                  <button
-                    className="delete-walk-button"
-                    type="button"
-                    aria-label={`Удалить прогулку питомца ${walk.pet}`}
-                    onClick={() => { setWalkDeleteError(""); setWalkPendingDelete(walk); }}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </button>
+                  <span className="collection-card-actions">
+                    <button
+                      className="edit-walk-button"
+                      type="button"
+                      aria-label={`Редактировать прогулку питомца ${walk.pet}`}
+                      onClick={() => editWalk(walk)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </button>
+                    <button
+                      className="delete-walk-button"
+                      type="button"
+                      aria-label={`Удалить прогулку питомца ${walk.pet}`}
+                      onClick={() => { setWalkDeleteError(""); setWalkPendingDelete(walk); }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </button>
+                  </span>
                 </article>
               )) : (
                 <p className="collection-empty">У вас пока нет добавленных прогулок</p>
@@ -1431,7 +1509,7 @@ export default function Home() {
                   <Image src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={62} height={62} unoptimized />
                   <span className="collection-card-info">
                     <strong>{pet.name}</strong>
-                    <small><Dog aria-hidden="true" />{pet.breed || "Порода не указана"}</small>
+                    <small><Dog aria-hidden="true" />{pet.breed}</small>
                     <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
                   </span>
                   <button
@@ -1447,7 +1525,7 @@ export default function Home() {
                 <p className="collection-empty">У вас пока нет добавленных питомцев</p>
               )}
             </div>
-            <button className="primary-button floating-pet-button" type="button" onClick={() => { setTouchedFields({}); setPetNameInput(""); setOwnerNameInput(""); setPetReturnTarget("my-pets"); setGuidedWalkFlow(false); setScreen("pet"); }}>
+            <button className="primary-button floating-pet-button" type="button" onClick={() => { setTouchedFields({}); setPetNameInput(""); setOwnerNameInput(""); setBreedInput(""); setPetReturnTarget("my-pets"); setGuidedWalkFlow(false); setScreen("pet"); }}>
               <Plus aria-hidden="true" />
               Добавить питомца
             </button>
@@ -1519,7 +1597,20 @@ export default function Home() {
               </label>
               <label className="field text-field">
                 <span>Порода</span>
-                <input name="breed" maxLength={80} placeholder="Например, корги" />
+                <input
+                  name="breed"
+                  value={breedInput}
+                  required
+                  maxLength={80}
+                  placeholder="Например, корги"
+                  aria-invalid={Boolean(touchedFields["pet-breed"] && !breedIsValid)}
+                  aria-describedby={touchedFields["pet-breed"] && !breedIsValid ? "pet-breed-hint" : undefined}
+                  onBlur={() => touchField("pet-breed")}
+                  onChange={(event) => { setBreedInput(event.target.value); setPetSubmitError(""); }}
+                />
+                {touchedFields["pet-breed"] && !breedIsValid && (
+                  <span className="validation-hint" id="pet-breed-hint">{breedInput.trim() ? "Порода должна содержать хотя бы одну букву" : "Введите породу"}</span>
+                )}
               </label>
               <button className="primary-button form-submit" type="submit" disabled={!petFormIsValid || petSaving || petSaved}>
                 {petSaved ? <><CheckCircle2 /> Питомец добавлен</> : petSaving ? "Сжимаем и сохраняем…" : "Сохранить"}
@@ -1538,13 +1629,13 @@ export default function Home() {
           <div className="screen form-screen announce-screen">
             {guidedWalkFlow ? (
               <div className="guided-form-topbar">
-                <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => { setPlaceMenuOpen(false); setGuidedWalkFlow(false); setScreen("walks"); }}>
+                <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={leaveWalkScreen}>
                   <ArrowLeft />
                 </button>
                 <WalkSetupStepper step={2} />
               </div>
             ) : (
-              <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => { setPlaceMenuOpen(false); setScreen("walks"); }}>
+              <button className="icon-button back-button" type="button" aria-label={walkBeingEdited ? "Назад к моим прогулкам" : "Назад к прогулкам"} onClick={leaveWalkScreen}>
                 <ArrowLeft />
               </button>
             )}
@@ -1665,11 +1756,25 @@ export default function Home() {
                 />
                 {touchedFields["walk-time"] && !timeIsValid && <p className="validation-hint" id="walk-time-hint">Выберите время прогулки</p>}
               </div>
+              <div className="field comment-field">
+                <label htmlFor="walk-comment">Комментарий <span>(необязательно)</span></label>
+                <input
+                  id="walk-comment"
+                  name="comment"
+                  maxLength={MAX_WALK_COMMENT_LENGTH}
+                  value={walkComment}
+                  placeholder="Например, возьмём мячик"
+                  onChange={(event) => setWalkComment(event.target.value)}
+                />
+                <small>{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small>
+              </div>
               {(walkSubmitError || savedPets.length === 0) && (
                 <p className="error-message" role="alert">{walkSubmitError || "Сначала добавьте питомца через меню."}</p>
               )}
               <button className="primary-button form-submit" type="submit" disabled={!walkFormIsValid || walkSaving || walkSaved}>
-                {walkSaved ? <><CheckCircle2 /> Прогулка добавлена</> : walkSaving ? "Сохраняем…" : "Сообщить о прогулке"}
+                {walkSaved
+                  ? <><CheckCircle2 /> {walkBeingEdited ? "Изменения сохранены" : "Прогулка добавлена"}</>
+                  : walkSaving ? "Сохраняем…" : walkBeingEdited ? "Сохранить" : "Сообщить о прогулке"}
               </button>
             </form>
             {walkSaving && (

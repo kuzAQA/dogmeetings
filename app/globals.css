@@ -92,13 +92,15 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 button,
 label,
-select {
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -708,7 +710,8 @@ strong {
   display: grid;
   width: 100%;
   min-width: 0;
-  align-content: center;
+  align-self: stretch;
+  align-content: end;
   justify-items: center;
   gap: var(--space-2);
 }
@@ -726,8 +729,8 @@ strong {
 }
 
 .walk-pet-breed svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   color: var(--green);
   stroke-width: 2;
@@ -746,15 +749,17 @@ strong {
   min-width: 0;
   align-self: stretch;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
 .walk-info h2 {
   min-width: 0;
   overflow: hidden;
+  margin-bottom: 6px;
   font-size: var(--card-title-size);
   line-height: var(--line-tight);
+  text-indent: -0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -763,7 +768,10 @@ strong {
   display: flex;
   min-width: 0;
   gap: var(--space-2);
-  color: #3f433e;
+  color: #4f534e;
+  font-family: inherit;
+  font-size: var(--small-text-size);
+  font-weight: var(--font-regular);
   line-height: var(--line-compact);
 }
 
@@ -771,8 +779,6 @@ strong {
   align-items: center;
   overflow: hidden;
   margin-top: 0;
-  color: #4f534e;
-  font-size: var(--caption-text-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -780,7 +786,6 @@ strong {
 .walk-info p:not(.pet-meta) {
   align-items: flex-start;
   margin-top: 0;
-  font-size: var(--small-text-size);
 }
 
 .walk-info svg {
@@ -827,6 +832,36 @@ strong {
   color: var(--green);
   fill: none;
   stroke-width: 2.5;
+}
+
+.walk-comment {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-1));
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: 13px;
+  background: var(--green-soft);
+  color: #465149;
+  font-size: clamp(0.68rem, 3vw, var(--caption-text-size));
+  line-height: var(--line-compact);
+}
+
+.walk-comment svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--green);
+  stroke-width: 2;
+}
+
+.walk-comment span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menu-overlay {
@@ -1220,10 +1255,17 @@ strong {
   color: var(--green);
 }
 
+.collection-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.edit-walk-button,
 .delete-walk-button {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border: 0;
   border-radius: 11px;
@@ -1232,9 +1274,10 @@ strong {
   cursor: pointer;
 }
 
+.edit-walk-button svg,
 .delete-walk-button svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .delete-pet-button {
@@ -1492,6 +1535,12 @@ strong {
   grid-template-columns: 62px minmax(0, 1fr) 40px;
 }
 
+.collection-walk {
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  height: max-content;
+  min-height: 114px;
+}
+
 .collection-card > img {
   width: 62px;
   height: 62px;
@@ -1639,6 +1688,52 @@ strong {
 .announce-screen .screen-heading h1 {
   max-width: 350px;
   font-size: var(--page-title-size);
+}
+
+.comment-field label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.comment-field label span,
+.comment-field small {
+  color: var(--muted);
+  font-size: var(--caption-text-size);
+  font-weight: var(--font-regular);
+}
+
+.comment-field input {
+  width: 100%;
+  height: calc(var(--control-height) + var(--space-2));
+  min-height: calc(var(--control-height) + var(--space-2));
+  padding: 0 var(--control-inline-padding);
+  border: 1.5px solid #8b9b85;
+  border-radius: 13px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--ink);
+  font-size: var(--control-text-size);
+  font-weight: var(--font-regular);
+  line-height: var(--line-compact);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.comment-field input::placeholder {
+  color: #92978f;
+  font-size: var(--small-text-size);
+  opacity: 1;
+}
+
+.comment-field input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 4px rgba(40, 90, 59, 0.1);
+}
+
+.comment-field small {
+  justify-self: end;
+  margin-top: calc(-1 * var(--space-1));
 }
 
 .schedule-field {
@@ -1933,6 +2028,7 @@ strong {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 .photo-upload:has(input:focus-visible) {
   outline: 3px solid rgba(207, 111, 60, 0.48);
   outline-offset: 3px;

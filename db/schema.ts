@@ -13,7 +13,7 @@ export const pets = pgTable(
     id: uuid("id").primaryKey(),
     clientId: uuid("client_id").notNull().defaultRandom(),
     name: varchar("name", { length: 40 }).notNull(),
-    breed: varchar("breed", { length: 80 }),
+    breed: varchar("breed", { length: 80 }).notNull(),
     ownerName: varchar("owner_name", { length: 60 }).notNull(),
     photo: bytea("photo"),
     photoType: varchar("photo_type", { length: 50 }),
@@ -72,14 +72,17 @@ export const walks = pgTable(
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
     placeId: uuid("place_id").notNull().references(() => places.id, { onDelete: "restrict" }),
     place: varchar("place", { length: 100 }).notNull(),
+    comment: varchar("comment", { length: 60 }),
     scheduleType: varchar("schedule_type", { length: 10 }).notNull().default("today"),
     walkDate: date("walk_date", { mode: "string" }).notNull().default(sql`CURRENT_DATE`),
     walkTime: time("walk_time").notNull().default("12:00:00"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     index("walks_starts_at_idx").on(table.startsAt),
+    index("walks_updated_at_idx").on(table.updatedAt),
     index("walks_schedule_idx").on(table.scheduleType, table.walkDate, table.walkTime),
     index("walks_location_idx").on(table.city, table.district, table.residentialComplex)
   ]
