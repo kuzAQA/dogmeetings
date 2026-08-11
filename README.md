@@ -100,6 +100,9 @@ Production-конфигурация рассчитана на Ubuntu 24.04, Dock
 
    SQL-миграции применяются автоматически и повторно не выполняются. После
    успешного запуска сайт будет доступен на [https://dogmeet.ru](https://dogmeet.ru).
+   Сервис `scheduler` ежедневно в 06:00 по московскому времени удаляет прогулки,
+   у которых дата прогулки меньше текущей даты. Если контейнер был перезапущен
+   после 06:00, пропущенная очистка выполняется сразу после запуска.
 
 ### Обновление
 
@@ -107,6 +110,12 @@ Production-конфигурация рассчитана на Ubuntu 24.04, Dock
 cd /opt/dogmeet
 git pull --ff-only
 docker compose --env-file .env.production -f compose.production.yml up -d --build
+```
+
+Проверить работу планировщика можно по его журналу:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml logs --tail=100 scheduler
 ```
 
 ### Резервные копии PostgreSQL

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Две собачьи лапы">
+  <rect x="12" y="12" width="488" height="488" rx="108" fill="#fbfaf6"/>
+  <g fill="#285a3b" transform="translate(56 56) scale(.78)">
+    <ellipse cx="255" cy="124" rx="31" ry="40" transform="rotate(-17 255 124)"/>
+    <ellipse cx="322" cy="73" rx="33" ry="44"/>
+    <ellipse cx="404" cy="72" rx="33" ry="44"/>
+    <ellipse cx="470" cy="123" rx="30" ry="40" transform="rotate(17 470 123)"/>
+    <path d="M347 132c28-2 44 17 65 39l28 30c23 24 21 58 2 80-17 20-43 27-67 17l-19-8a26 26 0 0 0-20 0l-18 7c-27 11-56 3-72-19-16-23-13-54 7-75l48-51c14-14 28-19 46-20Z"/>
+    <ellipse cx="43" cy="339" rx="30" ry="40" transform="rotate(-20 43 339)"/>
+    <ellipse cx="109" cy="288" rx="33" ry="44"/>
+    <ellipse cx="192" cy="286" rx="33" ry="44"/>
+    <ellipse cx="257" cy="338" rx="30" ry="40" transform="rotate(20 257 338)"/>
+    <path d="M150 347c28-2 45 17 65 39l23 25c24 25 22 59 2 80-18 19-44 24-68 14l-14-6a25 25 0 0 0-19 0l-18 7c-26 10-55 2-72-20-17-23-14-54 6-75l47-45c14-13 30-18 48-19Z"/>
+  </g>
+</svg>

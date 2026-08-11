@@ -11,6 +11,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Гулять вместе",
     description: "Находите компанию для прогулок с собакой рядом с домом.",
+    icons: {
+      icon: [{ url: "/icons/paws.svg?v=20260811-2", type: "image/svg+xml", sizes: "any" }],
+      shortcut: "/icons/paws.svg?v=20260811-2"
+    },
     openGraph: {
       title: "Гулять вместе",
       description: "Компания для прогулок с собакой — рядом с домом",
@@ -36,6 +40,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/icons/paws.svg?v=20260811-2" type="image/svg+xml" sizes="any" />
+        <link rel="shortcut icon" href="/icons/paws.svg?v=20260811-2" type="image/svg+xml" />
+      </head>
       <body>{children}</body>
     </html>
   );

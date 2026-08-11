@@ -23,6 +23,7 @@ ENV NODE_ENV=production \
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/scripts/cleanup-expired-walks.mjs ./scripts/cleanup-expired-walks.mjs
 
 USER node
 

@@ -109,7 +109,7 @@ const scheduleIndicatorLeft: Record<ScheduleType, string> = {
   always: "calc(66.666667% + 5.333333px)"
 };
 const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
-const minuteOptions = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
+const minuteOptions = Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, "0"));
 const defaultLocation: Location = {
   city: "",
   district: "",
@@ -198,6 +198,23 @@ function formatWalkDate(walk: ApiWalk) {
   if (walk.scheduleType === "always") return "Всегда";
   const [year = "", month = "", day = ""] = walk.walkDate.split("-");
   return `${day}.${month}.${year}`;
+}
+
+function formatResidentialComplex(value: string) {
+  const complex = value.trim().replace(/^жилой комплекс\s+/iu, "");
+  return /^дзен[\s-]+кварталы$/iu.test(complex) ? "Дзен-Кварталы" : complex;
+}
+
+function WalkSetupStepper({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="walk-setup-stepper" role="status" aria-label={`Шаг ${step} из 2`}>
+      <span className="walk-setup-progress" aria-hidden="true">
+        <span className="complete" />
+        <span className={step === 2 ? "complete walk-setup-progress-animated" : ""} />
+      </span>
+      <span className="walk-setup-step-label">Шаг {step} из 2</span>
+    </div>
+  );
 }
 
 function normalizePlaceForComparison(value: string) {
@@ -561,6 +578,7 @@ export default function Home() {
   const [savedPets, setSavedPets] = useState<Pet[]>([]);
   const [petsLoaded, setPetsLoaded] = useState(false);
   const [petReturnTarget, setPetReturnTarget] = useState<PetReturnTarget>("my-pets");
+  const [guidedWalkFlow, setGuidedWalkFlow] = useState(false);
   const [showPetRequiredPopup, setShowPetRequiredPopup] = useState(false);
   const [walkSaved, setWalkSaved] = useState(false);
   const [walkSaving, setWalkSaving] = useState(false);
@@ -887,6 +905,7 @@ export default function Home() {
     setTouchedFields({});
     if (petReturnTarget === "announce") {
       setPetReturnTarget("my-pets");
+      setGuidedWalkFlow(false);
       setScreen("walks");
     } else {
       setScreen("my-pets");
@@ -898,6 +917,7 @@ export default function Home() {
       setShowPetRequiredPopup(true);
       return;
     }
+    setGuidedWalkFlow(false);
     setTouchedFields({});
     setSelectedPetId(savedPets.length === 1 ? savedPets[0].id : "");
     setScreen("announce");
@@ -909,6 +929,7 @@ export default function Home() {
     setPetNameInput("");
     setOwnerNameInput("");
     setPetReturnTarget("announce");
+    setGuidedWalkFlow(true);
     setScreen("pet");
   }
 
@@ -1070,6 +1091,7 @@ export default function Home() {
         setTouchedFields({});
         setWalkSaved(false);
         setWalkSaving(false);
+        setGuidedWalkFlow(false);
         setScreen("walks");
       }, remainingLoaderTime);
     } catch (error) {
@@ -1268,13 +1290,15 @@ export default function Home() {
                   </p>
                 ) : visibleWalks.map((walk) => (
                   <article className="walk-card" key={walk.id}>
-                    <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
+                    <div className="walk-pet-visual">
+                      <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
+                      <p className="walk-pet-breed"><Dog aria-hidden="true" /><span>{walk.breed || "Порода не указана"}</span></p>
+                    </div>
                     <div className="walk-info">
                       <h2>{walk.pet}</h2>
-                      <p className="pet-meta breed"><Dog aria-hidden="true" />{walk.breed || "Порода не указана"}</p>
-                      <p className="pet-meta owner"><UserRound aria-hidden="true" />{walk.owner}</p>
+                      <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" />{walk.owner}</p>
                       <p><Clock3 className="time-icon" aria-hidden="true" />{walk.time}</p>
-                      <p><MapPin className="location-icon" aria-hidden="true" />{walk.point}</p>
+                      <p><span className="walk-card-icon walk-card-icon--pin" aria-hidden="true" />{walk.point}</p>
                     </div>
                   </article>
                 ))}
@@ -1312,10 +1336,18 @@ export default function Home() {
                   <div className="drawer-body">
                     <p className="drawer-label">Сохранённая локация</p>
                     <button className="location-card" type="button" onClick={openLocationEditor}>
-                      <span><small>Город</small><strong>{location.city}</strong></span>
-                      <span><small>Район</small><strong>{location.district}</strong></span>
-                      <span><small>Жилой комплекс</small><strong>{location.complex}</strong></span>
-                      <span className="change-location">Изменить локацию <ChevronRight /></span>
+                      <span className="location-card-summary">
+                        <span className="location-card-pin" aria-hidden="true" />
+                        <strong className="location-card-address">
+                          <span>{location.city} · {location.district}</span>
+                          <span>{formatResidentialComplex(location.complex)}</span>
+                        </strong>
+                        <ChevronDown className="location-card-chevron" aria-hidden="true" />
+                      </span>
+                      <span className="change-location">
+                        <span className="change-location-pin" aria-hidden="true" />
+                        Изменить локацию
+                      </span>
                     </button>
 
                     <button className="drawer-link" type="button" onClick={() => { setMenuOpen(false); setScreen("my-walks"); }}>
@@ -1324,13 +1356,18 @@ export default function Home() {
                       <ChevronRight />
                     </button>
                     <button className="drawer-link" type="button" onClick={() => { setMenuOpen(false); setScreen("my-pets"); }}>
-                      <span className="drawer-link-icon"><PawPrint aria-hidden="true" /></span>
+                      <span className="drawer-link-icon"><span className="drawer-pets-icon" aria-hidden="true" /></span>
                       <span>Мои питомцы</span>
                       <ChevronRight />
                     </button>
-                    <a className="developer-link" href="https://t.me/kuznetsoviv" target="_blank" rel="noopener noreferrer">
-                      ТГ разработчика
-                    </a>
+                    <div className="drawer-footer">
+                      <div className="drawer-illustration" aria-hidden="true">
+                        <Image src="/menu-corgi.webp" alt="" width={1799} height={874} sizes="430px" />
+                      </div>
+                      <a className="developer-link" href="https://t.me/kuznetsoviv" target="_blank" rel="noopener noreferrer">
+                        ТГ разработчика
+                      </a>
+                    </div>
                   </div>
                 </aside>
               </div>
@@ -1410,7 +1447,7 @@ export default function Home() {
                 <p className="collection-empty">У вас пока нет добавленных питомцев</p>
               )}
             </div>
-            <button className="primary-button floating-pet-button" type="button" onClick={() => { setTouchedFields({}); setPetNameInput(""); setOwnerNameInput(""); setPetReturnTarget("my-pets"); setScreen("pet"); }}>
+            <button className="primary-button floating-pet-button" type="button" onClick={() => { setTouchedFields({}); setPetNameInput(""); setOwnerNameInput(""); setPetReturnTarget("my-pets"); setGuidedWalkFlow(false); setScreen("pet"); }}>
               <Plus aria-hidden="true" />
               Добавить питомца
             </button>
@@ -1419,9 +1456,18 @@ export default function Home() {
 
         {screen === "pet" && (
           <div className="screen form-screen pet-screen">
-            <button className="icon-button back-button" type="button" aria-label={petReturnTarget === "announce" ? "Назад к прогулкам" : "Назад к моим питомцам"} onClick={leavePetScreen}>
-              <ArrowLeft />
-            </button>
+            {guidedWalkFlow && petReturnTarget === "announce" ? (
+              <div className="guided-form-topbar">
+                <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={leavePetScreen}>
+                  <ArrowLeft />
+                </button>
+                <WalkSetupStepper step={1} />
+              </div>
+            ) : (
+              <button className="icon-button back-button" type="button" aria-label={petReturnTarget === "announce" ? "Назад к прогулкам" : "Назад к моим питомцам"} onClick={leavePetScreen}>
+                <ArrowLeft />
+              </button>
+            )}
             <div className="screen-heading">
               <h1>Добавить питомца</h1>
               <p>Расскажите немного о вашем друге</p>
@@ -1490,9 +1536,18 @@ export default function Home() {
 
         {screen === "announce" && (
           <div className="screen form-screen announce-screen">
-            <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => { setPlaceMenuOpen(false); setScreen("walks"); }}>
-              <ArrowLeft />
-            </button>
+            {guidedWalkFlow ? (
+              <div className="guided-form-topbar">
+                <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => { setPlaceMenuOpen(false); setGuidedWalkFlow(false); setScreen("walks"); }}>
+                  <ArrowLeft />
+                </button>
+                <WalkSetupStepper step={2} />
+              </div>
+            ) : (
+              <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={() => { setPlaceMenuOpen(false); setScreen("walks"); }}>
+                <ArrowLeft />
+              </button>
+            )}
             <div className="screen-heading">
               <h1>Сообщить о прогулке</h1>
               <p>Укажите, с кем, где и когда вы будете гулять</p>

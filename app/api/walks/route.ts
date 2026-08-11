@@ -133,7 +133,7 @@ export async function GET(request: Request) {
           eq(walks.residentialComplex, residentialComplex),
           or(eq(walks.scheduleType, "always"), eq(walks.walkDate, today))
         ))
-        .orderBy(walks.walkTime)
+        .orderBy(desc(walks.createdAt))
         .limit(100));
 
     return Response.json({ walks: rows.map(publicWalk) });

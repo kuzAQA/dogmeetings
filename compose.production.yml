@@ -46,6 +46,7 @@ services:
     mem_limit: 128m
 
   app:
+    image: dogmeet-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -67,6 +68,22 @@ services:
       retries: 12
       start_period: 15s
     mem_limit: 768m
+
+  scheduler:
+    image: dogmeet-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "scripts/cleanup-expired-walks.mjs"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      TZ: Europe/Moscow
+      NODE_OPTIONS: --max-old-space-size=64
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 128m
 
   caddy:
     image: caddy:2-alpine
