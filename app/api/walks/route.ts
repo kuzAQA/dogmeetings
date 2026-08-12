@@ -2,6 +2,9 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { pets, places, walks } from "../../../db/schema";
 
+const MAX_WALK_META_LENGTH = 40;
+const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
+
 type WalkRow = {
   id: string;
   petId: string;
@@ -184,14 +187,14 @@ export async function POST(request: Request) {
     if (!/^[0-9a-f-]{36}$/i.test(clientId)) {
       return Response.json({ error: "Некорректный идентификатор пользователя." }, { status: 400 });
     }
-    if (!place || place.length > 100) {
-      return Response.json({ error: "Укажите место прогулки до 100 символов." }, { status: 400 });
+    if (!place || place.length > MAX_WALK_PLACE_LENGTH) {
+      return Response.json({ error: `Укажите место прогулки до ${MAX_WALK_PLACE_LENGTH} символов.` }, { status: 400 });
     }
     if (!/\p{L}/u.test(place)) {
       return Response.json({ error: "Название места прогулки должно содержать хотя бы одну букву." }, { status: 400 });
     }
-    if (comment.length > 50) {
-      return Response.json({ error: "Комментарий должен содержать не более 50 символов." }, { status: 400 });
+    if (comment.length > MAX_WALK_META_LENGTH) {
+      return Response.json({ error: `Комментарий должен содержать не более ${MAX_WALK_META_LENGTH} символов.` }, { status: 400 });
     }
     if (!city || !district || !residentialComplex) {
       return Response.json({ error: "Не выбрана локация прогулки." }, { status: 400 });
@@ -333,14 +336,14 @@ export async function PATCH(request: Request) {
     if (!/^[0-9a-f-]{36}$/i.test(clientId)) {
       return Response.json({ error: "Некорректный идентификатор пользователя." }, { status: 400 });
     }
-    if (!place || place.length > 100) {
-      return Response.json({ error: "Укажите место прогулки до 100 символов." }, { status: 400 });
+    if (!place || place.length > MAX_WALK_PLACE_LENGTH) {
+      return Response.json({ error: `Укажите место прогулки до ${MAX_WALK_PLACE_LENGTH} символов.` }, { status: 400 });
     }
     if (!/\p{L}/u.test(place)) {
       return Response.json({ error: "Название места прогулки должно содержать хотя бы одну букву." }, { status: 400 });
     }
-    if (comment.length > 50) {
-      return Response.json({ error: "Комментарий должен содержать не более 50 символов." }, { status: 400 });
+    if (comment.length > MAX_WALK_META_LENGTH) {
+      return Response.json({ error: `Комментарий должен содержать не более ${MAX_WALK_META_LENGTH} символов.` }, { status: 400 });
     }
     if (!city || !district || !residentialComplex) {
       return Response.json({ error: "Не выбрана локация прогулки." }, { status: 400 });

@@ -5,6 +5,7 @@ import { pets } from "../../../db/schema";
 
 const MAX_PHOTO_SIZE = 1024 * 1024;
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_BREED_LENGTH = 20;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const containsLetter = /\p{L}/u;
 
@@ -87,8 +88,8 @@ export async function POST(request: Request) {
     if (!containsLetter.test(name)) {
       return Response.json({ error: "Имя питомца должно содержать хотя бы одну букву." }, { status: 400 });
     }
-    if (!breed || breed.length > 80) {
-      return Response.json({ error: "Укажите породу до 80 символов." }, { status: 400 });
+    if (!breed || breed.length > MAX_BREED_LENGTH) {
+      return Response.json({ error: `Укажите породу до ${MAX_BREED_LENGTH} символов.` }, { status: 400 });
     }
     if (!containsLetter.test(breed)) {
       return Response.json({ error: "Порода должна содержать хотя бы одну букву." }, { status: 400 });
@@ -154,8 +155,8 @@ export async function PATCH(request: Request) {
     if (!name || name.length > 40 || !containsLetter.test(name)) {
       return Response.json({ error: "Укажите корректное имя питомца до 40 символов." }, { status: 400 });
     }
-    if (!breed || breed.length > 80 || !containsLetter.test(breed)) {
-      return Response.json({ error: "Укажите корректную породу до 80 символов." }, { status: 400 });
+    if (!breed || breed.length > MAX_BREED_LENGTH || !containsLetter.test(breed)) {
+      return Response.json({ error: `Укажите корректную породу до ${MAX_BREED_LENGTH} символов.` }, { status: 400 });
     }
     if (!ownerName || ownerName.length > 60 || !containsLetter.test(ownerName)) {
       return Response.json({ error: "Укажите корректное имя хозяина до 60 символов." }, { status: 400 });

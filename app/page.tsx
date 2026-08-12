@@ -10,15 +10,12 @@ import {
   Clock3,
   Dog,
   House,
-  MapPin,
-  Menu,
   MessageCircle,
   PawPrint,
   Pencil,
   Plus,
   Trash2,
-  UserRound,
-  X
+  UserRound
 } from "lucide-react";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -28,6 +25,8 @@ type Period = "Все" | "Утро" | "День" | "Вечер";
 type ScheduleType = "today" | "tomorrow" | "always";
 type PetReturnTarget = "my-pets" | "announce";
 type FilterMotion = "idle" | "exit-left" | "exit-right" | "enter-left" | "enter-right";
+type LocationCloseTarget = "menu" | "walks" | null;
+type FormScreen = "pet" | "announce";
 
 type Location = {
   city: string;
@@ -99,10 +98,14 @@ const CLIENT_ID_KEY = "dogwalk.clientId.v1";
 const MAX_SOURCE_PHOTO_SIZE = 10 * 1024 * 1024;
 const MAX_COMPRESSED_PHOTO_SIZE = 700 * 1024;
 const MAX_PHOTO_DIMENSION = 1024;
-const MAX_WALK_COMMENT_LENGTH = 50;
+const MAX_WALK_META_LENGTH = 40;
+const MAX_WALK_COMMENT_LENGTH = MAX_WALK_META_LENGTH;
+const MAX_BREED_LENGTH = 20;
+const WALK_PLACE_BUBBLE_ENABLED = false;
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const containsLetter = /\p{L}/u;
+const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
 const periodOptions: Period[] = ["Все", "Утро", "День", "Вечер"];
 const filterIndicatorLeft: Record<Period, string> = {
   "Все": "0",
@@ -221,6 +224,131 @@ function WalkSetupStepper({ step }: { step: 1 | 2 }) {
         <span className={step === 2 ? "complete walk-setup-progress-animated" : ""} />
       </span>
       <span className="walk-setup-step-label">Шаг {step} из 2</span>
+    </div>
+  );
+}
+
+function MenuMorphIcon() {
+  return (
+    <span className="menu-icon" aria-hidden="true">
+      <svg className="menu-frame" viewBox="0 0 48 48" focusable="false">
+        <rect className="menu-frame-stroke" x="0.75" y="0.75" width="46.5" height="46.5" rx="12.25" pathLength={1} />
+      </svg>
+      <span className="menu-glyph" />
+    </span>
+  );
+}
+
+function WalkPlace({ place }: { place: string }) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [measuredPlace, setMeasuredPlace] = useState(place);
+  const displayedPlace = WALK_PLACE_BUBBLE_ENABLED
+    ? measuredPlace
+    : Array.from(place).slice(0, MAX_WALK_META_LENGTH).join("").trimEnd();
+  const [bubbleState, setBubbleState] = useState<"closed" | "open" | "closing">("closed");
+  const expanded = WALK_PLACE_BUBBLE_ENABLED && bubbleState !== "closed";
+
+  const closeBubble = useCallback(() => {
+    setBubbleState((current) => current === "open" ? "closing" : current);
+  }, []);
+
+  useEffect(() => {
+    const text = textRef.current;
+    if (!text) return;
+
+    if (!WALK_PLACE_BUBBLE_ENABLED) {
+      return;
+    }
+
+    const measure = () => {
+      text.textContent = place;
+      const isTruncated = text.scrollHeight > text.clientHeight + 1;
+
+      if (isTruncated) {
+        const characters = Array.from(place);
+        let lowerBound = 0;
+        let upperBound = characters.length;
+        let fittedText = "…";
+
+        while (lowerBound <= upperBound) {
+          const middle = Math.floor((lowerBound + upperBound) / 2);
+          const candidate = `${characters.slice(0, middle).join("").trimEnd()}…`;
+          text.textContent = candidate;
+
+          if (text.scrollHeight <= text.clientHeight + 1) {
+            fittedText = candidate;
+            lowerBound = middle + 1;
+          } else {
+            upperBound = middle - 1;
+          }
+        }
+
+        text.textContent = fittedText;
+        setMeasuredPlace((current) => current === fittedText ? current : fittedText);
+      } else {
+        text.textContent = place;
+        setMeasuredPlace((current) => current === place ? current : place);
+      }
+
+      setTruncated(isTruncated);
+      if (!isTruncated) setBubbleState("closed");
+    };
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [place]);
+
+  useEffect(() => {
+    if (!WALK_PLACE_BUBBLE_ENABLED || bubbleState !== "open") return;
+
+    const timer = window.setTimeout(closeBubble, 5000);
+    const closeOnScreenPress = (event: PointerEvent) => {
+      if (event.target instanceof Node && triggerRef.current?.contains(event.target)) return;
+      closeBubble();
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeBubble();
+    };
+
+    document.addEventListener("pointerdown", closeOnScreenPress);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("pointerdown", closeOnScreenPress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [bubbleState, closeBubble]);
+
+  useEffect(() => {
+    if (bubbleState !== "closing") return;
+    const timer = window.setTimeout(() => setBubbleState("closed"), 220);
+    return () => window.clearTimeout(timer);
+  }, [bubbleState]);
+
+  return (
+    <div className={`walk-place-row walk-location-block ${expanded ? "is-expanded" : ""}`}>
+      <span className="walk-card-icon walk-card-icon--pin" aria-hidden="true" />
+      <button
+        ref={triggerRef}
+        className={`walk-place-trigger ${WALK_PLACE_BUBBLE_ENABLED && truncated ? "is-truncated" : ""}`}
+        type="button"
+        aria-label={WALK_PLACE_BUBBLE_ENABLED && truncated ? `Показать полное место прогулки: ${place}` : place}
+        aria-expanded={WALK_PLACE_BUBBLE_ENABLED && truncated ? expanded : undefined}
+        disabled={!WALK_PLACE_BUBBLE_ENABLED || !truncated}
+        onClick={() => setBubbleState((current) => current === "open" ? "closing" : "open")}
+      >
+        <span className="walk-place-text" ref={textRef}>{displayedPlace}</span>
+      </button>
+      {expanded && (
+        <span className={`walk-place-bubble ${bubbleState === "closing" ? "is-closing" : ""}`} role="status">
+          {place}
+        </span>
+      )}
     </div>
   );
 }
@@ -574,7 +702,12 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [animateMenuOpen, setAnimateMenuOpen] = useState(true);
   const [menuClosing, setMenuClosing] = useState(false);
+  const [menuButtonClosing, setMenuButtonClosing] = useState(false);
+  const [collectionClosing, setCollectionClosing] = useState(false);
   const [locationOpenedFromMenu, setLocationOpenedFromMenu] = useState(false);
+  const [locationCloseTarget, setLocationCloseTarget] = useState<LocationCloseTarget>(null);
+  const [formClosing, setFormClosing] = useState(false);
+  const [formCloseTarget, setFormCloseTarget] = useState<Screen | null>(null);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
@@ -618,6 +751,7 @@ export default function Home() {
   const filterTimersRef = useRef<number[]>([]);
 
   const closeMenu = useCallback(() => {
+    setMenuButtonClosing(true);
     setMenuClosing(true);
   }, []);
 
@@ -784,9 +918,9 @@ export default function Home() {
   );
   const normalizedPlaceInput = normalizePlaceForComparison(placeInput);
   const matchingSharedPlaces = useMemo(
-    () => normalizedPlaceInput
-      ? sharedPlaces.filter((place) => normalizePlaceForComparison(place.name).includes(normalizedPlaceInput))
-      : sharedPlaces,
+    () => sharedPlaces.filter(
+      (place) => !normalizedPlaceInput || normalizePlaceForComparison(place.name).includes(normalizedPlaceInput)
+    ),
     [normalizedPlaceInput, sharedPlaces]
   );
   const placeSuggestionsVisible = placeMenuOpen && (
@@ -797,9 +931,9 @@ export default function Home() {
   );
   const petNameIsValid = containsLetter.test(petNameInput.trim());
   const ownerNameIsValid = containsLetter.test(ownerNameInput.trim());
-  const breedIsValid = containsLetter.test(breedInput.trim());
+  const breedIsValid = containsLetter.test(breedInput.trim()) && breedInput.trim().length <= MAX_BREED_LENGTH;
   const petFormIsValid = petNameIsValid && ownerNameIsValid && breedIsValid;
-  const placeIsValid = containsLetter.test(placeInput.trim());
+  const placeIsValid = containsLetter.test(placeInput.trim()) && placeInput.trim().length <= MAX_WALK_PLACE_LENGTH;
   const timeIsValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime);
   const walkFormIsValid = Boolean(selectedPetId && placeIsValid && timeIsValid);
 
@@ -863,6 +997,10 @@ export default function Home() {
     setLocation(locationDraft);
     setHasLocation(true);
     setTouchedFields({});
+    if (locationOpenedFromMenu) {
+      setLocationCloseTarget("walks");
+      return;
+    }
     setLocationOpenedFromMenu(false);
     setScreen("walks");
   }
@@ -872,11 +1010,7 @@ export default function Home() {
     setTouchedFields({});
 
     if (locationOpenedFromMenu) {
-      setLocationOpenedFromMenu(false);
-      setScreen("walks");
-      setAnimateMenuOpen(false);
-      setMenuClosing(false);
-      setMenuOpen(true);
+      setLocationCloseTarget("menu");
       return;
     }
 
@@ -886,9 +1020,22 @@ export default function Home() {
   function openLocationEditor() {
     setLocationDraft(location);
     setTouchedFields({});
+    setLocationCloseTarget(null);
     setLocationOpenedFromMenu(true);
     setMenuOpen(false);
     setScreen("location");
+  }
+
+  function completeLocationClose() {
+    const target = locationCloseTarget;
+    setLocationCloseTarget(null);
+    setLocationOpenedFromMenu(false);
+    setScreen("walks");
+    if (target === "menu") {
+      setAnimateMenuOpen(true);
+      setMenuClosing(false);
+      setMenuOpen(true);
+    }
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -908,22 +1055,57 @@ export default function Home() {
     setPhotoUrl(URL.createObjectURL(file));
   }
 
-  function leavePetScreen() {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(null);
-    setPhotoError("");
-    setPetSubmitError("");
-    setPetNameInput("");
-    setOwnerNameInput("");
-    setBreedInput("");
-    setPetBeingEdited(null);
-    setTouchedFields({});
-    if (petReturnTarget === "announce") {
-      setPetReturnTarget("my-pets");
+  function openFormScreen(nextScreen: FormScreen) {
+    setFormClosing(false);
+    setFormCloseTarget(null);
+    setScreen(nextScreen);
+  }
+
+  function beginFormClose(target: Screen) {
+    setFormCloseTarget(target);
+    setFormClosing(true);
+  }
+
+  function completeFormClose() {
+    const target = formCloseTarget;
+    if (!target) return;
+
+    if (screen === "pet") {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      setPhotoUrl(null);
+      setPhotoError("");
+      setPetSubmitError("");
+      setPetNameInput("");
+      setOwnerNameInput("");
+      setBreedInput("");
+      setPetBeingEdited(null);
+      setTouchedFields({});
+      if (target === "walks") {
+        setPetReturnTarget("my-pets");
+        setGuidedWalkFlow(false);
+      }
+    } else if (screen === "announce") {
+      setPlaceMenuOpen(false);
+      setScheduleType("today");
+      setWalkTime("");
+      setWalkComment("");
+      setPlaceInput("");
+      setTouchedFields({});
+      setWalkSubmitError("");
       setGuidedWalkFlow(false);
-      setScreen("walks");
+      if (target === "my-walks") setWalkBeingEdited(null);
+    }
+
+    setFormClosing(false);
+    setFormCloseTarget(null);
+    setScreen(target);
+  }
+
+  function leavePetScreen() {
+    if (petReturnTarget === "announce") {
+      beginFormClose("walks");
     } else {
-      setScreen("my-pets");
+      beginFormClose("my-pets");
     }
   }
 
@@ -938,7 +1120,7 @@ export default function Home() {
     setPetBeingEdited(null);
     setPetReturnTarget("my-pets");
     setGuidedWalkFlow(false);
-    setScreen("pet");
+    openFormScreen("pet");
   }
 
   function editPet(pet: Pet) {
@@ -952,7 +1134,7 @@ export default function Home() {
     setPetBeingEdited(pet);
     setPetReturnTarget("my-pets");
     setGuidedWalkFlow(false);
-    setScreen("pet");
+    openFormScreen("pet");
   }
 
   function startWalkAnnouncement() {
@@ -968,7 +1150,7 @@ export default function Home() {
     setScheduleType("today");
     setWalkTime("");
     setWalkComment("");
-    setScreen("announce");
+    openFormScreen("announce");
   }
 
   function editWalk(walk: ApiWalk) {
@@ -982,20 +1164,15 @@ export default function Home() {
     setScheduleType(walk.scheduleType);
     setWalkTime(walk.walkTime.slice(0, 5));
     setWalkComment(walk.comment?.slice(0, MAX_WALK_COMMENT_LENGTH) ?? "");
-    setScreen("announce");
+    openFormScreen("announce");
   }
 
   function leaveWalkScreen() {
-    setPlaceMenuOpen(false);
-    setTouchedFields({});
-    setWalkSubmitError("");
-    setGuidedWalkFlow(false);
     if (walkBeingEdited) {
-      setWalkBeingEdited(null);
-      setScreen("my-walks");
+      beginFormClose("my-walks");
       return;
     }
-    setScreen("walks");
+    beginFormClose("walks");
   }
 
   function continueToRequiredPet() {
@@ -1007,7 +1184,7 @@ export default function Home() {
     setPetBeingEdited(null);
     setPetReturnTarget("announce");
     setGuidedWalkFlow(true);
-    setScreen("pet");
+    openFormScreen("pet");
   }
 
   function updatePlaceInput(value: string) {
@@ -1028,15 +1205,27 @@ export default function Home() {
     setPlaceMenuOpen(false);
   }
 
+  function openCollectionScreen(nextScreen: "my-walks" | "my-pets") {
+    setScreen(nextScreen);
+    setCollectionClosing(false);
+    setMenuOpen(false);
+  }
+
   function returnToMenu() {
-    setScreen("walks");
+    setCollectionClosing(true);
+  }
+
+  function completeCollectionClose() {
     setAnimateMenuOpen(false);
     setMenuClosing(false);
     setMenuOpen(true);
+    setScreen("walks");
+    setCollectionClosing(false);
   }
 
   function openMenu() {
     setAnimateMenuOpen(true);
+    setMenuButtonClosing(false);
     setMenuClosing(false);
     setMenuOpen(true);
   }
@@ -1102,21 +1291,14 @@ export default function Home() {
       setPetSaved(true);
       const remainingLoaderTime = Math.max(600 - (Date.now() - savingStartedAt), 0);
       window.setTimeout(() => {
-        form.reset();
-        setPetNameInput("");
-        setOwnerNameInput("");
-        setBreedInput("");
-        setTouchedFields({});
-        setPhotoUrl(null);
-        setPetBeingEdited(null);
         setPetSaved(false);
         setPetSaving(false);
         if (returnTarget === "announce") {
           setPetReturnTarget("my-pets");
           setSelectedPetId(data.pet!.id);
-          setScreen("announce");
+          beginFormClose("announce");
         } else {
-          setScreen("my-pets");
+          beginFormClose("my-pets");
         }
       }, remainingLoaderTime);
     } catch (error) {
@@ -1139,7 +1321,7 @@ export default function Home() {
       setWalkSubmitError("");
       return;
     }
-    if (!containsLetter.test(submittedPlace)) {
+    if (!containsLetter.test(submittedPlace) || submittedPlace.length > MAX_WALK_PLACE_LENGTH) {
       touchField("walk-place");
       setWalkSubmitError("");
       return;
@@ -1192,18 +1374,10 @@ export default function Home() {
       setWalkSaved(true);
       const remainingLoaderTime = Math.max(600 - (Date.now() - savingStartedAt), 0);
       window.setTimeout(() => {
-        form.reset();
-        setScheduleType("today");
-        setWalkTime("");
-        setWalkComment("");
-        setPlaceInput("");
-        setPlaceMenuOpen(false);
-        setTouchedFields({});
         setWalkSaved(false);
         setWalkSaving(false);
         setGuidedWalkFlow(false);
-        setWalkBeingEdited(null);
-        setScreen(editedWalk ? "my-walks" : "walks");
+        beginFormClose(editedWalk ? "my-walks" : "walks");
       }, remainingLoaderTime);
     } catch (error) {
       setWalkSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
@@ -1302,7 +1476,12 @@ export default function Home() {
         )}
 
         {screen === "location" && (
-          <div className="screen form-screen location-screen">
+          <div
+            className={`screen form-screen location-screen ${locationOpenedFromMenu ? locationCloseTarget ? "location-exit-to-menu" : "location-enter-from-menu" : "location-default"}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && locationCloseTarget) completeLocationClose();
+            }}
+          >
             <button className="icon-button back-button" type="button" aria-label={locationOpenedFromMenu ? "Назад в меню" : "Назад"} onClick={leaveLocationScreen}>
               <ArrowLeft />
             </button>
@@ -1377,8 +1556,18 @@ export default function Home() {
                 <h1>Прогулки рядом</h1>
                 <p>Сегодня · {location.complex}</p>
               </div>
-              <button className="menu-button" type="button" aria-label="Открыть меню" aria-expanded={menuOpen} onClick={openMenu}>
-                <Menu />
+              <button
+                ref={closeButtonRef}
+                className={`menu-button menu-morph-button ${menuOpen && !menuButtonClosing ? "menu-morph-button--open" : ""} ${menuButtonClosing ? "menu-morph-button--closing" : ""}`}
+                type="button"
+                aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+                aria-expanded={menuOpen}
+                onClick={menuOpen ? closeMenu : openMenu}
+                onAnimationEnd={(event) => {
+                  if (event.animationName === "menu-frame-show") setMenuButtonClosing(false);
+                }}
+              >
+                <MenuMorphIcon />
               </button>
             </header>
 
@@ -1403,18 +1592,18 @@ export default function Home() {
                   <article className="walk-card" key={walk.id}>
                     <div className="walk-pet-visual">
                       <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
-                      <p className="walk-pet-breed"><Dog aria-hidden="true" /><span>{walk.breed}</span></p>
                     </div>
                     <div className="walk-info">
                       <h2>{walk.pet}</h2>
-                      <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" />{walk.owner}</p>
-                      <p><Clock3 className="time-icon" aria-hidden="true" />{walk.time}</p>
-                      <p><span className="walk-card-icon walk-card-icon--pin" aria-hidden="true" />{walk.point}</p>
+                      <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" /><span>{walk.owner}</span></p>
+                      <p><Clock3 className="time-icon" aria-hidden="true" /><span>{walk.time}</span></p>
+                      <p className="pet-meta breed" aria-label={`Порода: ${walk.breed}`}><Dog aria-hidden="true" /><span>{Array.from(walk.breed).slice(0, MAX_BREED_LENGTH).join("").trimEnd()}</span></p>
                     </div>
+                    <WalkPlace place={walk.point} />
                     {walk.comment && (
                       <p className="walk-comment">
                         <MessageCircle aria-hidden="true" />
-                        <span>{walk.comment}</span>
+                        <span>{Array.from(walk.comment).slice(0, MAX_WALK_META_LENGTH).join("").trimEnd()}</span>
                       </p>
                     )}
                   </article>
@@ -1440,17 +1629,16 @@ export default function Home() {
                 role="presentation"
                 onMouseDown={(event) => { if (event.target === event.currentTarget) closeMenu(); }}
                 onAnimationEnd={(event) => {
-                  if (event.target !== event.currentTarget || !menuClosing) return;
+                  if (event.target !== event.currentTarget || !menuClosing || event.animationName !== "menu-surface-out") return;
                   setMenuOpen(false);
                   setMenuClosing(false);
                 }}
               >
                 <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="menu-title">
                   <div className="drawer-header">
-                    <h1 id="menu-title">Меню</h1>
-                    <button ref={closeButtonRef} className="icon-button" type="button" aria-label="Закрыть меню" onClick={closeMenu}><X /></button>
+                    <h1 className="drawer-menu-content" id="menu-title">Меню</h1>
                   </div>
-                  <div className="drawer-body">
+                  <div className="drawer-body drawer-menu-content">
                     <p className="drawer-label">Сохранённая локация</p>
                     <button className="location-card" type="button" onClick={openLocationEditor}>
                       <span className="location-card-summary">
@@ -1467,12 +1655,12 @@ export default function Home() {
                       </span>
                     </button>
 
-                    <button className="drawer-link" type="button" onClick={() => { setMenuOpen(false); setScreen("my-walks"); }}>
+                    <button className="drawer-link" type="button" onClick={() => openCollectionScreen("my-walks")}>
                       <span className="drawer-link-icon"><CalendarDays aria-hidden="true" /></span>
                       <span>Мои прогулки</span>
                       <ChevronRight />
                     </button>
-                    <button className="drawer-link" type="button" onClick={() => { setMenuOpen(false); setScreen("my-pets"); }}>
+                    <button className="drawer-link" type="button" onClick={() => openCollectionScreen("my-pets")}>
                       <span className="drawer-link-icon"><span className="drawer-pets-icon" aria-hidden="true" /></span>
                       <span>Мои питомцы</span>
                       <ChevronRight />
@@ -1493,7 +1681,12 @@ export default function Home() {
         )}
 
         {screen === "my-walks" && (
-          <div className="screen collection-screen">
+          <div
+            className={`screen collection-screen ${collectionClosing ? "collection-screen--exit" : "collection-screen--enter"}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && collectionClosing) completeCollectionClose();
+            }}
+          >
             <button className="icon-button back-button" type="button" aria-label="Назад в меню" onClick={returnToMenu}>
               <ArrowLeft />
             </button>
@@ -1510,7 +1703,7 @@ export default function Home() {
                   <span className="collection-card-info">
                     <strong>{walk.pet}</strong>
                     <small className="collection-complex"><House aria-hidden="true" />{walk.complex}</small>
-                    <small className="collection-place"><MapPin aria-hidden="true" />{walk.point}</small>
+                    <small className="collection-place"><span className="walk-card-icon walk-card-icon--pin" aria-hidden="true" />{walk.point}</small>
                     <small className="collection-date"><CalendarDays aria-hidden="true" />{formatWalkDate(walk)} · {walk.walkTime}</small>
                   </span>
                   <span className="collection-card-actions">
@@ -1544,7 +1737,12 @@ export default function Home() {
         )}
 
         {screen === "my-pets" && (
-          <div className="screen collection-screen">
+          <div
+            className={`screen collection-screen ${collectionClosing ? "collection-screen--exit" : "collection-screen--enter"}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && collectionClosing) completeCollectionClose();
+            }}
+          >
             <button className="icon-button back-button" type="button" aria-label="Назад в меню" onClick={returnToMenu}>
               <ArrowLeft />
             </button>
@@ -1592,7 +1790,12 @@ export default function Home() {
         )}
 
         {screen === "pet" && (
-          <div className="screen form-screen pet-screen">
+          <div
+            className={`screen form-screen pet-screen animated-form-screen ${formClosing ? "animated-form-screen--exit" : "animated-form-screen--enter"}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && formClosing) completeFormClose();
+            }}
+          >
             {guidedWalkFlow && petReturnTarget === "announce" ? (
               <div className="guided-form-topbar">
                 <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={leavePetScreen}>
@@ -1669,7 +1872,7 @@ export default function Home() {
                   name="breed"
                   value={breedInput}
                   required
-                  maxLength={80}
+                  maxLength={MAX_BREED_LENGTH}
                   placeholder="Например, корги"
                   aria-invalid={Boolean(touchedFields["pet-breed"] && !breedIsValid)}
                   aria-describedby={touchedFields["pet-breed"] && !breedIsValid ? "pet-breed-hint" : undefined}
@@ -1694,7 +1897,12 @@ export default function Home() {
         )}
 
         {screen === "announce" && (
-          <div className="screen form-screen announce-screen">
+          <div
+            className={`screen form-screen announce-screen animated-form-screen ${formClosing ? "animated-form-screen--exit" : "animated-form-screen--enter"}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && formClosing) completeFormClose();
+            }}
+          >
             {guidedWalkFlow ? (
               <div className="guided-form-topbar">
                 <button className="icon-button back-button" type="button" aria-label="Назад к прогулкам" onClick={leaveWalkScreen}>
@@ -1746,7 +1954,7 @@ export default function Home() {
                     name="place"
                     value={placeInput}
                     required
-                    maxLength={100}
+                    maxLength={MAX_WALK_PLACE_LENGTH}
                     autoComplete="off"
                     role="combobox"
                     aria-autocomplete="list"
@@ -1795,7 +2003,13 @@ export default function Home() {
                   )}
                 </div>
                 {touchedFields["walk-place"] && !placeIsValid && (
-                  <p className="validation-hint" id="walk-place-hint">{placeInput.trim() ? "Название места должно содержать хотя бы одну букву" : "Укажите место прогулки"}</p>
+                  <p className="validation-hint" id="walk-place-hint">
+                    {placeInput.trim().length > MAX_WALK_PLACE_LENGTH
+                      ? `Название места должно содержать не более ${MAX_WALK_PLACE_LENGTH} символов`
+                      : placeInput.trim()
+                        ? "Название места должно содержать хотя бы одну букву"
+                        : "Укажите место прогулки"}
+                  </p>
                 )}
               </div>
               <fieldset className="schedule-field">
