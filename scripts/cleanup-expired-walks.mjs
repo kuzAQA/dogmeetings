@@ -61,6 +61,7 @@ async function deleteExpiredWalks() {
     const result = await client.query(`
       DELETE FROM walks
       WHERE walk_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date
+        AND schedule_type IN ('today', 'tomorrow')
     `);
 
     console.info(

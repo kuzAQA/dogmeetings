@@ -17,7 +17,7 @@ function normalizeName(value: FormDataEntryValue | null) {
   return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
 }
 
-type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt">;
+type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
 
 function publicPet(pet: PetSummary) {
   return {
@@ -25,8 +25,9 @@ function publicPet(pet: PetSummary) {
     name: pet.name,
     breed: pet.breed,
     ownerName: pet.ownerName,
-    photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}`,
-    createdAt: pet.createdAt.toISOString()
+    photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}&v=${pet.updatedAt.getTime()}`,
+    createdAt: pet.createdAt.toISOString(),
+    updatedAt: pet.updatedAt.toISOString()
   };
 }
 
@@ -54,7 +55,8 @@ export async function GET(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
-          createdAt: pets.createdAt
+          createdAt: pets.createdAt,
+          updatedAt: pets.updatedAt
         })
         .from(pets)
         .where(eq(pets.clientId, clientId))
@@ -126,10 +128,74 @@ export async function POST(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
-          createdAt: pets.createdAt
+          createdAt: pets.createdAt,
+          updatedAt: pets.updatedAt
         }));
 
     return Response.json({ pet: publicPet(pet) }, { status: 201 });
+  } catch (error) {
+    return Response.json({ error: errorMessage(error) }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const formData = await request.formData();
+    const petId = String(formData.get("petId") ?? "").trim();
+    const clientId = String(formData.get("clientId") ?? "").trim();
+    const name = normalizeName(formData.get("petName"));
+    const breed = String(formData.get("breed") ?? "").trim();
+    const ownerName = normalizeName(formData.get("ownerName"));
+    const photo = formData.get("photo");
+
+    if (!uuidPattern.test(petId) || !uuidPattern.test(clientId)) {
+      return Response.json({ error: "Некорректные данные питомца." }, { status: 400 });
+    }
+    if (!name || name.length > 40 || !containsLetter.test(name)) {
+      return Response.json({ error: "Укажите корректное имя питомца до 40 символов." }, { status: 400 });
+    }
+    if (!breed || breed.length > 80 || !containsLetter.test(breed)) {
+      return Response.json({ error: "Укажите корректную породу до 80 символов." }, { status: 400 });
+    }
+    if (!ownerName || ownerName.length > 60 || !containsLetter.test(ownerName)) {
+      return Response.json({ error: "Укажите корректное имя хозяина до 60 символов." }, { status: 400 });
+    }
+
+    const hasPhoto = photo instanceof File && photo.size > 0;
+    if (hasPhoto) {
+      if (!allowedPhotoTypes.has(photo.type)) {
+        return Response.json({ error: "Поддерживаются фотографии JPEG, PNG и WebP." }, { status: 400 });
+      }
+      if (photo.size > MAX_PHOTO_SIZE) {
+        return Response.json({ error: "Фотография после сжатия должна быть меньше 1 МБ." }, { status: 400 });
+      }
+    }
+
+    const updatedAt = new Date();
+    const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, updatedAt };
+    if (hasPhoto) {
+      values.photo = Buffer.from(await photo.arrayBuffer());
+      values.photoType = photo.type;
+    }
+
+    const [pet] = await withDb((db) => db
+      .update(pets)
+      .set(values)
+      .where(and(eq(pets.id, petId), eq(pets.clientId, clientId)))
+      .returning({
+        id: pets.id,
+        name: pets.name,
+        breed: pets.breed,
+        ownerName: pets.ownerName,
+        createdAt: pets.createdAt,
+        updatedAt: pets.updatedAt
+      }));
+
+    if (!pet) {
+      return Response.json({ error: "Питомец не найден." }, { status: 404 });
+    }
+
+    return Response.json({ pet: publicPet(pet) });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: 500 });
   }

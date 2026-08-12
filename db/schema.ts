@@ -17,7 +17,8 @@ export const pets = pgTable(
     ownerName: varchar("owner_name", { length: 60 }).notNull(),
     photo: bytea("photo"),
     photoType: varchar("photo_type", { length: 50 }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     index("pets_created_at_idx").on(table.createdAt),

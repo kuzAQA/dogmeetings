@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         status: 302,
         headers: {
           "Location": new URL("/dog-placeholder.webp", request.url).toString(),
-          "Cache-Control": "public, max-age=86400"
+          "Cache-Control": "private, no-cache, must-revalidate"
         }
       });
     }
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return new Response(new Uint8Array(pet.photo), {
       headers: {
         "Content-Type": pet.photoType,
-        "Cache-Control": "public, max-age=86400"
+        "Cache-Control": "private, no-cache, must-revalidate"
       }
     });
   } catch {

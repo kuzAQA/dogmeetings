@@ -699,11 +699,14 @@ strong {
 }
 
 .dog-avatar {
-  width: 94px;
-  height: 94px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   object-fit: cover;
   background: #e5e1cc;
+  box-shadow:
+    0 0 15px 3px rgba(40, 112, 67, 0.22),
+    0 0 28px 7px rgba(232, 199, 91, 0.26);
 }
 
 .walk-pet-visual {
@@ -711,7 +714,7 @@ strong {
   width: 100%;
   min-width: 0;
   align-self: stretch;
-  align-content: end;
+  align-content: space-between;
   justify-items: center;
   gap: var(--space-2);
 }
@@ -749,15 +752,15 @@ strong {
   min-width: 0;
   align-self: stretch;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: var(--space-2);
 }
 
 .walk-info h2 {
   min-width: 0;
+  margin-bottom: auto;
   overflow: hidden;
-  margin-bottom: 6px;
-  font-size: var(--card-title-size);
+  font-size: calc(var(--card-title-size) + 0.14rem);
   line-height: var(--line-tight);
   text-indent: -0.04em;
   text-overflow: ellipsis;
@@ -1162,6 +1165,9 @@ strong {
   height: 52px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow:
+    0 0 10px 2px rgba(40, 112, 67, 0.22),
+    0 0 18px 4px rgba(232, 199, 91, 0.26);
 }
 
 .menu-pet > span {
@@ -1221,6 +1227,9 @@ strong {
   height: 50px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow:
+    0 0 10px 2px rgba(40, 112, 67, 0.22),
+    0 0 18px 4px rgba(232, 199, 91, 0.26);
 }
 
 .menu-walk-info {
@@ -1280,6 +1289,7 @@ strong {
   height: 18px;
 }
 
+.edit-pet-button,
 .delete-pet-button {
   display: grid;
   width: 40px;
@@ -1292,6 +1302,7 @@ strong {
   cursor: pointer;
 }
 
+.edit-pet-button svg,
 .delete-pet-button svg {
   width: 20px;
   height: 20px;
@@ -1532,7 +1543,7 @@ strong {
 }
 
 .collection-pet {
-  grid-template-columns: 62px minmax(0, 1fr) 40px;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
 }
 
 .collection-walk {
@@ -1546,6 +1557,9 @@ strong {
   height: 62px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow:
+    0 0 11px 2px rgba(40, 112, 67, 0.22),
+    0 0 21px 5px rgba(232, 199, 91, 0.26);
 }
 
 .collection-card-info {
@@ -1983,6 +1997,51 @@ strong {
   aspect-ratio: 1;
   margin-bottom: var(--space-5);
   gap: var(--space-2);
+  box-shadow:
+    0 0 26px 8px rgba(40, 112, 67, 0.25),
+    0 0 52px 15px rgba(232, 199, 91, 0.3);
+}
+
+.pet-screen .photo-upload::before {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 9px 16px rgba(26, 53, 35, 0.25),
+    inset 6px 0 12px rgba(34, 68, 45, 0.1),
+    inset -6px 0 12px rgba(34, 68, 45, 0.1),
+    inset 0 -6px 11px rgba(255, 255, 255, 0.42),
+    inset 0 0 0 1px rgba(31, 76, 49, 0.2);
+  content: "";
+  pointer-events: none;
+}
+
+.pet-screen .photo-upload.has-photo.is-editing::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(27, 38, 30, 0.36);
+  content: "";
+  pointer-events: none;
+}
+
+.pet-screen .photo-upload.has-photo .photo-edit-hint {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  padding: 14%;
+  place-items: center;
+  color: #fff;
+  font-size: var(--caption-text-size);
+  font-weight: var(--font-semibold);
+  line-height: var(--line-compact);
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+  white-space: normal;
 }
 
 .pet-screen .photo-upload svg {
@@ -2048,7 +2107,7 @@ textarea:focus-visible,
     gap: var(--card-content-gap);
     padding: var(--space-2) var(--space-3);
   }
-  .dog-avatar { width: 82px; height: 82px; }
+  .dog-avatar { width: 78px; height: 78px; }
   .walk-info p:not(.owner) { font-size: var(--small-text-size); }
 }
 
@@ -2188,6 +2247,7 @@ textarea:focus-visible,
   .pet-screen .photo-upload svg { width: 26px; height: 26px; }
   .pet-screen .photo-upload span { font-size: var(--caption-text-size); }
   .pet-screen .photo-upload small { font-size: var(--caption-text-size); }
+  .pet-screen .photo-upload.has-photo .photo-edit-hint { font-size: 0.66rem; }
   .pet-screen .text-field {
     gap: var(--field-label-gap);
     margin-bottom: var(--field-spacing);

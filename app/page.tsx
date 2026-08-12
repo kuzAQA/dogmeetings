@@ -55,6 +55,7 @@ type Pet = {
   ownerName: string;
   photoUrl: string;
   createdAt: string;
+  updatedAt: string;
 };
 
 type SharedPlace = {
@@ -585,6 +586,7 @@ export default function Home() {
   const [breedInput, setBreedInput] = useState("");
   const [savedPets, setSavedPets] = useState<Pet[]>([]);
   const [petsLoaded, setPetsLoaded] = useState(false);
+  const [petBeingEdited, setPetBeingEdited] = useState<Pet | null>(null);
   const [petReturnTarget, setPetReturnTarget] = useState<PetReturnTarget>("my-pets");
   const [guidedWalkFlow, setGuidedWalkFlow] = useState(false);
   const [showPetRequiredPopup, setShowPetRequiredPopup] = useState(false);
@@ -914,6 +916,7 @@ export default function Home() {
     setPetNameInput("");
     setOwnerNameInput("");
     setBreedInput("");
+    setPetBeingEdited(null);
     setTouchedFields({});
     if (petReturnTarget === "announce") {
       setPetReturnTarget("my-pets");
@@ -922,6 +925,34 @@ export default function Home() {
     } else {
       setScreen("my-pets");
     }
+  }
+
+  function addPet() {
+    setTouchedFields({});
+    setPetSubmitError("");
+    setPhotoError("");
+    setPhotoUrl(null);
+    setPetNameInput("");
+    setOwnerNameInput("");
+    setBreedInput("");
+    setPetBeingEdited(null);
+    setPetReturnTarget("my-pets");
+    setGuidedWalkFlow(false);
+    setScreen("pet");
+  }
+
+  function editPet(pet: Pet) {
+    setTouchedFields({});
+    setPetSubmitError("");
+    setPhotoError("");
+    setPhotoUrl(pet.photoUrl);
+    setPetNameInput(pet.name);
+    setOwnerNameInput(pet.ownerName);
+    setBreedInput(pet.breed);
+    setPetBeingEdited(pet);
+    setPetReturnTarget("my-pets");
+    setGuidedWalkFlow(false);
+    setScreen("pet");
   }
 
   function startWalkAnnouncement() {
@@ -973,6 +1004,7 @@ export default function Home() {
     setPetNameInput("");
     setOwnerNameInput("");
     setBreedInput("");
+    setPetBeingEdited(null);
     setPetReturnTarget("announce");
     setGuidedWalkFlow(true);
     setScreen("pet");
@@ -1015,6 +1047,7 @@ export default function Home() {
     const formData = new FormData(form);
     const savingStartedAt = Date.now();
     const returnTarget = petReturnTarget;
+    const editedPet = petBeingEdited;
     if (photoError) return;
 
     setPetSubmitError("");
@@ -1041,8 +1074,9 @@ export default function Home() {
         formData.delete("photo");
       }
       formData.set("clientId", clientId);
+      if (editedPet) formData.set("petId", editedPet.id);
       const response = await fetch("/api/pets", {
-        method: "POST",
+        method: editedPet ? "PATCH" : "POST",
         body: formData
       });
       const data = await response.json() as { pet?: Pet; error?: string };
@@ -1051,6 +1085,20 @@ export default function Home() {
       }
 
       setSavedPets((current) => [data.pet!, ...current.filter((pet) => pet.id !== data.pet!.id)]);
+      setSavedWalks((current) => current.map((walk) => walk.petId === data.pet!.id ? {
+        ...walk,
+        pet: data.pet!.name,
+        breed: data.pet!.breed,
+        owner: data.pet!.ownerName,
+        image: data.pet!.photoUrl
+      } : walk));
+      setMyWalks((current) => current.map((walk) => walk.petId === data.pet!.id ? {
+        ...walk,
+        pet: data.pet!.name,
+        breed: data.pet!.breed,
+        owner: data.pet!.ownerName,
+        image: data.pet!.photoUrl
+      } : walk));
       setPetSaved(true);
       const remainingLoaderTime = Math.max(600 - (Date.now() - savingStartedAt), 0);
       window.setTimeout(() => {
@@ -1060,6 +1108,7 @@ export default function Home() {
         setBreedInput("");
         setTouchedFields({});
         setPhotoUrl(null);
+        setPetBeingEdited(null);
         setPetSaved(false);
         setPetSaving(false);
         if (returnTarget === "announce") {
@@ -1512,20 +1561,30 @@ export default function Home() {
                     <small><Dog aria-hidden="true" />{pet.breed}</small>
                     <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
                   </span>
-                  <button
-                    className="delete-pet-button"
-                    type="button"
-                    aria-label={`Удалить питомца ${pet.name}`}
-                    onClick={() => { setPetDeleteError(""); setPetPendingDelete(pet); }}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </button>
+                  <span className="collection-card-actions">
+                    <button
+                      className="edit-pet-button"
+                      type="button"
+                      aria-label={`Редактировать питомца ${pet.name}`}
+                      onClick={() => editPet(pet)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </button>
+                    <button
+                      className="delete-pet-button"
+                      type="button"
+                      aria-label={`Удалить питомца ${pet.name}`}
+                      onClick={() => { setPetDeleteError(""); setPetPendingDelete(pet); }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </button>
+                  </span>
                 </article>
               )) : (
                 <p className="collection-empty">У вас пока нет добавленных питомцев</p>
               )}
             </div>
-            <button className="primary-button floating-pet-button" type="button" onClick={() => { setTouchedFields({}); setPetNameInput(""); setOwnerNameInput(""); setBreedInput(""); setPetReturnTarget("my-pets"); setGuidedWalkFlow(false); setScreen("pet"); }}>
+            <button className="primary-button floating-pet-button" type="button" onClick={addPet}>
               <Plus aria-hidden="true" />
               Добавить питомца
             </button>
@@ -1547,15 +1606,24 @@ export default function Home() {
               </button>
             )}
             <div className="screen-heading">
-              <h1>Добавить питомца</h1>
-              <p>Расскажите немного о вашем друге</p>
+              <h1>{petBeingEdited ? "Редактировать питомца" : "Добавить питомца"}</h1>
+              <p>{petBeingEdited ? "Обновите информацию о вашем друге" : "Расскажите немного о вашем друге"}</p>
             </div>
             <form className="pet-form" onSubmit={savePet} aria-busy={petSaving} noValidate>
-              <label className={`photo-upload ${photoUrl ? "has-photo" : ""}`}>
-                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} />
+              <label className={`photo-upload ${photoUrl ? "has-photo" : ""} ${petBeingEdited ? "is-editing" : ""}`}>
+                <input
+                  name="photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-label={petBeingEdited ? "Выбрать новую фотографию питомца" : "Добавить фотографию питомца"}
+                  onChange={handlePhoto}
+                />
                 {photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photoUrl} alt="Предпросмотр фотографии питомца" />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoUrl} alt="Предпросмотр фотографии питомца" />
+                    {petBeingEdited && <span className="photo-edit-hint">Нажмите, чтобы изменить фото</span>}
+                  </>
                 ) : (
                   <><Camera aria-hidden="true" /><span>Добавить фото</span><small>Необязательно</small></>
                 )}
@@ -1613,7 +1681,7 @@ export default function Home() {
                 )}
               </label>
               <button className="primary-button form-submit" type="submit" disabled={!petFormIsValid || petSaving || petSaved}>
-                {petSaved ? <><CheckCircle2 /> Питомец добавлен</> : petSaving ? "Сжимаем и сохраняем…" : "Сохранить"}
+                {petSaved ? <><CheckCircle2 /> {petBeingEdited ? "Изменения сохранены" : "Питомец добавлен"}</> : petSaving ? "Сжимаем и сохраняем…" : "Сохранить"}
               </button>
             </form>
             {petSaving && (
