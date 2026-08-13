@@ -18,7 +18,7 @@ import {
   UserRound
 } from "lucide-react";
 import Image from "next/image";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Screen = "welcome" | "location" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
 type Period = "Все" | "Утро" | "День" | "Вечер";
@@ -92,6 +92,11 @@ type ApiWalk = {
   image: string;
 };
 
+type SessionBootstrapData = {
+  hasLocation: boolean;
+  location: Location | null;
+};
+
 const STORAGE_KEY = "dogwalk.location.v1";
 const HAS_LOCATION_KEY = "dogwalk.hasLocation.v1";
 const CLIENT_ID_KEY = "dogwalk.clientId.v1";
@@ -126,64 +131,101 @@ const defaultLocation: Location = {
   complex: ""
 };
 
-function getInitialLocation(): Location {
-  if (typeof window === "undefined") return defaultLocation;
-
+function readLegacySessionData() {
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const storedLocation = stored ? JSON.parse(stored) as Partial<Location> : {};
+    const legacyClientId = window.localStorage.getItem(CLIENT_ID_KEY) ?? "";
+    const storedLocation = window.localStorage.getItem(STORAGE_KEY);
+    const parsedLocation = storedLocation ? JSON.parse(storedLocation) as Partial<Location> : null;
+    const legacyLocation = parsedLocation ? {
+      city: parsedLocation.city?.trim() ?? "",
+      district: parsedLocation.district?.trim() ?? "",
+      complex: parsedLocation.complex?.trim() ?? ""
+    } : null;
+
     return {
-      city: storedLocation.city?.trim() || defaultLocation.city,
-      district: storedLocation.district?.trim() || defaultLocation.district,
-      complex: storedLocation.complex?.trim() || ""
+      legacyClientId: uuidPattern.test(legacyClientId) ? legacyClientId : undefined,
+      legacyLocation,
+      legacyHasLocation: window.localStorage.getItem(HAS_LOCATION_KEY) === "true"
     };
   } catch {
-    return defaultLocation;
+    return {};
   }
 }
 
-function getInitialHasLocation() {
-  if (typeof window === "undefined") return false;
-
+function clearLegacySessionData() {
   try {
-    const stored = window.localStorage.getItem(HAS_LOCATION_KEY);
-    if (stored === null) {
-      window.localStorage.setItem(HAS_LOCATION_KEY, "false");
-      return false;
-    }
-    return stored === "true";
+    window.localStorage.removeItem(CLIENT_ID_KEY);
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(HAS_LOCATION_KEY);
   } catch {
-    return false;
+    // Работа с сайтом уже продолжается через HttpOnly cookie.
   }
 }
 
-function getOrCreateClientId() {
-  if (typeof window === "undefined") return "";
+let sessionBootstrapPromise: Promise<SessionBootstrapData> | null = null;
 
-  try {
-    const stored = window.localStorage.getItem(CLIENT_ID_KEY);
-    if (stored && uuidPattern.test(stored)) return stored;
-
-    const clientId = window.crypto.randomUUID();
-    window.localStorage.setItem(CLIENT_ID_KEY, clientId);
-    return clientId;
-  } catch {
-    return "";
+async function postSessionBootstrap(body: object) {
+  const response = await fetch("/api/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json() as Partial<SessionBootstrapData> & { error?: string };
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(data.error || "Не удалось восстановить безопасную сессию."),
+      { status: response.status }
+    );
   }
+  return {
+    hasLocation: Boolean(data.hasLocation),
+    location: data.location ?? null
+  };
 }
 
-function subscribeToActiveScreen() {
-  return () => undefined;
+async function getSessionBootstrap() {
+  const response = await fetch("/api/session", { cache: "no-store" });
+  const data = await response.json() as Partial<SessionBootstrapData> & { error?: string };
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(data.error || "Не удалось восстановить безопасную сессию."),
+      { status: response.status }
+    );
+  }
+  return {
+    hasLocation: Boolean(data.hasLocation),
+    location: data.location ?? null
+  };
 }
 
-function getActiveScreenSnapshot(): Screen {
-  if (typeof window === "undefined") return "welcome";
+function bootstrapSession() {
+  if (!sessionBootstrapPromise) {
+    sessionBootstrapPromise = getSessionBootstrap()
+      .catch(async (error: Error & { status?: number }) => {
+        if (error.status !== 401) throw error;
 
-  try {
-    return window.localStorage.getItem(HAS_LOCATION_KEY) === "true" ? "walks" : "welcome";
-  } catch {
-    return "welcome";
+        try {
+          await postSessionBootstrap(readLegacySessionData());
+        } catch (migrationError) {
+          if ((migrationError as Error & { status?: number }).status !== 409) throw migrationError;
+          await new Promise((resolve) => window.setTimeout(resolve, 100));
+        }
+
+        try {
+          return await getSessionBootstrap();
+        } catch (verificationError) {
+          if ((verificationError as Error & { status?: number }).status === 401) {
+            throw new Error("Браузер не сохранил cookie. Разрешите cookie для этого сайта и повторите попытку.");
+          }
+          throw verificationError;
+        }
+      })
+      .catch((error) => {
+        sessionBootstrapPromise = null;
+        throw error;
+      });
   }
+  return sessionBootstrapPromise;
 }
 
 function apiWalkToCard(walk: ApiWalk): Walk {
@@ -682,20 +724,18 @@ async function compressPetPhoto(file: File) {
 }
 
 export default function Home() {
-  const restoredScreen = useSyncExternalStore<Screen | null>(
-    subscribeToActiveScreen,
-    getActiveScreenSnapshot,
-    () => null
-  );
-  const [selectedScreen, setScreen] = useState<Screen | null>(null);
-  const screen = selectedScreen ?? restoredScreen;
-  const [location, setLocation] = useState<Location>(getInitialLocation);
-  const [locationDraft, setLocationDraft] = useState<Location>(getInitialLocation);
+  const [screen, setScreen] = useState<Screen | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+  const [sessionAttempt, setSessionAttempt] = useState(0);
+  const [location, setLocation] = useState<Location>(defaultLocation);
+  const [locationDraft, setLocationDraft] = useState<Location>(defaultLocation);
   const [availableLocations, setAvailableLocations] = useState<AvailableLocation[]>([]);
   const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [locationsError, setLocationsError] = useState("");
-  const [hasLocation, setHasLocation] = useState(getInitialHasLocation);
-  const [clientId] = useState(getOrCreateClientId);
+  const [hasLocation, setHasLocation] = useState(false);
+  const [locationSaving, setLocationSaving] = useState(false);
+  const [locationSubmitError, setLocationSubmitError] = useState("");
   const [period, setPeriod] = useState<Period>("Все");
   const [displayedPeriod, setDisplayedPeriod] = useState<Period>("Все");
   const [filterMotion, setFilterMotion] = useState<FilterMotion>("idle");
@@ -762,6 +802,31 @@ export default function Home() {
   useEffect(() => {
     let active = true;
 
+    bootstrapSession()
+      .then((data) => {
+        if (!active) return;
+
+        const restoredLocation = data.hasLocation && data.location
+          ? data.location
+          : defaultLocation;
+        setLocation(restoredLocation);
+        setLocationDraft(restoredLocation);
+        setHasLocation(Boolean(data.hasLocation && data.location));
+        setScreen(data.hasLocation && data.location ? "walks" : "welcome");
+        setSessionReady(true);
+        clearLegacySessionData();
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSessionError(error instanceof Error ? error.message : "Не удалось восстановить безопасную сессию.");
+      });
+
+    return () => { active = false; };
+  }, [sessionAttempt]);
+
+  useEffect(() => {
+    let active = true;
+
     fetch("/api/locations")
       .then(async (response) => {
         const data = await response.json() as { locations?: AvailableLocation[]; error?: string };
@@ -783,11 +848,9 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
+    if (!sessionReady) return;
 
-    if (!clientId) return;
-
-    const params = new URLSearchParams({ clientId });
-    fetch(`/api/pets?${params}`)
+    fetch("/api/pets")
       .then(async (response) => {
         if (!response.ok) return;
         const data = await response.json() as { pets?: Pet[] };
@@ -797,14 +860,13 @@ export default function Home() {
       .finally(() => { if (active) setPetsLoaded(true); });
 
     return () => { active = false; };
-  }, [clientId]);
+  }, [sessionReady]);
 
   useEffect(() => {
     let active = true;
-    if (!clientId) return;
+    if (!sessionReady) return;
 
-    const params = new URLSearchParams({ clientId });
-    fetch(`/api/walks?${params}`)
+    fetch("/api/walks?scope=mine")
       .then(async (response) => {
         if (!response.ok) return;
         const data = await response.json() as { walks?: ApiWalk[] };
@@ -814,11 +876,11 @@ export default function Home() {
       .finally(() => { if (active) setMyWalksLoaded(true); });
 
     return () => { active = false; };
-  }, [clientId]);
+  }, [sessionReady]);
 
   useEffect(() => {
     let active = true;
-    if (!location.city || !location.district || !location.complex) {
+    if (!sessionReady || !location.city || !location.district || !location.complex) {
       return;
     }
     const params = new URLSearchParams({
@@ -837,11 +899,11 @@ export default function Home() {
       .finally(() => { if (active) setWalksLoaded(true); });
 
     return () => { active = false; };
-  }, [location.city, location.district, location.complex]);
+  }, [sessionReady, location.city, location.district, location.complex]);
 
   useEffect(() => {
     let active = true;
-    if (!location.city || !location.district || !location.complex) {
+    if (!sessionReady || !location.city || !location.district || !location.complex) {
       return;
     }
     const params = new URLSearchParams({
@@ -860,7 +922,7 @@ export default function Home() {
       .finally(() => { if (active) setPlacesLoaded(true); });
 
     return () => { active = false; };
-  }, [location.city, location.district, location.complex]);
+  }, [sessionReady, location.city, location.district, location.complex]);
 
   useEffect(() => {
     if (!menuOpen && !walkPendingDelete && !petPendingDelete) return;
@@ -971,7 +1033,7 @@ export default function Home() {
     filterTimersRef.current = [exitTimer];
   }
 
-  function saveLocation(event: FormEvent<HTMLFormElement>) {
+  async function saveLocation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!locationFormIsValid) {
       setTouchedFields((current) => ({
@@ -982,27 +1044,50 @@ export default function Home() {
       }));
       return;
     }
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(locationDraft));
-    window.localStorage.setItem(HAS_LOCATION_KEY, "true");
-    if (
-      location.city !== locationDraft.city ||
-      location.district !== locationDraft.district ||
-      location.complex !== locationDraft.complex
-    ) {
-      setWalksLoaded(false);
-      setSavedWalks([]);
-      setPlacesLoaded(false);
-      setSharedPlaces([]);
+    setLocationSaving(true);
+    setLocationSubmitError("");
+
+    try {
+      const response = await fetch("/api/session", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: locationDraft })
+      });
+      const data = await response.json() as {
+        location?: Location | null;
+        hasLocation?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !data.hasLocation || !data.location) {
+        throw new Error(data.error || "Не удалось сохранить локацию.");
+      }
+
+      const savedLocation = data.location;
+      if (
+        location.city !== savedLocation.city ||
+        location.district !== savedLocation.district ||
+        location.complex !== savedLocation.complex
+      ) {
+        setWalksLoaded(false);
+        setSavedWalks([]);
+        setPlacesLoaded(false);
+        setSharedPlaces([]);
+      }
+      setLocation(savedLocation);
+      setLocationDraft(savedLocation);
+      setHasLocation(true);
+      setTouchedFields({});
+      if (locationOpenedFromMenu) {
+        setLocationCloseTarget("walks");
+        return;
+      }
+      setLocationOpenedFromMenu(false);
+      setScreen("walks");
+    } catch (error) {
+      setLocationSubmitError(error instanceof Error ? error.message : "Не удалось сохранить локацию.");
+    } finally {
+      setLocationSaving(false);
     }
-    setLocation(locationDraft);
-    setHasLocation(true);
-    setTouchedFields({});
-    if (locationOpenedFromMenu) {
-      setLocationCloseTarget("walks");
-      return;
-    }
-    setLocationOpenedFromMenu(false);
-    setScreen("walks");
   }
 
   function leaveLocationScreen() {
@@ -1028,14 +1113,18 @@ export default function Home() {
 
   function completeLocationClose() {
     const target = locationCloseTarget;
+    if (target === "menu") {
+      setAnimateMenuOpen(false);
+      setMenuClosing(false);
+      setMenuButtonClosing(false);
+      setMenuOpen(true);
+      setScreen("walks");
+    } else if (target === "walks") {
+      setMenuOpen(false);
+      setScreen("walks");
+    }
     setLocationCloseTarget(null);
     setLocationOpenedFromMenu(false);
-    setScreen("walks");
-    if (target === "menu") {
-      setAnimateMenuOpen(true);
-      setMenuClosing(false);
-      setMenuOpen(true);
-    }
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -1218,6 +1307,7 @@ export default function Home() {
   function completeCollectionClose() {
     setAnimateMenuOpen(false);
     setMenuClosing(false);
+    setMenuButtonClosing(false);
     setMenuOpen(true);
     setScreen("walks");
     setCollectionClosing(false);
@@ -1262,7 +1352,6 @@ export default function Home() {
       } else {
         formData.delete("photo");
       }
-      formData.set("clientId", clientId);
       if (editedPet) formData.set("petId", editedPet.id);
       const response = await fetch("/api/pets", {
         method: editedPet ? "PATCH" : "POST",
@@ -1347,8 +1436,7 @@ export default function Home() {
           walkTime: submittedWalkTime,
           city: editedWalk?.city ?? location.city,
           district: editedWalk?.district ?? location.district,
-          complex: editedWalk?.complex ?? location.complex,
-          clientId
+          complex: editedWalk?.complex ?? location.complex
         })
       });
       const data = await response.json() as { walk?: ApiWalk; error?: string };
@@ -1394,7 +1482,7 @@ export default function Home() {
       const response = await fetch("/api/walks", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walkId: walkPendingDelete.id, clientId })
+        body: JSON.stringify({ walkId: walkPendingDelete.id })
       });
       const data = await response.json() as { deleted?: boolean; error?: string };
       if (!response.ok || !data.deleted) {
@@ -1421,7 +1509,7 @@ export default function Home() {
       const response = await fetch("/api/pets", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ petId: petPendingDelete.id, clientId })
+        body: JSON.stringify({ petId: petPendingDelete.id })
       });
       const data = await response.json() as { deleted?: boolean; error?: string };
       if (!response.ok || !data.deleted) {
@@ -1444,7 +1532,20 @@ export default function Home() {
     return (
       <main className="page-shell">
         <section className="app-shell restoring-shell" aria-label="Сервис совместных прогулок" aria-busy="true">
-          <span className="visually-hidden" role="status">Восстанавливаем сохранённую страницу</span>
+          {sessionError ? (
+            <div className="session-error" role="alert">
+              <p>{sessionError}</p>
+              <button className="primary-button" type="button" onClick={() => {
+                setSessionError("");
+                sessionBootstrapPromise = null;
+                setSessionAttempt((value) => value + 1);
+              }}>
+                Повторить
+              </button>
+            </div>
+          ) : (
+            <span className="visually-hidden" role="status">Восстанавливаем безопасную сессию</span>
+          )}
         </section>
       </main>
     );
@@ -1477,9 +1578,13 @@ export default function Home() {
 
         {screen === "location" && (
           <div
-            className={`screen form-screen location-screen ${locationOpenedFromMenu ? locationCloseTarget ? "location-exit-to-menu" : "location-enter-from-menu" : "location-default"}`}
+            className={`screen form-screen location-screen ${locationOpenedFromMenu ? `subpage-screen-motion ${locationCloseTarget ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}` : "location-default"}`}
             onAnimationEnd={(event) => {
-              if (event.target === event.currentTarget && locationCloseTarget) completeLocationClose();
+              if (
+                event.target === event.currentTarget &&
+                event.animationName === "subpage-screen-exit" &&
+                locationCloseTarget
+              ) completeLocationClose();
             }}
           >
             <button className="icon-button back-button" type="button" aria-label={locationOpenedFromMenu ? "Назад в меню" : "Назад"} onClick={leaveLocationScreen}>
@@ -1541,9 +1646,9 @@ export default function Home() {
                 />
                 {touchedFields["location-complex"] && !locationDraft.complex && <p className="validation-hint" id="location-complex-hint">Выберите жилой комплекс</p>}
               </div>
-              {locationsError && <p className="error-message" role="alert">{locationsError}</p>}
-              <button className="primary-button form-submit" type="submit" disabled={!locationFormIsValid}>
-                {hasLocation ? "Сохранить" : "Далее"}
+              {(locationsError || locationSubmitError) && <p className="error-message" role="alert">{locationsError || locationSubmitError}</p>}
+              <button className="primary-button form-submit" type="submit" disabled={!locationFormIsValid || locationSaving}>
+                {locationSaving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Далее"}
               </button>
             </form>
           </div>
@@ -1558,7 +1663,7 @@ export default function Home() {
               </div>
               <button
                 ref={closeButtonRef}
-                className={`menu-button menu-morph-button ${menuOpen && !menuButtonClosing ? "menu-morph-button--open" : ""} ${menuButtonClosing ? "menu-morph-button--closing" : ""}`}
+                className={`menu-button menu-morph-button ${menuOpen && !menuButtonClosing ? "menu-morph-button--open" : ""} ${menuButtonClosing ? "menu-morph-button--closing" : ""} ${menuOpen && !animateMenuOpen && !menuClosing && !menuButtonClosing ? "menu-morph-button--instant-open" : ""}`}
                 type="button"
                 aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
                 aria-expanded={menuOpen}
@@ -1682,9 +1787,13 @@ export default function Home() {
 
         {screen === "my-walks" && (
           <div
-            className={`screen collection-screen ${collectionClosing ? "collection-screen--exit" : "collection-screen--enter"}`}
+            className={`screen collection-screen subpage-screen-motion ${collectionClosing ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}`}
             onAnimationEnd={(event) => {
-              if (event.target === event.currentTarget && collectionClosing) completeCollectionClose();
+              if (
+                event.target === event.currentTarget &&
+                event.animationName === "subpage-screen-exit" &&
+                collectionClosing
+              ) completeCollectionClose();
             }}
           >
             <button className="icon-button back-button" type="button" aria-label="Назад в меню" onClick={returnToMenu}>
@@ -1738,9 +1847,13 @@ export default function Home() {
 
         {screen === "my-pets" && (
           <div
-            className={`screen collection-screen ${collectionClosing ? "collection-screen--exit" : "collection-screen--enter"}`}
+            className={`screen collection-screen subpage-screen-motion ${collectionClosing ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}`}
             onAnimationEnd={(event) => {
-              if (event.target === event.currentTarget && collectionClosing) completeCollectionClose();
+              if (
+                event.target === event.currentTarget &&
+                event.animationName === "subpage-screen-exit" &&
+                collectionClosing
+              ) completeCollectionClose();
             }}
           >
             <button className="icon-button back-button" type="button" aria-label="Назад в меню" onClick={returnToMenu}>

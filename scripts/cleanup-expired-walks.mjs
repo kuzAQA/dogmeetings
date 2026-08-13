@@ -49,7 +49,7 @@ function formatMoscowDateTime(value) {
   }).format(value);
 }
 
-async function deleteExpiredWalks() {
+async function cleanupExpiredData() {
   const client = new Client({
     connectionString: connectionString(),
     connectionTimeoutMillis: 5000
@@ -58,14 +58,18 @@ async function deleteExpiredWalks() {
   await client.connect();
 
   try {
-    const result = await client.query(`
+    const walksResult = await client.query(`
       DELETE FROM walks
       WHERE walk_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date
         AND schedule_type IN ('today', 'tomorrow')
     `);
+    const sessionsResult = await client.query(`
+      DELETE FROM client_sessions
+      WHERE expires_at < CURRENT_TIMESTAMP
+    `);
 
     console.info(
-      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${result.rowCount ?? 0}`
+      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${walksResult.rowCount ?? 0}, истёкших сессий — ${sessionsResult.rowCount ?? 0}`
     );
   } finally {
     await client.end();
@@ -82,7 +86,7 @@ function scheduleNextRun() {
 
 async function runAndSchedule() {
   try {
-    await deleteExpiredWalks();
+    await cleanupExpiredData();
     scheduleNextRun();
   } catch (error) {
     console.error("[walk-cleanup] Не удалось удалить устаревшие прогулки. Повтор через 5 минут.", error);
@@ -100,7 +104,7 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
 if (runOnce) {
-  deleteExpiredWalks().catch((error) => {
+  cleanupExpiredData().catch((error) => {
     console.error("[walk-cleanup] Не удалось удалить устаревшие прогулки.", error);
     process.exitCode = 1;
   });

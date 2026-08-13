@@ -156,11 +156,6 @@ input::placeholder {
   to { opacity: 1; transform: none; }
 }
 
-.location-enter-from-menu {
-  animation: subpage-screen-enter 270ms cubic-bezier(.2, .78, .28, 1) both !important;
-  will-change: opacity, transform;
-}
-
 .location-screen {
   background:
     linear-gradient(
@@ -178,12 +173,6 @@ input::placeholder {
 .location-default {
   transform: none;
   animation: none;
-}
-
-.location-exit-to-menu {
-  pointer-events: none;
-  animation: subpage-screen-exit 230ms cubic-bezier(.42, 0, .72, .22) both !important;
-  will-change: opacity, transform;
 }
 
 @keyframes walks-screen-in {
@@ -288,7 +277,7 @@ strong {
   min-height: 0;
   overflow: hidden;
   padding-top: max(var(--space-4), env(safe-area-inset-top));
-  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  padding-bottom: max(var(--screen-inline-padding), env(safe-area-inset-bottom));
 }
 
 .welcome-screen .primary-button {
@@ -641,6 +630,17 @@ strong {
   animation: menu-frame-show var(--menu-motion-duration) cubic-bezier(.4, 0, .6, 1) both !important;
 }
 
+.menu-morph-button--instant-open .menu-glyph::before,
+.menu-morph-button--instant-open .menu-glyph::after {
+  transition: none !important;
+}
+
+.menu-morph-button--instant-open .menu-frame-stroke {
+  opacity: 0;
+  stroke-dasharray: 0 1;
+  animation: none !important;
+}
+
 @keyframes menu-frame-hide {
   0% {
     opacity: 1;
@@ -787,8 +787,9 @@ strong {
   position: absolute;
   z-index: 10;
   bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  right: var(--screen-inline-padding);
   left: var(--screen-inline-padding);
-  width: calc(100% - var(--screen-inline-total));
+  width: auto;
   min-height: var(--primary-button-height);
   box-shadow: 0 12px 28px rgba(31, 76, 49, 0.3);
 }
@@ -1757,11 +1758,15 @@ strong {
   will-change: opacity, transform;
 }
 
-.collection-screen--enter {
+.subpage-screen-motion {
+  will-change: opacity, transform;
+}
+
+.subpage-screen-motion--enter {
   animation: subpage-screen-enter 270ms cubic-bezier(.2, .78, .28, 1) both !important;
 }
 
-.collection-screen--exit {
+.subpage-screen-motion--exit {
   pointer-events: none;
   animation: subpage-screen-exit 230ms cubic-bezier(.42, 0, .72, .22) both !important;
 }
@@ -1820,8 +1825,9 @@ strong {
   position: absolute;
   z-index: 10;
   bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  right: var(--screen-inline-padding);
   left: var(--screen-inline-padding);
-  width: calc(100% - var(--screen-inline-total));
+  width: auto;
   min-height: var(--primary-button-height);
   box-shadow: 0 12px 28px rgba(31, 76, 49, 0.3);
 }
@@ -2387,6 +2393,17 @@ strong {
   text-align: center;
 }
 
+.session-error {
+  width: calc(100% - 2 * var(--screen-inline-padding));
+  margin: auto;
+  display: grid;
+  gap: var(--space-5);
+  color: #a33b2d;
+  font-size: var(--body-text-size);
+  line-height: 1.4;
+  text-align: center;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -2673,7 +2690,7 @@ textarea:focus-visible,
 }
 
 /* Анимации включены только для согласованных переходов и интерактивных состояний. */
-*:not(.saving-spinner):not(.filter-indicator):not(.filter-button):not(.walk-list-content):not(.schedule-indicator):not(.schedule-button):not(.delete-confirm-overlay):not(.information-overlay):not(.saving-overlay):not(.delete-confirm):not(.information-dialog):not(.menu-overlay):not(.drawer):not(.drawer-menu-content):not(.walks-heading-copy):not(.walk-setup-progress-animated):not(.walk-place-bubble):not(.collection-screen):not(.location-enter-from-menu):not(.location-exit-to-menu):not(.animated-form-screen):not(.menu-glyph-line):not(.menu-frame-stroke),
+*:not(.saving-spinner):not(.filter-indicator):not(.filter-button):not(.walk-list-content):not(.schedule-indicator):not(.schedule-button):not(.delete-confirm-overlay):not(.information-overlay):not(.saving-overlay):not(.delete-confirm):not(.information-dialog):not(.menu-overlay):not(.drawer):not(.drawer-menu-content):not(.walks-heading-copy):not(.walk-setup-progress-animated):not(.walk-place-bubble):not(.subpage-screen-motion):not(.animated-form-screen):not(.menu-glyph-line):not(.menu-frame-stroke),
 *:not(.walk-place-trigger):not(.menu-overlay):not(.menu-glyph)::before,
 *:not(.walk-place-trigger):not(.menu-glyph)::after {
   animation: none !important;

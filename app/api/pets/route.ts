@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { withDb } from "../../../db";
 import { pets } from "../../../db/schema";
+import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const MAX_PHOTO_SIZE = 1024 * 1024;
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -43,13 +44,17 @@ function errorMessage(error: unknown) {
   return "Не удалось выполнить запрос к базе данных.";
 }
 
-export async function GET(request: Request) {
-  const clientId = new URL(request.url).searchParams.get("clientId")?.trim() ?? "";
-  if (!uuidPattern.test(clientId)) {
-    return Response.json({ error: "Некорректный идентификатор браузера." }, { status: 400 });
-  }
+function privateError(message: string, status: number) {
+  return privateJson({ error: message }, { status });
+}
 
+export async function GET(request: Request) {
   try {
+    const session = await getClientSession(request);
+    if (!session) {
+      return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
+    }
+
     const rows = await withDb((db) => db
         .select({
           id: pets.id,
@@ -60,54 +65,59 @@ export async function GET(request: Request) {
           updatedAt: pets.updatedAt
         })
         .from(pets)
-        .where(eq(pets.clientId, clientId))
+        .where(eq(pets.clientId, session.clientId))
         .orderBy(desc(pets.createdAt))
         .limit(100));
 
-    return Response.json({ pets: rows.map(publicPet) });
+    return privateJson({ pets: rows.map(publicPet) });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return privateJson({ error: "Запрос отклонён." }, { status: 403 });
+  }
+
   try {
+    const session = await getClientSession(request);
+    if (!session) {
+      return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const name = normalizeName(formData.get("petName"));
     const breed = String(formData.get("breed") ?? "").trim();
     const ownerName = normalizeName(formData.get("ownerName"));
-    const clientId = String(formData.get("clientId") ?? "").trim();
     const photo = formData.get("photo");
 
-    if (!uuidPattern.test(clientId)) {
-      return Response.json({ error: "Некорректный идентификатор браузера." }, { status: 400 });
-    }
     if (!name || name.length > 40) {
-      return Response.json({ error: "Укажите имя питомца до 40 символов." }, { status: 400 });
+      return privateError("Укажите имя питомца до 40 символов.", 400);
     }
     if (!containsLetter.test(name)) {
-      return Response.json({ error: "Имя питомца должно содержать хотя бы одну букву." }, { status: 400 });
+      return privateError("Имя питомца должно содержать хотя бы одну букву.", 400);
     }
     if (!breed || breed.length > MAX_BREED_LENGTH) {
-      return Response.json({ error: `Укажите породу до ${MAX_BREED_LENGTH} символов.` }, { status: 400 });
+      return privateError(`Укажите породу до ${MAX_BREED_LENGTH} символов.`, 400);
     }
     if (!containsLetter.test(breed)) {
-      return Response.json({ error: "Порода должна содержать хотя бы одну букву." }, { status: 400 });
+      return privateError("Порода должна содержать хотя бы одну букву.", 400);
     }
     if (!ownerName || ownerName.length > 60) {
-      return Response.json({ error: "Укажите имя хозяина до 60 символов." }, { status: 400 });
+      return privateError("Укажите имя хозяина до 60 символов.", 400);
     }
     if (!containsLetter.test(ownerName)) {
-      return Response.json({ error: "Имя хозяина должно содержать хотя бы одну букву." }, { status: 400 });
+      return privateError("Имя хозяина должно содержать хотя бы одну букву.", 400);
     }
 
     const hasPhoto = photo instanceof File && photo.size > 0;
     if (hasPhoto) {
       if (!allowedPhotoTypes.has(photo.type)) {
-        return Response.json({ error: "Поддерживаются фотографии JPEG, PNG и WebP." }, { status: 400 });
+        return privateError("Поддерживаются фотографии JPEG, PNG и WebP.", 400);
       }
       if (photo.size > MAX_PHOTO_SIZE) {
-        return Response.json({ error: "Фотография после сжатия должна быть меньше 1 МБ." }, { status: 400 });
+        return privateError("Фотография после сжатия должна быть меньше 1 МБ.", 400);
       }
     }
 
@@ -117,7 +127,7 @@ export async function POST(request: Request) {
         .insert(pets)
         .values({
           id,
-          clientId,
+          clientId: session.clientId,
           name,
           breed,
           ownerName,
@@ -133,42 +143,50 @@ export async function POST(request: Request) {
           updatedAt: pets.updatedAt
         }));
 
-    return Response.json({ pet: publicPet(pet) }, { status: 201 });
+    return privateJson({ pet: publicPet(pet) }, { status: 201 });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return privateJson({ error: "Запрос отклонён." }, { status: 403 });
+  }
+
   try {
+    const session = await getClientSession(request);
+    if (!session) {
+      return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const petId = String(formData.get("petId") ?? "").trim();
-    const clientId = String(formData.get("clientId") ?? "").trim();
     const name = normalizeName(formData.get("petName"));
     const breed = String(formData.get("breed") ?? "").trim();
     const ownerName = normalizeName(formData.get("ownerName"));
     const photo = formData.get("photo");
 
-    if (!uuidPattern.test(petId) || !uuidPattern.test(clientId)) {
-      return Response.json({ error: "Некорректные данные питомца." }, { status: 400 });
+    if (!uuidPattern.test(petId)) {
+      return privateError("Некорректные данные питомца.", 400);
     }
     if (!name || name.length > 40 || !containsLetter.test(name)) {
-      return Response.json({ error: "Укажите корректное имя питомца до 40 символов." }, { status: 400 });
+      return privateError("Укажите корректное имя питомца до 40 символов.", 400);
     }
     if (!breed || breed.length > MAX_BREED_LENGTH || !containsLetter.test(breed)) {
-      return Response.json({ error: `Укажите корректную породу до ${MAX_BREED_LENGTH} символов.` }, { status: 400 });
+      return privateError(`Укажите корректную породу до ${MAX_BREED_LENGTH} символов.`, 400);
     }
     if (!ownerName || ownerName.length > 60 || !containsLetter.test(ownerName)) {
-      return Response.json({ error: "Укажите корректное имя хозяина до 60 символов." }, { status: 400 });
+      return privateError("Укажите корректное имя хозяина до 60 символов.", 400);
     }
 
     const hasPhoto = photo instanceof File && photo.size > 0;
     if (hasPhoto) {
       if (!allowedPhotoTypes.has(photo.type)) {
-        return Response.json({ error: "Поддерживаются фотографии JPEG, PNG и WebP." }, { status: 400 });
+        return privateError("Поддерживаются фотографии JPEG, PNG и WebP.", 400);
       }
       if (photo.size > MAX_PHOTO_SIZE) {
-        return Response.json({ error: "Фотография после сжатия должна быть меньше 1 МБ." }, { status: 400 });
+        return privateError("Фотография после сжатия должна быть меньше 1 МБ.", 400);
       }
     }
 
@@ -182,7 +200,7 @@ export async function PATCH(request: Request) {
     const [pet] = await withDb((db) => db
       .update(pets)
       .set(values)
-      .where(and(eq(pets.id, petId), eq(pets.clientId, clientId)))
+      .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
       .returning({
         id: pets.id,
         name: pets.name,
@@ -193,36 +211,44 @@ export async function PATCH(request: Request) {
       }));
 
     if (!pet) {
-      return Response.json({ error: "Питомец не найден." }, { status: 404 });
+      return privateError("Питомец не найден.", 404);
     }
 
-    return Response.json({ pet: publicPet(pet) });
+    return privateJson({ pet: publicPet(pet) });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
-  try {
-    const payload = await request.json() as { petId?: string; clientId?: string };
-    const petId = payload.petId?.trim() ?? "";
-    const clientId = payload.clientId?.trim() ?? "";
+  if (!isSameOriginRequest(request)) {
+    return privateJson({ error: "Запрос отклонён." }, { status: 403 });
+  }
 
-    if (!uuidPattern.test(petId) || !uuidPattern.test(clientId)) {
-      return Response.json({ error: "Некорректные данные питомца." }, { status: 400 });
+  try {
+    const session = await getClientSession(request);
+    if (!session) {
+      return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
+    }
+
+    const payload = await request.json().catch(() => null) as { petId?: string } | null;
+    const petId = payload?.petId?.trim() ?? "";
+
+    if (!uuidPattern.test(petId)) {
+      return privateError("Некорректные данные питомца.", 400);
     }
 
     const deleted = await withDb((db) => db
       .delete(pets)
-      .where(and(eq(pets.id, petId), eq(pets.clientId, clientId)))
+      .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
       .returning({ id: pets.id }));
 
     if (deleted.length === 0) {
-      return Response.json({ error: "Питомец не найден." }, { status: 404 });
+      return privateError("Питомец не найден.", 404);
     }
 
-    return Response.json({ deleted: true });
+    return privateJson({ deleted: true });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }

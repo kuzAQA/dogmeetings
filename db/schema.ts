@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { customType, date, index, pgTable, primaryKey, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, customType, date, index, pgTable, primaryKey, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -23,6 +23,26 @@ export const pets = pgTable(
   (table) => [
     index("pets_created_at_idx").on(table.createdAt),
     index("pets_client_id_idx").on(table.clientId)
+  ]
+);
+
+export const clientSessions = pgTable(
+  "client_sessions",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    clientId: uuid("client_id").notNull(),
+    city: varchar("city", { length: 80 }),
+    district: varchar("district", { length: 80 }),
+    residentialComplex: varchar("residential_complex", { length: 120 }),
+    hasLocation: boolean("has_location").notNull().default(false),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("client_sessions_client_id_unique").on(table.clientId),
+    index("client_sessions_expires_at_idx").on(table.expiresAt)
   ]
 );
 
