@@ -36,6 +36,7 @@ type BrowserGuidePlatform = "ios" | "android";
 type Period = "Все" | "Утро" | "День" | "Вечер";
 type ScheduleType = "today" | "tomorrow" | "always";
 type PetReturnTarget = "my-pets" | "announce";
+type WalkEditReturnTarget = "walks" | "my-walks";
 type FilterMotion = "idle" | "exit-left" | "exit-right" | "enter-left" | "enter-right";
 type LocationCloseTarget = "menu" | "walks" | null;
 type FormScreen = "pet" | "announce";
@@ -792,6 +793,7 @@ export default function Home() {
   const [myWalks, setMyWalks] = useState<ApiWalk[]>([]);
   const [myWalksLoaded, setMyWalksLoaded] = useState(false);
   const [walkBeingEdited, setWalkBeingEdited] = useState<ApiWalk | null>(null);
+  const [walkEditReturnTarget, setWalkEditReturnTarget] = useState<WalkEditReturnTarget>("my-walks");
   const [walkPendingDelete, setWalkPendingDelete] = useState<ApiWalk | null>(null);
   const [walkDeleting, setWalkDeleting] = useState(false);
   const [walkDeleteError, setWalkDeleteError] = useState("");
@@ -1062,6 +1064,10 @@ export default function Home() {
   const visibleWalks = useMemo(
     () => displayedPeriod === "Все" ? savedWalks : savedWalks.filter((walk) => walk.period === displayedPeriod),
     [displayedPeriod, savedWalks]
+  );
+  const ownedWalksById = useMemo(
+    () => new Map(myWalks.map((walk) => [walk.id, walk])),
+    [myWalks]
   );
   const locationCityOptions = useMemo(
     () => uniqueLocationValues(availableLocations.map((row) => row.city)).map((value) => ({ value, label: value })),
@@ -1335,7 +1341,7 @@ export default function Home() {
       setTouchedFields({});
       setWalkSubmitError("");
       setGuidedWalkFlow(false);
-      if (target === "my-walks") setWalkBeingEdited(null);
+      if (target === "my-walks" || target === "walks") setWalkBeingEdited(null);
     }
 
     if (formCloseModeRef.current === "replace") {
@@ -1398,8 +1404,9 @@ export default function Home() {
     openFormScreen("announce");
   }
 
-  function editWalk(walk: ApiWalk) {
+  function editWalk(walk: ApiWalk, returnTarget: WalkEditReturnTarget = "my-walks") {
     setWalkBeingEdited(walk);
+    setWalkEditReturnTarget(returnTarget);
     setGuidedWalkFlow(false);
     setTouchedFields({});
     setWalkSubmitError("");
@@ -1414,7 +1421,7 @@ export default function Home() {
 
   function leaveWalkScreen() {
     if (walkBeingEdited) {
-      beginFormClose("my-walks");
+      beginFormClose(walkEditReturnTarget);
       return;
     }
     beginFormClose("walks");
@@ -1551,6 +1558,7 @@ export default function Home() {
     event.preventDefault();
     const form = event.currentTarget;
     const editedWalk = walkBeingEdited;
+    const editReturnTarget = walkEditReturnTarget;
     const formData = new FormData(form);
     const petId = formData.get("pet");
     const submittedPlace = String(formData.get("place") ?? "").trim();
@@ -1616,7 +1624,7 @@ export default function Home() {
         setWalkSaved(false);
         setWalkSaving(false);
         setGuidedWalkFlow(false);
-        beginFormClose(editedWalk ? "my-walks" : "walks");
+        beginFormClose(editedWalk ? editReturnTarget : "walks");
       }, remainingLoaderTime);
     } catch (error) {
       setWalkSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
@@ -2020,26 +2028,39 @@ export default function Home() {
                   <p className="empty-walks">
                     {savedWalks.length === 0 ? "Пока никто не сообщил о прогулке" : "В это время прогулок пока нет"}
                   </p>
-                ) : visibleWalks.map((walk) => (
-                  <article className="walk-card" key={walk.id}>
-                    <div className="walk-pet-visual">
-                      <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
-                    </div>
-                    <div className="walk-info">
-                      <h2>{walk.pet}</h2>
-                      <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" /><span>{walk.owner}</span></p>
-                      <p><Clock3 className="time-icon" aria-hidden="true" /><span>{walk.time}</span></p>
-                      <p className="pet-meta breed" aria-label={`Порода: ${walk.breed}`}><Dog aria-hidden="true" /><span>{Array.from(walk.breed).slice(0, MAX_BREED_LENGTH).join("").trimEnd()}</span></p>
-                    </div>
-                    <WalkPlace place={walk.point} />
-                    {walk.comment && (
-                      <p className="walk-comment">
-                        <MessageCircle aria-hidden="true" />
-                        <span>{Array.from(walk.comment).slice(0, MAX_WALK_META_LENGTH).join("").trimEnd()}</span>
-                      </p>
-                    )}
-                  </article>
-                ))}
+                ) : visibleWalks.map((walk) => {
+                  const ownedWalk = ownedWalksById.get(walk.id);
+                  return (
+                    <article className={`walk-card ${ownedWalk ? "walk-card--editable" : ""}`} key={walk.id}>
+                      {ownedWalk && (
+                        <button
+                          className="edit-walk-button walk-card-edit-button"
+                          type="button"
+                          aria-label={`Редактировать прогулку питомца ${walk.pet}`}
+                          onClick={() => editWalk(ownedWalk, "walks")}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </button>
+                      )}
+                      <div className="walk-pet-visual">
+                        <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
+                      </div>
+                      <div className="walk-info">
+                        <h2>{walk.pet}</h2>
+                        <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" /><span>{walk.owner}</span></p>
+                        <p><Clock3 className="time-icon" aria-hidden="true" /><span>{walk.time}</span></p>
+                        <p className="pet-meta breed" aria-label={`Порода: ${walk.breed}`}><Dog aria-hidden="true" /><span>{Array.from(walk.breed).slice(0, MAX_BREED_LENGTH).join("").trimEnd()}</span></p>
+                      </div>
+                      <WalkPlace place={walk.point} />
+                      {walk.comment && (
+                        <p className="walk-comment">
+                          <MessageCircle aria-hidden="true" />
+                          <span>{Array.from(walk.comment).slice(0, MAX_WALK_META_LENGTH).join("").trimEnd()}</span>
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </div>
 
@@ -2146,7 +2167,7 @@ export default function Home() {
                       className="edit-walk-button"
                       type="button"
                       aria-label={`Редактировать прогулку питомца ${walk.pet}`}
-                      onClick={() => editWalk(walk)}
+                      onClick={() => editWalk(walk, "my-walks")}
                     >
                       <Pencil aria-hidden="true" />
                     </button>

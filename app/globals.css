@@ -1517,6 +1517,7 @@ strong {
 }
 
 .walk-card {
+  position: relative;
   display: grid;
   grid-template-columns: var(--walk-visual-width) minmax(0, 1fr);
   min-height: 148px;
@@ -1528,6 +1529,17 @@ strong {
   border-radius: 18px;
   background: var(--card);
   box-shadow: 0 7px 20px rgba(69, 74, 61, 0.075);
+}
+
+.walk-card-edit-button {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.walk-card--editable .walk-info h2 {
+  padding-right: calc(36px + var(--space-3));
 }
 
 .dog-avatar {
