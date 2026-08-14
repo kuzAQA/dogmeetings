@@ -2410,6 +2410,7 @@ export default function Home() {
                     type="button"
                     aria-label={placeSuggestionsVisible ? "Закрыть список мест" : "Открыть список мест"}
                     aria-expanded={placeSuggestionsVisible}
+                    onPointerDown={(event) => event.preventDefault()}
                     onClick={() => {
                       if (placeSuggestionsVisible) {
                         setPlaceMenuOpen(false);
@@ -2431,6 +2432,10 @@ export default function Home() {
                           type="button"
                           role="option"
                           aria-selected={normalizePlaceForComparison(place.name) === normalizePlaceForComparison(placeInput)}
+                          onPointerDown={(event) => {
+                            event.preventDefault();
+                            chooseSharedPlace(place);
+                          }}
                           onClick={() => chooseSharedPlace(place)}
                         >
                           {place.name}
