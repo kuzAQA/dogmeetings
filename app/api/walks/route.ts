@@ -22,6 +22,7 @@ type WalkRow = {
   walkDate: string;
   walkTime: string;
   updatedAt: Date;
+  petUpdatedAt: Date;
 };
 
 function publicWalk(walk: WalkRow) {
@@ -41,7 +42,7 @@ function publicWalk(walk: WalkRow) {
     walkTime: walk.walkTime.slice(0, 5),
     scheduleType: walk.scheduleType,
     updatedAt: walk.updatedAt.toISOString(),
-    image: `/api/pet-photo?id=${encodeURIComponent(walk.petId)}`
+    image: `/api/pet-photo?id=${encodeURIComponent(walk.petId)}&v=${walk.petUpdatedAt.getTime()}`
   };
 }
 
@@ -117,7 +118,8 @@ export async function GET(request: Request) {
           scheduleType: walks.scheduleType,
           walkDate: walks.walkDate,
           walkTime: walks.walkTime,
-          updatedAt: walks.updatedAt
+          updatedAt: walks.updatedAt,
+          petUpdatedAt: pets.updatedAt
         })
         .from(walks)
         .innerJoin(pets, eq(walks.petId, pets.id))
@@ -144,7 +146,8 @@ export async function GET(request: Request) {
           scheduleType: walks.scheduleType,
           walkDate: walks.walkDate,
           walkTime: walks.walkTime,
-          updatedAt: walks.updatedAt
+          updatedAt: walks.updatedAt,
+          petUpdatedAt: pets.updatedAt
         })
         .from(walks)
         .innerJoin(pets, eq(walks.petId, pets.id))
@@ -223,7 +226,13 @@ export async function POST(request: Request) {
 
     const result = await withDb((db) => db.transaction(async (tx) => {
       const [pet] = await tx
-        .select({ id: pets.id, name: pets.name, breed: pets.breed, ownerName: pets.ownerName })
+        .select({
+          id: pets.id,
+          name: pets.name,
+          breed: pets.breed,
+          ownerName: pets.ownerName,
+          updatedAt: pets.updatedAt
+        })
         .from(pets)
         .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
         .limit(1);
@@ -308,7 +317,8 @@ export async function POST(request: Request) {
         petId: result.pet.id,
         petName: result.pet.name,
         petBreed: result.pet.breed,
-        ownerName: result.pet.ownerName
+        ownerName: result.pet.ownerName,
+        petUpdatedAt: result.pet.updatedAt
       })
     }, { status: 201 });
   } catch (error) {
@@ -383,7 +393,13 @@ export async function PATCH(request: Request) {
       if (!ownedWalk) return null;
 
       const [pet] = await tx
-        .select({ id: pets.id, name: pets.name, breed: pets.breed, ownerName: pets.ownerName })
+        .select({
+          id: pets.id,
+          name: pets.name,
+          breed: pets.breed,
+          ownerName: pets.ownerName,
+          updatedAt: pets.updatedAt
+        })
         .from(pets)
         .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
         .limit(1);
@@ -469,7 +485,8 @@ export async function PATCH(request: Request) {
         petId: result.pet.id,
         petName: result.pet.name,
         petBreed: result.pet.breed,
-        ownerName: result.pet.ownerName
+        ownerName: result.pet.ownerName,
+        petUpdatedAt: result.pet.updatedAt
       })
     });
   } catch (error) {
