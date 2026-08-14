@@ -1,0 +1,19 @@
+{
+  "name": "Гулять вместе",
+  "short_name": "Гулять вместе",
+  "description": "Компания для прогулок с собакой рядом с домом",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f7f2",
+  "theme_color": "#f8f7f2",
+  "icons": [
+    {
+      "src": "/icons/paws.svg?v=20260811-2",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

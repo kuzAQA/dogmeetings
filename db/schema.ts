@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, customType, date, index, pgTable, primaryKey, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, customType, date, index, integer, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -59,6 +59,47 @@ export const locations = pgTable(
       columns: [table.city, table.district, table.residentialComplex]
     })
   ]
+);
+
+export const locationRequests = pgTable(
+  "location_requests",
+  {
+    id: uuid("id").primaryKey(),
+    clientId: uuid("client_id").notNull(),
+    city: varchar("city", { length: 80 }).notNull(),
+    district: varchar("district", { length: 80 }).notNull(),
+    residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("location_requests_client_id_idx").on(table.clientId),
+    index("location_requests_created_at_idx").on(table.createdAt)
+  ]
+);
+
+export const adminLoginAttempts = pgTable(
+  "admin_login_attempts",
+  {
+    key: varchar("key", { length: 64 }).primaryKey(),
+    failureCount: integer("failure_count").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("admin_login_attempts_updated_at_idx").on(table.updatedAt)]
+);
+
+export const adminPushSubscriptions = pgTable(
+  "admin_push_subscriptions",
+  {
+    endpointHash: varchar("endpoint_hash", { length: 64 }).primaryKey(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: varchar("p256dh", { length: 180 }).notNull(),
+    auth: varchar("auth", { length: 64 }).notNull(),
+    userAgent: varchar("user_agent", { length: 300 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("admin_push_subscriptions_updated_at_idx").on(table.updatedAt)]
 );
 
 export const places = pgTable(

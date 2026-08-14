@@ -8,19 +8,31 @@ import {
   ChevronDown,
   ChevronRight,
   Clock3,
+  Compass,
   Dog,
+  EllipsisVertical,
   House,
+  Hourglass,
   MessageCircle,
   PawPrint,
   Pencil,
   Plus,
+  Share2,
   Trash2,
-  UserRound
+  UserRound,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Screen = "welcome" | "location" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
+type Screen = "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
+type AppNavigationState = {
+  dogmeetNavigation: true;
+  screen: Screen;
+  menuOpen: boolean;
+  locationOpenedFromMenu: boolean;
+};
+type BrowserGuidePlatform = "ios" | "android";
 type Period = "Все" | "Утро" | "День" | "Вечер";
 type ScheduleType = "today" | "tomorrow" | "always";
 type PetReturnTarget = "my-pets" | "announce";
@@ -725,6 +737,7 @@ async function compressPetPhoto(file: File) {
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen | null>(null);
+  const [browserGuidePlatform, setBrowserGuidePlatform] = useState<BrowserGuidePlatform>("ios");
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState("");
   const [sessionAttempt, setSessionAttempt] = useState(0);
@@ -736,6 +749,10 @@ export default function Home() {
   const [hasLocation, setHasLocation] = useState(false);
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSubmitError, setLocationSubmitError] = useState("");
+  const [locationRequestDraft, setLocationRequestDraft] = useState<Location>(defaultLocation);
+  const [locationRequestSaving, setLocationRequestSaving] = useState(false);
+  const [locationRequestError, setLocationRequestError] = useState("");
+  const [locationRequestSent, setLocationRequestSent] = useState(false);
   const [period, setPeriod] = useState<Period>("Все");
   const [displayedPeriod, setDisplayedPeriod] = useState<Period>("Все");
   const [filterMotion, setFilterMotion] = useState<FilterMotion>("idle");
@@ -788,7 +805,58 @@ export default function Home() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
+  const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
   const filterTimersRef = useRef<number[]>([]);
+  const formCloseModeRef = useRef<"back" | "replace">("back");
+
+  const applyNavigationState = useCallback((navigation: AppNavigationState) => {
+    setCollectionClosing(false);
+    setLocationCloseTarget(null);
+    setFormClosing(false);
+    setFormCloseTarget(null);
+    setMenuClosing(false);
+    setMenuButtonClosing(false);
+    setLocationOpenedFromMenu(navigation.locationOpenedFromMenu);
+    setMenuOpen(navigation.menuOpen);
+    setScreen(navigation.screen);
+  }, []);
+
+  const pushNavigation = useCallback((
+    nextScreen: Screen,
+    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu">> = {}
+  ) => {
+    const navigation: AppNavigationState = {
+      dogmeetNavigation: true,
+      screen: nextScreen,
+      menuOpen: options.menuOpen ?? false,
+      locationOpenedFromMenu: options.locationOpenedFromMenu ?? false
+    };
+    window.history.pushState(navigation, "", window.location.href);
+    applyNavigationState(navigation);
+  }, [applyNavigationState]);
+
+  const replaceNavigation = useCallback((
+    nextScreen: Screen,
+    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu">> = {}
+  ) => {
+    const navigation: AppNavigationState = {
+      dogmeetNavigation: true,
+      screen: nextScreen,
+      menuOpen: options.menuOpen ?? false,
+      locationOpenedFromMenu: options.locationOpenedFromMenu ?? false
+    };
+    window.history.replaceState(navigation, "", window.location.href);
+    applyNavigationState(navigation);
+  }, [applyNavigationState]);
+
+  const returnThroughHistory = useCallback(() => {
+    const current = window.history.state as Partial<AppNavigationState> | null;
+    if (current?.dogmeetNavigation) {
+      window.history.back();
+      return;
+    }
+    replaceNavigation(hasLocation ? "walks" : "welcome");
+  }, [hasLocation, replaceNavigation]);
 
   const closeMenu = useCallback(() => {
     setMenuButtonClosing(true);
@@ -797,6 +865,13 @@ export default function Home() {
 
   function touchField(field: string) {
     setTouchedFields((current) => current[field] ? current : { ...current, [field]: true });
+  }
+
+  function openBrowserGuide() {
+    const userAgent = navigator.userAgent;
+    const isIPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    setBrowserGuidePlatform(/Android/i.test(userAgent) && !isIPadOs ? "android" : "ios");
+    pushNavigation("browser-guide");
   }
 
   useEffect(() => {
@@ -809,10 +884,18 @@ export default function Home() {
         const restoredLocation = data.hasLocation && data.location
           ? data.location
           : defaultLocation;
+        const initialScreen: Screen = data.hasLocation && data.location ? "walks" : "welcome";
         setLocation(restoredLocation);
-        setLocationDraft(restoredLocation);
+        setLocationDraft((current) => data.hasLocation && data.location ? restoredLocation : current);
         setHasLocation(Boolean(data.hasLocation && data.location));
-        setScreen(data.hasLocation && data.location ? "walks" : "welcome");
+        const initialNavigation: AppNavigationState = {
+          dogmeetNavigation: true,
+          screen: initialScreen,
+          menuOpen: false,
+          locationOpenedFromMenu: false
+        };
+        window.history.replaceState(initialNavigation, "", window.location.href);
+        applyNavigationState(initialNavigation);
         setSessionReady(true);
         clearLegacySessionData();
       })
@@ -822,7 +905,23 @@ export default function Home() {
       });
 
     return () => { active = false; };
-  }, [sessionAttempt]);
+  }, [applyNavigationState, sessionAttempt]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const navigation = event.state as Partial<AppNavigationState> | null;
+      if (!navigation?.dogmeetNavigation || !navigation.screen) return;
+      setAnimateMenuOpen(false);
+      applyNavigationState({
+        dogmeetNavigation: true,
+        screen: navigation.screen,
+        menuOpen: Boolean(navigation.menuOpen),
+        locationOpenedFromMenu: Boolean(navigation.locationOpenedFromMenu)
+      });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyNavigationState]);
 
   useEffect(() => {
     let active = true;
@@ -947,6 +1046,10 @@ export default function Home() {
   }, [showPetRequiredPopup]);
 
   useEffect(() => {
+    if (locationRequestSent) locationRequestButtonRef.current?.focus();
+  }, [locationRequestSent]);
+
+  useEffect(() => {
     return () => {
       if (photoUrl) URL.revokeObjectURL(photoUrl);
     };
@@ -991,6 +1094,10 @@ export default function Home() {
   const locationFormIsValid = Boolean(
     locationsLoaded && !locationsError && locationDraft.city && locationDraft.district && locationDraft.complex
   );
+  const locationRequestCityIsValid = containsLetter.test(locationRequestDraft.city.trim()) && locationRequestDraft.city.trim().length <= 80;
+  const locationRequestDistrictIsValid = containsLetter.test(locationRequestDraft.district.trim()) && locationRequestDraft.district.trim().length <= 80;
+  const locationRequestComplexIsValid = containsLetter.test(locationRequestDraft.complex.trim()) && locationRequestDraft.complex.trim().length <= 120;
+  const locationRequestFormIsValid = locationRequestCityIsValid && locationRequestDistrictIsValid && locationRequestComplexIsValid;
   const petNameIsValid = containsLetter.test(petNameInput.trim());
   const ownerNameIsValid = containsLetter.test(ownerNameInput.trim());
   const breedIsValid = containsLetter.test(breedInput.trim()) && breedInput.trim().length <= MAX_BREED_LENGTH;
@@ -1013,6 +1120,58 @@ export default function Home() {
       .filter((row) => row.city === locationDraft.city && row.district === district)
       .map((row) => row.complex));
     setLocationDraft({ ...locationDraft, district, complex: complexes.length === 1 ? complexes[0] : "" });
+  }
+
+  function openLocationRequest() {
+    setLocationRequestDraft(defaultLocation);
+    setLocationRequestError("");
+    setTouchedFields({});
+    pushNavigation("location-request");
+  }
+
+  function leaveLocationRequest() {
+    setLocationRequestError("");
+    setTouchedFields({});
+    returnThroughHistory();
+  }
+
+  async function sendLocationRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!locationRequestFormIsValid) {
+      setTouchedFields((current) => ({
+        ...current,
+        "request-city": true,
+        "request-district": true,
+        "request-complex": true
+      }));
+      return;
+    }
+
+    setLocationRequestSaving(true);
+    setLocationRequestError("");
+
+    try {
+      const response = await fetch("/api/location-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(locationRequestDraft)
+      });
+      const data = await response.json() as { request?: { id: string }; error?: string };
+      if (!response.ok || !data.request) {
+        throw new Error(data.error || "Не удалось отправить заявку.");
+      }
+
+      setLocationOpenedFromMenu(false);
+      setLocationDraft(normalizeLocationSelection(defaultLocation, availableLocations));
+      setLocationRequestDraft(defaultLocation);
+      setTouchedFields({});
+      returnThroughHistory();
+      setLocationRequestSent(true);
+    } catch (error) {
+      setLocationRequestError(error instanceof Error ? error.message : "Не удалось отправить заявку.");
+    } finally {
+      setLocationRequestSaving(false);
+    }
   }
 
   function selectPeriod(nextPeriod: Period) {
@@ -1082,7 +1241,7 @@ export default function Home() {
         return;
       }
       setLocationOpenedFromMenu(false);
-      setScreen("walks");
+      pushNavigation("walks");
     } catch (error) {
       setLocationSubmitError(error instanceof Error ? error.message : "Не удалось сохранить локацию.");
     } finally {
@@ -1099,7 +1258,7 @@ export default function Home() {
       return;
     }
 
-    setScreen(hasLocation ? "walks" : "welcome");
+    returnThroughHistory();
   }
 
   function openLocationEditor() {
@@ -1108,23 +1267,16 @@ export default function Home() {
     setLocationCloseTarget(null);
     setLocationOpenedFromMenu(true);
     setMenuOpen(false);
-    setScreen("location");
+    pushNavigation("location", { locationOpenedFromMenu: true });
   }
 
   function completeLocationClose() {
     const target = locationCloseTarget;
     if (target === "menu") {
-      setAnimateMenuOpen(false);
-      setMenuClosing(false);
-      setMenuButtonClosing(false);
-      setMenuOpen(true);
-      setScreen("walks");
+      returnThroughHistory();
     } else if (target === "walks") {
-      setMenuOpen(false);
-      setScreen("walks");
+      window.history.go(-2);
     }
-    setLocationCloseTarget(null);
-    setLocationOpenedFromMenu(false);
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -1147,10 +1299,11 @@ export default function Home() {
   function openFormScreen(nextScreen: FormScreen) {
     setFormClosing(false);
     setFormCloseTarget(null);
-    setScreen(nextScreen);
+    pushNavigation(nextScreen);
   }
 
-  function beginFormClose(target: Screen) {
+  function beginFormClose(target: Screen, mode: "back" | "replace" = "back") {
+    formCloseModeRef.current = mode;
     setFormCloseTarget(target);
     setFormClosing(true);
   }
@@ -1185,9 +1338,12 @@ export default function Home() {
       if (target === "my-walks") setWalkBeingEdited(null);
     }
 
-    setFormClosing(false);
-    setFormCloseTarget(null);
-    setScreen(target);
+    if (formCloseModeRef.current === "replace") {
+      replaceNavigation(target);
+    } else {
+      returnThroughHistory();
+    }
+    formCloseModeRef.current = "back";
   }
 
   function leavePetScreen() {
@@ -1295,9 +1451,9 @@ export default function Home() {
   }
 
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets") {
-    setScreen(nextScreen);
     setCollectionClosing(false);
     setMenuOpen(false);
+    pushNavigation(nextScreen);
   }
 
   function returnToMenu() {
@@ -1305,19 +1461,14 @@ export default function Home() {
   }
 
   function completeCollectionClose() {
-    setAnimateMenuOpen(false);
-    setMenuClosing(false);
-    setMenuButtonClosing(false);
-    setMenuOpen(true);
-    setScreen("walks");
-    setCollectionClosing(false);
+    returnThroughHistory();
   }
 
   function openMenu() {
     setAnimateMenuOpen(true);
     setMenuButtonClosing(false);
     setMenuClosing(false);
-    setMenuOpen(true);
+    pushNavigation("walks", { menuOpen: true });
   }
 
   async function savePet(event: FormEvent<HTMLFormElement>) {
@@ -1385,7 +1536,7 @@ export default function Home() {
         if (returnTarget === "announce") {
           setPetReturnTarget("my-pets");
           setSelectedPetId(data.pet!.id);
-          beginFormClose("announce");
+          beginFormClose("announce", "replace");
         } else {
           beginFormClose("my-pets");
         }
@@ -1570,8 +1721,95 @@ export default function Home() {
                 sizes="(max-width: 520px) 100vw, 430px"
               />
             </div>
-            <button className="primary-button" type="button" onClick={() => setScreen(hasLocation ? "walks" : "location")}>
+            <button className="primary-button" type="button" onClick={openBrowserGuide}>
               Найти компанию
+            </button>
+          </div>
+        )}
+
+        {screen === "browser-guide" && (
+          <div className="screen browser-guide-screen">
+            <button className="icon-button back-button" type="button" aria-label="Назад" onClick={returnThroughHistory}>
+              <ArrowLeft />
+            </button>
+
+            <div className="screen-heading browser-guide-heading">
+              <h1>Откройте сайт в браузере</h1>
+              <p>Если ссылка открылась внутри Telegram или другого мессенджера, перейдите в обычный браузер</p>
+            </div>
+
+            <div className="browser-guide-content">
+              <div className="browser-guide-platforms" role="group" aria-label="Выберите устройство">
+                <span
+                  className="filter-indicator browser-guide-platform-indicator"
+                  aria-hidden="true"
+                  style={{ left: browserGuidePlatform === "ios" ? "var(--space-1)" : "50%" }}
+                />
+                <button
+                  className={`filter-button browser-guide-platform-button ${browserGuidePlatform === "ios" ? "is-active" : ""}`}
+                  type="button"
+                  aria-pressed={browserGuidePlatform === "ios"}
+                  onClick={() => setBrowserGuidePlatform("ios")}
+                >
+                  <span>iPhone</span>
+                </button>
+                <button
+                  className={`filter-button browser-guide-platform-button ${browserGuidePlatform === "android" ? "is-active" : ""}`}
+                  type="button"
+                  aria-pressed={browserGuidePlatform === "android"}
+                  onClick={() => setBrowserGuidePlatform("android")}
+                >
+                  <span>Android</span>
+                </button>
+              </div>
+
+              {browserGuidePlatform === "ios" ? (
+                <section className="browser-tip-card browser-tip-card--ios" aria-labelledby="ios-browser-tip-title">
+                  <div className="browser-tip-copy">
+                    <span className="browser-tip-number" aria-hidden="true">1</span>
+                    <div>
+                      <h2 id="ios-browser-tip-title">Откройте в Safari</h2>
+                      <p>Нажмите значок компаса внизу предварительного окна</p>
+                    </div>
+                  </div>
+                  <div className="browser-preview browser-preview--ios" aria-hidden="true">
+                    <span className="browser-preview-label">Нажмите сюда</span>
+                    <span className="browser-preview-arrow browser-preview-arrow--down" />
+                    <span className="browser-preview-action"><Compass /></span>
+                  </div>
+                </section>
+              ) : (
+                <section className="browser-tip-card browser-tip-card--android" aria-labelledby="android-browser-tip-title">
+                  <div className="browser-preview browser-preview--android" aria-hidden="true">
+                    <div className="android-inapp-toolbar">
+                      <span className="android-status-time">11:29</span>
+                      <span className="android-status-icons">● ◒ ▮</span>
+                      <span className="android-toolbar-actions"><X /><ChevronDown /></span>
+                      <span className="android-toolbar-identity"><strong>Гулять вместе</strong><small>dogmeet.ru</small></span>
+                      <Share2 className="android-toolbar-share" />
+                      <span className="browser-preview-action"><EllipsisVertical /></span>
+                    </div>
+                    <span className="browser-preview-label">Нажмите сюда</span>
+                    <span className="browser-preview-arrow browser-preview-arrow--android" />
+                  </div>
+                  <div className="browser-tip-copy">
+                    <span className="browser-tip-number" aria-hidden="true">1</span>
+                    <div>
+                      <h2 id="android-browser-tip-title">Откройте в браузере</h2>
+                      <p>Нажмите три точки справа сверху, затем выберите «Открыть в браузере»</p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              <p className="browser-guide-note">
+                Если сайт уже открыт в Safari или Chrome,<br />
+                просто продолжите
+              </p>
+            </div>
+
+            <button className="primary-button browser-guide-continue" type="button" onClick={() => pushNavigation(hasLocation ? "walks" : "location")}>
+              Продолжить
             </button>
           </div>
         )}
@@ -1647,10 +1885,99 @@ export default function Home() {
                 {touchedFields["location-complex"] && !locationDraft.complex && <p className="validation-hint" id="location-complex-hint">Выберите жилой комплекс</p>}
               </div>
               {(locationsError || locationSubmitError) && <p className="error-message" role="alert">{locationsError || locationSubmitError}</p>}
-              <button className="primary-button form-submit" type="submit" disabled={!locationFormIsValid || locationSaving}>
-                {locationSaving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Далее"}
-              </button>
+              <div className="location-form-footer">
+                <p className="location-request-prompt">
+                  Нет вашего города, района, жилого комплекса?{" "}
+                  <button type="button" onClick={openLocationRequest}>Оставьте заявку</button>
+                </p>
+                <button className="primary-button form-submit" type="submit" disabled={!locationFormIsValid || locationSaving}>
+                  {locationSaving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Продолжить"}
+                </button>
+              </div>
             </form>
+          </div>
+        )}
+
+        {screen === "location-request" && (
+          <div className="screen form-screen location-screen location-request-screen">
+            <button className="icon-button back-button" type="button" aria-label="Назад к выбору локации" onClick={leaveLocationRequest}>
+              <ArrowLeft />
+            </button>
+            <div className="screen-heading">
+              <h1>Оставить заявку</h1>
+              <p>Укажите вашу локацию и мы добавим её в ближайшее время</p>
+            </div>
+            <form className="location-form" onSubmit={sendLocationRequest} aria-busy={locationRequestSaving} noValidate>
+              <label className="field text-field">
+                <span>Город</span>
+                <input
+                  value={locationRequestDraft.city}
+                  required
+                  maxLength={80}
+                  placeholder="Например, Москва"
+                  aria-invalid={Boolean(touchedFields["request-city"] && !locationRequestCityIsValid)}
+                  aria-describedby={touchedFields["request-city"] && !locationRequestCityIsValid ? "request-city-hint" : undefined}
+                  onBlur={() => touchField("request-city")}
+                  onChange={(event) => {
+                    setLocationRequestDraft((current) => ({ ...current, city: event.target.value }));
+                    setLocationRequestError("");
+                  }}
+                />
+                {touchedFields["request-city"] && !locationRequestCityIsValid && (
+                  <span className="validation-hint" id="request-city-hint">Введите название города</span>
+                )}
+              </label>
+              <label className="field text-field">
+                <span>Район</span>
+                <input
+                  value={locationRequestDraft.district}
+                  required
+                  maxLength={80}
+                  placeholder="Например, Коммунарка"
+                  aria-invalid={Boolean(touchedFields["request-district"] && !locationRequestDistrictIsValid)}
+                  aria-describedby={touchedFields["request-district"] && !locationRequestDistrictIsValid ? "request-district-hint" : undefined}
+                  onBlur={() => touchField("request-district")}
+                  onChange={(event) => {
+                    setLocationRequestDraft((current) => ({ ...current, district: event.target.value }));
+                    setLocationRequestError("");
+                  }}
+                />
+                {touchedFields["request-district"] && !locationRequestDistrictIsValid && (
+                  <span className="validation-hint" id="request-district-hint">Введите название района</span>
+                )}
+              </label>
+              <label className="field text-field">
+                <span>Жилой комплекс</span>
+                <input
+                  value={locationRequestDraft.complex}
+                  required
+                  maxLength={120}
+                  placeholder="Например, Дзен-Кварталы"
+                  aria-invalid={Boolean(touchedFields["request-complex"] && !locationRequestComplexIsValid)}
+                  aria-describedby={touchedFields["request-complex"] && !locationRequestComplexIsValid ? "request-complex-hint" : undefined}
+                  onBlur={() => touchField("request-complex")}
+                  onChange={(event) => {
+                    setLocationRequestDraft((current) => ({ ...current, complex: event.target.value }));
+                    setLocationRequestError("");
+                  }}
+                />
+                {touchedFields["request-complex"] && !locationRequestComplexIsValid && (
+                  <span className="validation-hint" id="request-complex-hint">Введите название жилого комплекса</span>
+                )}
+              </label>
+              {locationRequestError && <p className="error-message" role="alert">{locationRequestError}</p>}
+              <div className="location-form-footer">
+                <button className="primary-button form-submit" type="submit" disabled={!locationRequestFormIsValid || locationRequestSaving}>
+                  Отправить
+                </button>
+              </div>
+            </form>
+            {locationRequestSaving && (
+              <div className="saving-overlay" role="status" aria-live="polite">
+                <span className="saving-spinner" aria-hidden="true" />
+                <p>Идёт отправка заявки</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1735,8 +2062,7 @@ export default function Home() {
                 onMouseDown={(event) => { if (event.target === event.currentTarget) closeMenu(); }}
                 onAnimationEnd={(event) => {
                   if (event.target !== event.currentTarget || !menuClosing || event.animationName !== "menu-surface-out") return;
-                  setMenuOpen(false);
-                  setMenuClosing(false);
+                  returnThroughHistory();
                 }}
               >
                 <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -2186,6 +2512,16 @@ export default function Home() {
             <section className="information-dialog" role="dialog" aria-modal="true" aria-describedby="pet-required-description">
               <p id="pet-required-description">Добавьте информацию о своём питомце, чтобы сообщить о прогулке</p>
               <button ref={informationButtonRef} className="primary-button" type="button" onClick={continueToRequiredPet}>Хорошо</button>
+            </section>
+          </div>
+        )}
+
+        {locationRequestSent && (
+          <div className="information-overlay">
+            <section className="information-dialog location-request-dialog" role="dialog" aria-modal="true" aria-describedby="location-request-description">
+              <Hourglass className="location-request-dialog-icon" aria-hidden="true" />
+              <p id="location-request-description">Пока вы ждёте добавления своей локации, можете выбрать другое место для прогулки</p>
+              <button ref={locationRequestButtonRef} className="primary-button" type="button" onClick={() => setLocationRequestSent(false)}>Хорошо</button>
             </section>
           </div>
         )}

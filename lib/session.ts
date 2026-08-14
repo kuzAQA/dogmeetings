@@ -206,11 +206,15 @@ export function sessionCookie(request: Request, session: ClientSession) {
 export function privateJson(
   body: unknown,
   init: ResponseInit = {},
-  cookie?: string
+  cookie?: string | string[]
 ) {
   const headers = new Headers(init.headers);
   headers.set("Cache-Control", "no-store, private");
-  if (cookie) headers.append("Set-Cookie", cookie);
+  if (cookie) {
+    for (const value of Array.isArray(cookie) ? cookie : [cookie]) {
+      headers.append("Set-Cookie", value);
+    }
+  }
   return Response.json(body, { ...init, headers });
 }
 

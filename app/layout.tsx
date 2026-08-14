@@ -11,6 +11,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Гулять вместе",
     description: "Находите компанию для прогулок с собакой рядом с домом.",
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Гулять вместе"
+    },
     icons: {
       icon: [{ url: "/icons/paws.svg?v=20260811-2", type: "image/svg+xml", sizes: "any" }],
       shortcut: "/icons/paws.svg?v=20260811-2"
