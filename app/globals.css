@@ -604,7 +604,7 @@ strong {
 .browser-preview--android .browser-preview-label {
   top: auto;
   right: var(--space-3);
-  bottom: 6px;
+  bottom: 10px;
 }
 
 .browser-preview-arrow {
@@ -638,9 +638,9 @@ strong {
 
 .browser-preview-arrow--android {
   z-index: 4;
-  top: 80px;
-  right: 29px;
-  height: 27px;
+  top: 92px;
+  right: 13px;
+  height: 23px;
 }
 
 .browser-preview-arrow--android::after {
@@ -663,7 +663,7 @@ strong {
 
 .browser-guide-continue {
   flex: 0 0 auto;
-  margin-top: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 /* The mobile composition is also used inside the fixed desktop frame.
@@ -696,12 +696,12 @@ strong {
   .browser-preview--android .browser-preview-label {
     top: auto;
     right: var(--space-3);
-    bottom: 6px;
+    bottom: 10px;
   }
-  .browser-preview-arrow--android { top: 80px; right: 29px; height: 27px; }
+  .browser-preview-arrow--android { top: 87px; right: 19px; height: 23px; }
   .browser-preview--ios .browser-preview-label { bottom: 86px; }
   .browser-preview-arrow--down { bottom: 66px; height: 14px; }
-  .browser-guide-continue { margin-top: var(--space-3); }
+  .browser-guide-continue { margin-top: var(--space-4); }
 }
 
 .primary-button {
@@ -1871,11 +1871,12 @@ strong {
   top: var(--space-3);
   right: var(--space-3);
   display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
-.walk-card--editable .walk-info h2 {
-  padding-right: calc(80px + var(--space-3));
+.walk-card--editable .walk-info {
+  padding-right: calc(36px + var(--space-3));
 }
 
 .dog-avatar {
@@ -3890,6 +3891,10 @@ textarea:focus-visible,
     height: 116px;
     min-height: 116px;
   }
+  .browser-preview--ios {
+    height: 132px;
+    min-height: 132px;
+  }
   .browser-preview--android {
     height: 142px;
     min-height: 142px;
@@ -3910,12 +3915,12 @@ textarea:focus-visible,
   .browser-preview--android .browser-preview-label {
     top: auto;
     right: var(--space-2);
-    bottom: 4px;
+    bottom: 8px;
   }
-  .browser-preview-arrow--android { top: 61px; right: 27px; height: 18px; }
+  .browser-preview-arrow--android { top: 73px; right: 12px; height: 20px; }
   .browser-preview--ios .browser-preview-label { bottom: 86px; }
   .browser-preview-arrow--down { bottom: 66px; height: 14px; }
-  .browser-guide-continue { margin-top: var(--space-3); }
+  .browser-guide-continue { margin-top: var(--space-4); }
   .pet-screen {
     padding-top: max(var(--space-4), env(safe-area-inset-top));
     padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));

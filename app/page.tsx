@@ -2652,9 +2652,13 @@ export default function Home() {
                           aria-selected={normalizePlaceForComparison(place.name) === normalizePlaceForComparison(placeInput)}
                           onPointerDown={(event) => {
                             event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
                             chooseSharedPlace(place);
                           }}
-                          onClick={() => chooseSharedPlace(place)}
                         >
                           {place.name}
                         </button>
