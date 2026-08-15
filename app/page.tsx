@@ -930,7 +930,22 @@ export default function Home() {
           menuOpen: false,
           locationOpenedFromMenu: false
         };
-        window.history.replaceState(initialNavigation, "", window.location.href);
+        if (validSharedPetId || validSharedPetAlreadyAddedId) {
+          // A share acceptance reaches the app through location.replace(), so
+          // there is no previous Dogmeet entry to return to. Seed one before
+          // opening «Мои питомцы»; otherwise iOS goes back to the messenger's
+          // discarded preview and may leave a blank page.
+          const returnNavigation: AppNavigationState = {
+            dogmeetNavigation: true,
+            screen: data.hasLocation && data.location ? "walks" : "welcome",
+            menuOpen: false,
+            locationOpenedFromMenu: false
+          };
+          window.history.replaceState(returnNavigation, "", window.location.href);
+          window.history.pushState(initialNavigation, "", window.location.href);
+        } else {
+          window.history.replaceState(initialNavigation, "", window.location.href);
+        }
         applyNavigationState(initialNavigation);
         setSessionReady(true);
         clearLegacySessionData();
