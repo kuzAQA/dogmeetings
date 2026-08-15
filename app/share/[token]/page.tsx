@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowLeft, Dog, UserRound } from "lucide-react";
+import { ArrowLeft, ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
 import Image from "next/image";
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 
 type SharedPet = {
   id: string;
@@ -11,6 +11,9 @@ type SharedPet = {
   ownerName: string;
   photoUrl: string;
 };
+
+type ShareStage = "guide" | "checking" | "preview" | "already-added" | "error";
+type GuidePlatform = "ios" | "android";
 
 async function ensureClientSession() {
   const current = await fetch("/api/session", { cache: "no-store" });
@@ -31,24 +34,29 @@ async function ensureClientSession() {
 export default function SharedPetPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [pet, setPet] = useState<SharedPet | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stage, setStage] = useState<ShareStage>("guide");
+  const [guidePlatform, setGuidePlatform] = useState<GuidePlatform>("ios");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [linkInactive, setLinkInactive] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/pet-shares/${encodeURIComponent(token)}`, { cache: "no-store" })
-      .then(async (response) => {
-        const data = await response.json() as { pet?: SharedPet; error?: string };
-        if (!response.ok || !data.pet) throw new Error(data.error || "Ссылка недействительна.");
-        if (active) setPet(data.pet);
-      })
-      .catch((requestError) => {
-        if (active) setError(requestError instanceof Error ? requestError.message : "Не удалось открыть питомца.");
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [token]);
+  async function continueFromBrowserGuide() {
+    setStage("checking");
+    setError("");
+    setLinkInactive(false);
+    try {
+      await ensureClientSession();
+      const response = await fetch(`/api/pet-shares/${encodeURIComponent(token)}`, { cache: "no-store" });
+      const data = await response.json() as { pet?: SharedPet; alreadyAdded?: boolean; inactive?: boolean; error?: string };
+      if (data.inactive || response.status === 410) setLinkInactive(true);
+      if (!response.ok || !data.pet) throw new Error(data.error || "Ссылка недействительна.");
+      setPet(data.pet);
+      setStage(data.alreadyAdded ? "already-added" : "preview");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Не удалось открыть питомца.");
+      setStage("error");
+    }
+  }
 
   async function acceptPet() {
     if (!pet || adding) return;
@@ -57,10 +65,15 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
     try {
       await ensureClientSession();
       const response = await fetch(`/api/pet-shares/${encodeURIComponent(token)}`, { method: "POST" });
-      const data = await response.json() as { petId?: string; added?: boolean; alreadyAdded?: boolean; error?: string };
+      const data = await response.json() as { petId?: string; added?: boolean; alreadyAdded?: boolean; inactive?: boolean; error?: string };
+      if (data.inactive || response.status === 410) setLinkInactive(true);
       if (!response.ok || !data.petId) throw new Error(data.error || "Не удалось добавить питомца.");
-      const resultParameter = data.alreadyAdded ? "sharedPetAlreadyAdded" : "sharedPet";
-      window.location.replace(`/?${resultParameter}=${encodeURIComponent(data.petId)}`);
+      if (data.alreadyAdded) {
+        setStage("already-added");
+        setAdding(false);
+        return;
+      }
+      window.location.replace(`/?sharedPet=${encodeURIComponent(data.petId)}`);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Не удалось добавить питомца.");
       setAdding(false);
@@ -70,16 +83,71 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
   return (
     <main className="page-shell">
       <section className="app-shell shared-pet-page" aria-label="Добавление питомца по ссылке">
-        <button className="icon-button back-button" type="button" aria-label="Отказаться и вернуться на главную" onClick={() => window.location.replace("/")}>
-          <ArrowLeft />
-        </button>
+        {stage === "guide" && (
+          <div className="screen browser-guide-screen shared-pet-browser-guide">
+            <button className="icon-button back-button" type="button" aria-label="Назад на главную" onClick={() => window.location.replace("/")}>
+              <ArrowLeft />
+            </button>
+            <div className="screen-heading browser-guide-heading">
+              <h1>Откройте сайт в браузере</h1>
+              <p>Если ссылка открылась внутри Telegram или другого мессенджера, перейдите в обычный браузер</p>
+            </div>
+            <div className="browser-guide-content">
+              <div className="browser-guide-platforms" role="group" aria-label="Выберите устройство">
+                <span className="filter-indicator browser-guide-platform-indicator" aria-hidden="true" style={{ left: guidePlatform === "ios" ? "var(--space-1)" : "50%" }} />
+                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "ios" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "ios"} onClick={() => setGuidePlatform("ios")}><span>iPhone</span></button>
+                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "android" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "android"} onClick={() => setGuidePlatform("android")}><span>Android</span></button>
+              </div>
+              {guidePlatform === "ios" ? (
+                <section className="browser-tip-card browser-tip-card--ios">
+                  <div className="browser-tip-copy">
+                    <span className="browser-tip-number" aria-hidden="true">1</span>
+                    <div><h2>Откройте в Safari</h2><p>Нажмите значок компаса внизу предварительного окна</p></div>
+                  </div>
+                  <div className="browser-preview browser-preview--ios" aria-hidden="true">
+                    <span className="browser-preview-label">Нажмите сюда</span>
+                    <span className="browser-preview-arrow browser-preview-arrow--down" />
+                    <span className="browser-preview-action"><Compass /></span>
+                  </div>
+                </section>
+              ) : (
+                <section className="browser-tip-card browser-tip-card--android">
+                  <div className="browser-preview browser-preview--android" aria-hidden="true">
+                    <div className="android-inapp-toolbar">
+                      <span className="android-status-time">11:29</span>
+                      <span className="android-status-icons">● ◒ ▮</span>
+                      <span className="android-toolbar-actions"><X /><ChevronDown /></span>
+                      <span className="android-toolbar-identity"><strong>Гулять вместе</strong><small>dogmeet.ru</small></span>
+                      <Share2 className="android-toolbar-share" />
+                      <span className="browser-preview-action"><EllipsisVertical /></span>
+                    </div>
+                    <span className="browser-preview-label">Нажмите сюда</span>
+                    <span className="browser-preview-arrow browser-preview-arrow--android" />
+                  </div>
+                  <div className="browser-tip-copy">
+                    <span className="browser-tip-number" aria-hidden="true">1</span>
+                    <div><h2>Откройте в браузере</h2><p>Нажмите три точки справа сверху, затем выберите «Открыть в браузере»</p></div>
+                  </div>
+                </section>
+              )}
+              <p className="browser-guide-note">Если сайт уже открыт в Safari или Chrome,<br />просто продолжите</p>
+            </div>
+            <button className="primary-button browser-guide-continue" type="button" onClick={continueFromBrowserGuide}>Продолжить</button>
+          </div>
+        )}
 
-        {loading ? (
+        {stage === "checking" && (
           <div className="share-page-status" role="status">
             <span className="saving-spinner" aria-hidden="true" />
-            <p>Открываем питомца…</p>
+            <p>Загружаем</p>
           </div>
-        ) : pet ? (
+        )}
+
+        {stage === "preview" && pet && (
+          <>
+            <button className="icon-button back-button" type="button" aria-label="Отказаться и вернуться на главную" onClick={() => window.location.replace("/")}>
+              <ArrowLeft />
+            </button>
           <div className="shared-pet-content">
             <div className="screen-heading shared-pet-heading">
               <h1>С вами поделились питомцем!</h1>
@@ -103,11 +171,24 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
               </button>
             </div>
           </div>
-        ) : (
+          </>
+        )}
+
+        {stage === "error" && (
           <div className="share-page-status share-page-status--error">
-            <h1>Ссылка недействительна</h1>
-            <p>{error || "Владелец мог получить новую ссылку."}</p>
+            <h1>{linkInactive ? "Ссылка неактивна" : "Ссылка недействительна"}</h1>
+            <p>{linkInactive ? "По этой ссылке питомец уже добавлен" : (error || "Владелец мог получить новую ссылку.")}</p>
             <button className="primary-button" type="button" onClick={() => window.location.replace("/")}>На главную</button>
+          </div>
+        )}
+
+        {stage === "already-added" && pet && (
+          <div className="information-overlay">
+            <section className="information-dialog shared-pet-already-added-dialog" role="alertdialog" aria-modal="true" aria-describedby="shared-pet-already-added-description">
+              <Image className="shared-pet-already-added-photo" src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={80} height={80} unoptimized />
+              <p id="shared-pet-already-added-description">{pet.name} уже добавлен в ваш список питомцев</p>
+              <button className="primary-button" type="button" onClick={() => window.location.replace("/")}>Хорошо</button>
+            </section>
           </div>
         )}
 

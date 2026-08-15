@@ -815,6 +815,7 @@ export default function Home() {
   const [petShareError, setPetShareError] = useState("");
   const [petShareCopied, setPetShareCopied] = useState(false);
   const [highlightedPetId, setHighlightedPetId] = useState("");
+  const [pendingSharedPetHighlightId, setPendingSharedPetHighlightId] = useState("");
   const [showSharedPetAlreadyAddedPopup, setShowSharedPetAlreadyAddedPopup] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("today");
   const [selectedPetId, setSelectedPetId] = useState("");
@@ -915,7 +916,10 @@ export default function Home() {
         const initialScreen: Screen = validSharedPetId || validSharedPetAlreadyAddedId
           ? "my-pets"
           : data.hasLocation && data.location ? "walks" : "welcome";
-        setHighlightedPetId(validSharedPetId);
+        // Сначала показываем сам экран «Мои питомцы» и дожидаемся его данных.
+        // Подсветка новой карточки включается отдельным эффектом ниже.
+        setHighlightedPetId("");
+        setPendingSharedPetHighlightId(validSharedPetId);
         setShowSharedPetAlreadyAddedPopup(Boolean(validSharedPetAlreadyAddedId));
         setLocation(restoredLocation);
         setLocationDraft((current) => data.hasLocation && data.location ? restoredLocation : current);
@@ -992,6 +996,19 @@ export default function Home() {
 
     return () => { active = false; };
   }, [sessionReady]);
+
+  useEffect(() => {
+    if (!pendingSharedPetHighlightId || !petsLoaded) return;
+
+    const highlightTimer = window.setTimeout(() => {
+      if (savedPets.some((pet) => pet.id === pendingSharedPetHighlightId)) {
+        setHighlightedPetId(pendingSharedPetHighlightId);
+      }
+      setPendingSharedPetHighlightId("");
+    }, 0);
+
+    return () => window.clearTimeout(highlightTimer);
+  }, [pendingSharedPetHighlightId, petsLoaded, savedPets]);
 
   useEffect(() => {
     let active = true;

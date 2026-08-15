@@ -298,7 +298,7 @@ strong {
 .browser-guide-content {
   display: flex;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-4);
   margin-top: var(--heading-content-gap);
@@ -346,9 +346,10 @@ strong {
 .browser-tip-card {
   display: flex;
   min-height: 0;
-  flex: 1;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: var(--space-4);
+  margin-top: var(--space-2);
   padding: var(--space-5);
   border: 1px solid rgba(40, 90, 59, 0.15);
   border-radius: 20px;
@@ -388,8 +389,9 @@ strong {
 
 .browser-preview {
   position: relative;
-  min-height: 164px;
-  flex: 1;
+  height: clamp(144px, 18svh, 180px);
+  min-height: 144px;
+  flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid rgba(40, 90, 59, 0.12);
   border-radius: 17px;
@@ -422,6 +424,8 @@ strong {
 }
 
 .browser-preview--android {
+  height: clamp(156px, 19svh, 180px);
+  min-height: 156px;
   background: linear-gradient(145deg, #f7f8f3, #edf1e9);
 }
 
@@ -578,13 +582,16 @@ strong {
 .browser-preview-label {
   position: absolute;
   z-index: 2;
-  padding: var(--space-2) var(--space-3);
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 6px 14px 7px;
   border-radius: 999px;
   background: var(--button-green);
   color: white;
   font-size: var(--caption-text-size);
   font-weight: var(--font-semibold);
-  line-height: 1;
+  line-height: 1.2;
   box-shadow: 0 7px 16px rgba(63, 114, 84, 0.18);
 }
 
@@ -595,8 +602,9 @@ strong {
 }
 
 .browser-preview--android .browser-preview-label {
-  top: 116px;
+  top: auto;
   right: var(--space-3);
+  bottom: 6px;
 }
 
 .browser-preview-arrow {
@@ -630,9 +638,9 @@ strong {
 
 .browser-preview-arrow--android {
   z-index: 4;
-  top: 78px;
-  right: 27px;
-  height: 28px;
+  top: 80px;
+  right: 29px;
+  height: 27px;
 }
 
 .browser-preview-arrow--android::after {
@@ -646,6 +654,7 @@ strong {
 }
 
 .browser-guide-note {
+  margin-top: auto;
   color: var(--muted);
   font-size: var(--caption-text-size);
   line-height: var(--line-body);
@@ -654,7 +663,45 @@ strong {
 
 .browser-guide-continue {
   flex: 0 0 auto;
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+/* The mobile composition is also used inside the fixed desktop frame.
+   Keep the complete instruction card within that frame instead of shrinking
+   its text or letting it overflow below the rounded paper surface. */
+@media (min-width: 600px), (max-height: 900px) {
+  .browser-guide-screen {
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  }
+  .browser-guide-screen .back-button { margin-bottom: var(--space-2); }
+  .browser-guide-heading h1 { font-size: clamp(2rem, 6vw, 2.25rem); }
+  .browser-guide-heading p { font-size: var(--body-size); }
+  .browser-guide-content {
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+  .browser-tip-card {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+  .browser-preview {
+    height: 136px;
+    min-height: 136px;
+  }
+  .browser-preview--android {
+    height: 156px;
+    min-height: 156px;
+  }
+  .browser-preview--android .browser-preview-label {
+    top: auto;
+    right: var(--space-3);
+    bottom: 6px;
+  }
+  .browser-preview-arrow--android { top: 80px; right: 29px; height: 27px; }
+  .browser-preview--ios .browser-preview-label { bottom: 86px; }
+  .browser-preview-arrow--down { bottom: 66px; height: 14px; }
+  .browser-guide-continue { margin-top: var(--space-3); }
 }
 
 .primary-button {
@@ -2878,7 +2925,25 @@ strong {
 
 .collection-pet {
   position: relative;
-  grid-template-columns: 62px minmax(0, 1fr) auto;
+  grid-template-columns: 62px minmax(0, 1fr);
+  row-gap: var(--space-2);
+}
+
+/* Pet actions form their own full-width row so the card remains easy to use on touch screens. */
+.collection-pet .collection-card-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  width: 100%;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(227, 229, 220, 0.9);
+}
+
+.collection-pet .collection-card-actions > button {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
 }
 
 .collection-pet-entry {
@@ -2900,17 +2965,26 @@ strong {
 }
 
 .collection-pet-entry--shared-highlight {
+  position: relative;
   z-index: 41;
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .collection-pet--shared-highlight {
   z-index: 41;
   background: var(--card);
   box-shadow: none;
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .shared-pet-highlight-message {
   position: relative;
+  z-index: 42;
   width: fit-content;
   max-width: min(310px, calc(100% - (2 * var(--space-4))));
   margin: 0 auto;
@@ -2924,6 +2998,9 @@ strong {
   font-weight: var(--font-regular);
   line-height: var(--line-compact);
   text-align: center;
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .shared-pet-highlight-message::before {
@@ -3070,6 +3147,26 @@ strong {
 
 .information-dialog.location-request-dialog p {
   font-weight: var(--font-regular);
+}
+
+.shared-pet-already-added-dialog {
+  display: grid;
+  justify-items: center;
+}
+
+.information-dialog.shared-pet-already-added-dialog p {
+  font-weight: var(--font-regular);
+}
+
+.shared-pet-already-added-photo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--space-4);
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 0 12px 2px rgba(40, 112, 67, 0.2),
+    0 0 20px 5px rgba(232, 199, 91, 0.2);
 }
 
 .information-dialog .primary-button {
@@ -3789,7 +3886,14 @@ textarea:focus-visible,
     gap: var(--space-3);
     padding: var(--space-4);
   }
-  .browser-preview { min-height: 116px; }
+  .browser-preview {
+    height: 116px;
+    min-height: 116px;
+  }
+  .browser-preview--android {
+    height: 142px;
+    min-height: 142px;
+  }
   .android-inapp-toolbar {
     height: 78px;
     padding: 6px var(--space-2) var(--space-2);
@@ -3803,8 +3907,12 @@ textarea:focus-visible,
   .android-toolbar-share { width: 19px; height: 19px; }
   .android-inapp-toolbar .browser-preview-action { width: 26px; height: 28px; }
   .browser-preview--android .browser-preview-action svg { width: 24px; height: 24px; }
-  .browser-preview--android .browser-preview-label { top: 90px; }
-  .browser-preview-arrow--android { top: 61px; right: 23px; height: 24px; }
+  .browser-preview--android .browser-preview-label {
+    top: auto;
+    right: var(--space-2);
+    bottom: 4px;
+  }
+  .browser-preview-arrow--android { top: 61px; right: 27px; height: 18px; }
   .browser-preview--ios .browser-preview-label { bottom: 86px; }
   .browser-preview-arrow--down { bottom: 66px; height: 14px; }
   .browser-guide-continue { margin-top: var(--space-3); }
@@ -3871,7 +3979,10 @@ textarea:focus-visible,
   }
   .browser-tip-copy h2 { font-size: var(--body-size); }
   .browser-tip-copy p { font-size: var(--caption-text-size); }
-  .browser-preview { min-height: 84px; }
+  .browser-preview {
+    height: 84px;
+    min-height: 84px;
+  }
   .android-inapp-toolbar {
     height: 62px;
     padding: var(--space-2);
@@ -3976,6 +4087,12 @@ textarea:focus-visible,
   flex-direction: column;
   padding: var(--screen-inline-padding);
   overflow: hidden;
+}
+
+.shared-pet-page .shared-pet-browser-guide {
+  width: calc(100% + (2 * var(--screen-inline-padding)));
+  min-height: 100svh;
+  margin: calc(-1 * var(--screen-inline-padding));
 }
 
 .shared-pet-page .back-button {
