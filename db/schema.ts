@@ -26,6 +26,38 @@ export const pets = pgTable(
   ]
 );
 
+export const petCollaborators = pgTable(
+  "pet_collaborators",
+  {
+    petId: uuid("pet_id").notNull().references(() => pets.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").notNull(),
+    grantedByClientId: uuid("granted_by_client_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({
+      name: "pet_collaborators_pet_client_pk",
+      columns: [table.petId, table.clientId]
+    }),
+    index("pet_collaborators_client_id_idx").on(table.clientId)
+  ]
+);
+
+export const petShareLinks = pgTable(
+  "pet_share_links",
+  {
+    token: varchar("token", { length: 64 }).primaryKey(),
+    petId: uuid("pet_id").notNull().references(() => pets.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("pet_share_links_pet_id_unique").on(table.petId),
+    index("pet_share_links_updated_at_idx").on(table.updatedAt)
+  ]
+);
+
 export const clientSessions = pgTable(
   "client_sessions",
   {
@@ -129,6 +161,7 @@ export const walks = pgTable(
   {
     id: uuid("id").primaryKey(),
     petId: uuid("pet_id").notNull().references(() => pets.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").notNull(),
     city: varchar("city", { length: 80 }).notNull(),
     district: varchar("district", { length: 80 }).notNull(),
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
@@ -144,6 +177,7 @@ export const walks = pgTable(
   },
   (table) => [
     index("walks_starts_at_idx").on(table.startsAt),
+    index("walks_client_id_idx").on(table.clientId),
     index("walks_updated_at_idx").on(table.updatedAt),
     index("walks_schedule_idx").on(table.scheduleType, table.walkDate, table.walkTime),
     index("walks_location_idx").on(table.city, table.district, table.residentialComplex)

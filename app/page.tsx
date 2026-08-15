@@ -9,14 +9,17 @@ import {
   ChevronRight,
   Clock3,
   Compass,
+  Copy,
   Dog,
   EllipsisVertical,
+  Forward,
   House,
   Hourglass,
   MessageCircle,
   PawPrint,
   Pencil,
   Plus,
+  RefreshCw,
   Share2,
   Trash2,
   UserRound,
@@ -68,6 +71,11 @@ type Pet = {
   photoUrl: string;
   createdAt: string;
   updatedAt: string;
+  isOwner: boolean;
+  isShared: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canShare: boolean;
 };
 
 type SharedPlace = {
@@ -800,6 +808,14 @@ export default function Home() {
   const [petPendingDelete, setPetPendingDelete] = useState<Pet | null>(null);
   const [petDeleting, setPetDeleting] = useState(false);
   const [petDeleteError, setPetDeleteError] = useState("");
+  const [petToShare, setPetToShare] = useState<Pet | null>(null);
+  const [petShareLink, setPetShareLink] = useState("");
+  const [petShareLoading, setPetShareLoading] = useState(false);
+  const [petShareRefreshing, setPetShareRefreshing] = useState(false);
+  const [petShareError, setPetShareError] = useState("");
+  const [petShareCopied, setPetShareCopied] = useState(false);
+  const [highlightedPetId, setHighlightedPetId] = useState("");
+  const [showSharedPetAlreadyAddedPopup, setShowSharedPetAlreadyAddedPopup] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("today");
   const [selectedPetId, setSelectedPetId] = useState("");
   const [walkTime, setWalkTime] = useState("");
@@ -808,6 +824,7 @@ export default function Home() {
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
   const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
+  const shareDoneButtonRef = useRef<HTMLButtonElement>(null);
   const filterTimersRef = useRef<number[]>([]);
   const formCloseModeRef = useRef<"back" | "replace">("back");
 
@@ -886,7 +903,20 @@ export default function Home() {
         const restoredLocation = data.hasLocation && data.location
           ? data.location
           : defaultLocation;
-        const initialScreen: Screen = data.hasLocation && data.location ? "walks" : "welcome";
+        const searchParameters = new URLSearchParams(window.location.search);
+        const sharedPetId = searchParameters.get("sharedPet") ?? "";
+        const sharedPetAlreadyAddedId = searchParameters.get("sharedPetAlreadyAdded") ?? "";
+        const validSharedPetId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sharedPetId)
+          ? sharedPetId
+          : "";
+        const validSharedPetAlreadyAddedId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sharedPetAlreadyAddedId)
+          ? sharedPetAlreadyAddedId
+          : "";
+        const initialScreen: Screen = validSharedPetId || validSharedPetAlreadyAddedId
+          ? "my-pets"
+          : data.hasLocation && data.location ? "walks" : "welcome";
+        setHighlightedPetId(validSharedPetId);
+        setShowSharedPetAlreadyAddedPopup(Boolean(validSharedPetAlreadyAddedId));
         setLocation(restoredLocation);
         setLocationDraft((current) => data.hasLocation && data.location ? restoredLocation : current);
         setHasLocation(Boolean(data.hasLocation && data.location));
@@ -1052,6 +1082,10 @@ export default function Home() {
   }, [locationRequestSent]);
 
   useEffect(() => {
+    if (petToShare && !petShareLoading) shareDoneButtonRef.current?.focus();
+  }, [petShareLoading, petToShare]);
+
+  useEffect(() => {
     return () => {
       if (photoUrl) URL.revokeObjectURL(photoUrl);
     };
@@ -1068,6 +1102,10 @@ export default function Home() {
   const ownedWalksById = useMemo(
     () => new Map(myWalks.map((walk) => [walk.id, walk])),
     [myWalks]
+  );
+  const petsById = useMemo(
+    () => new Map(savedPets.map((pet) => [pet.id, pet])),
+    [savedPets]
   );
   const locationCityOptions = useMemo(
     () => uniqueLocationValues(availableLocations.map((row) => row.city)).map((value) => ({ value, label: value })),
@@ -1388,6 +1426,88 @@ export default function Home() {
     openFormScreen("pet");
   }
 
+  async function requestPetShareLink(pet: Pet, rotate = false) {
+    const refreshTurn = rotate
+      ? new Promise<void>((resolve) => window.setTimeout(resolve, 720))
+      : Promise.resolve();
+    if (rotate) {
+      setPetShareRefreshing(true);
+    } else {
+      setPetToShare(pet);
+      setPetShareLoading(true);
+    }
+    setPetShareError("");
+    setPetShareCopied(false);
+    try {
+      const response = await fetch("/api/pet-shares", {
+        method: rotate ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ petId: pet.id })
+      });
+      const data = await response.json() as { link?: string; error?: string };
+      if (!response.ok || !data.link) {
+        throw new Error(data.error || "Не удалось получить ссылку.");
+      }
+      setPetShareLink(data.link);
+    } catch (error) {
+      setPetShareError(error instanceof Error ? error.message : "Не удалось получить ссылку.");
+    } finally {
+      if (rotate) {
+        await refreshTurn;
+        setPetShareRefreshing(false);
+      } else {
+        setPetShareLoading(false);
+      }
+    }
+  }
+
+  function closePetShare() {
+    if (petShareLoading || petShareRefreshing) return;
+    setPetToShare(null);
+    setPetShareLink("");
+    setPetShareError("");
+    setPetShareCopied(false);
+  }
+
+  async function copyPetShareLink() {
+    if (!petShareLink || petShareLoading) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(petShareLink);
+      } else {
+        const temporaryInput = document.createElement("textarea");
+        temporaryInput.value = petShareLink;
+        temporaryInput.setAttribute("readonly", "");
+        temporaryInput.style.position = "fixed";
+        temporaryInput.style.opacity = "0";
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        const copied = document.execCommand("copy");
+        temporaryInput.remove();
+        if (!copied) throw new Error("copy-failed");
+      }
+      setPetShareCopied(true);
+      window.setTimeout(() => setPetShareCopied(false), 1800);
+    } catch {
+      setPetShareError("Не удалось скопировать ссылку. Нажмите на поле и скопируйте её вручную.");
+    }
+  }
+
+  function dismissSharedPetHighlight() {
+    if (!highlightedPetId) return;
+    setHighlightedPetId("");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("sharedPet");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function dismissSharedPetAlreadyAddedPopup() {
+    setShowSharedPetAlreadyAddedPopup(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("sharedPetAlreadyAdded");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
   function startWalkAnnouncement() {
     if (savedPets.length === 0) {
       setShowPetRequiredPopup(true);
@@ -1461,6 +1581,15 @@ export default function Home() {
     setCollectionClosing(false);
     setMenuOpen(false);
     pushNavigation(nextScreen);
+    if (nextScreen === "my-pets") {
+      fetch("/api/pets")
+        .then(async (response) => {
+          if (!response.ok) return;
+          const data = await response.json() as { pets?: Pet[] };
+          if (Array.isArray(data.pets)) setSavedPets(data.pets);
+        })
+        .catch(() => undefined);
+    }
   }
 
   function returnToMenu() {
@@ -1670,15 +1799,17 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ petId: petPendingDelete.id })
       });
-      const data = await response.json() as { deleted?: boolean; error?: string };
+      const data = await response.json() as { deleted?: boolean; detached?: boolean; error?: string };
       if (!response.ok || !data.deleted) {
         throw new Error(data.error || "Не удалось удалить питомца.");
       }
 
       const deletedId = petPendingDelete.id;
       setSavedPets((current) => current.filter((pet) => pet.id !== deletedId));
-      setMyWalks((current) => current.filter((walk) => walk.petId !== deletedId));
-      setSavedWalks((current) => current.filter((walk) => walk.petId !== deletedId));
+      if (!data.detached) {
+        setMyWalks((current) => current.filter((walk) => walk.petId !== deletedId));
+        setSavedWalks((current) => current.filter((walk) => walk.petId !== deletedId));
+      }
       setPetPendingDelete(null);
     } catch (error) {
       setPetDeleteError(error instanceof Error ? error.message : "Не удалось удалить питомца.");
@@ -2030,17 +2161,33 @@ export default function Home() {
                   </p>
                 ) : visibleWalks.map((walk) => {
                   const ownedWalk = ownedWalksById.get(walk.id);
+                  const shareablePet = petsById.get(walk.petId);
+                  const hasCardActions = Boolean(ownedWalk || shareablePet?.canShare);
                   return (
-                    <article className={`walk-card ${ownedWalk ? "walk-card--editable" : ""}`} key={walk.id}>
-                      {ownedWalk && (
-                        <button
-                          className="edit-walk-button walk-card-edit-button"
-                          type="button"
-                          aria-label={`Редактировать прогулку питомца ${walk.pet}`}
-                          onClick={() => editWalk(ownedWalk, "walks")}
-                        >
-                          <Pencil aria-hidden="true" />
-                        </button>
+                    <article className={`walk-card ${hasCardActions ? "walk-card--editable" : ""}`} key={walk.id}>
+                      {hasCardActions && (
+                        <span className="walk-card-actions">
+                          {shareablePet?.canShare && (
+                            <button
+                              className="share-pet-button share-pet-button--walk"
+                              type="button"
+                              aria-label={`Поделиться питомцем ${walk.pet}`}
+                              onClick={() => requestPetShareLink(shareablePet)}
+                            >
+                              <Forward aria-hidden="true" />
+                            </button>
+                          )}
+                          {ownedWalk && (
+                            <button
+                              className="edit-walk-button"
+                              type="button"
+                              aria-label={`Редактировать прогулку питомца ${walk.pet}`}
+                              onClick={() => editWalk(ownedWalk, "walks")}
+                            >
+                              <Pencil aria-hidden="true" />
+                            </button>
+                          )}
+                        </span>
                       )}
                       <div className="walk-pet-visual">
                         <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
@@ -2195,6 +2342,12 @@ export default function Home() {
         {screen === "my-pets" && (
           <div
             className={`screen collection-screen subpage-screen-motion ${collectionClosing ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}`}
+            onPointerDownCapture={(event) => {
+              if (!highlightedPetId) return;
+              event.preventDefault();
+              event.stopPropagation();
+              dismissSharedPetHighlight();
+            }}
             onAnimationEnd={(event) => {
               if (
                 event.target === event.currentTarget &&
@@ -2203,6 +2356,7 @@ export default function Home() {
               ) completeCollectionClose();
             }}
           >
+            {highlightedPetId && <div className="shared-pet-highlight-overlay" aria-hidden="true" />}
             <button className="icon-button back-button" type="button" aria-label="Назад в меню" onClick={returnToMenu}>
               <ArrowLeft />
             </button>
@@ -2211,34 +2365,60 @@ export default function Home() {
               <p>Добавленные вами питомцы</p>
             </div>
             <div className="collection-list collection-list-with-action" aria-live="polite">
-              {savedPets.length > 0 ? savedPets.map((pet) => (
-                <article className="collection-card collection-pet" key={pet.id}>
-                  <Image src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={62} height={62} unoptimized />
-                  <span className="collection-card-info">
-                    <strong>{pet.name}</strong>
-                    <small><Dog aria-hidden="true" />{pet.breed}</small>
-                    <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
-                  </span>
-                  <span className="collection-card-actions">
-                    <button
-                      className="edit-pet-button"
-                      type="button"
-                      aria-label={`Редактировать питомца ${pet.name}`}
-                      onClick={() => editPet(pet)}
-                    >
-                      <Pencil aria-hidden="true" />
-                    </button>
-                    <button
-                      className="delete-pet-button"
-                      type="button"
-                      aria-label={`Удалить питомца ${pet.name}`}
-                      onClick={() => { setPetDeleteError(""); setPetPendingDelete(pet); }}
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </button>
-                  </span>
-                </article>
-              )) : (
+              {savedPets.length > 0 ? savedPets.map((pet) => {
+                const isHighlighted = highlightedPetId === pet.id;
+                return (
+                  <div className={`collection-pet-entry ${isHighlighted ? "collection-pet-entry--shared-highlight" : ""}`} key={pet.id}>
+                    <article className={`collection-card collection-pet ${isHighlighted ? "collection-pet--shared-highlight" : ""}`}>
+                      <Image src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={62} height={62} unoptimized />
+                      <span className="collection-card-info">
+                        <strong>{pet.name}</strong>
+                        <small><Dog aria-hidden="true" />{pet.breed}</small>
+                        <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
+                      </span>
+                      <span className="collection-card-actions">
+                        {pet.canShare && (
+                          <button
+                            className="share-pet-button"
+                            type="button"
+                            aria-label={`Поделиться питомцем ${pet.name}`}
+                            onClick={() => requestPetShareLink(pet)}
+                          >
+                            <Forward aria-hidden="true" />
+                          </button>
+                        )}
+                        {pet.canEdit && (
+                          <button
+                            className="edit-pet-button"
+                            type="button"
+                            aria-label={`Редактировать питомца ${pet.name}`}
+                            onClick={() => editPet(pet)}
+                          >
+                            <Pencil aria-hidden="true" />
+                          </button>
+                        )}
+                        {pet.canDelete && (
+                          <button
+                            className="delete-pet-button"
+                            type="button"
+                            aria-label={`Удалить питомца ${pet.name}`}
+                            onClick={() => { setPetDeleteError(""); setPetPendingDelete(pet); }}
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </button>
+                        )}
+                      </span>
+                      {pet.isOwner && pet.isShared && (
+                        <span className="shared-pet-origin-label">Вы поделились этим питомцем</span>
+                      )}
+                      {!pet.isOwner && <span className="shared-pet-origin-label">Добавленный питомец</span>}
+                    </article>
+                    {isHighlighted && (
+                      <p className="shared-pet-highlight-message">Теперь вы можете управлять этим питомцем</p>
+                    )}
+                  </div>
+                );
+              }) : (
                 <p className="collection-empty">У вас пока нет добавленных питомцев</p>
               )}
             </div>
@@ -2542,12 +2722,71 @@ export default function Home() {
           </div>
         )}
 
+        {showSharedPetAlreadyAddedPopup && (
+          <div className="information-overlay">
+            <section className="information-dialog shared-pet-already-added-dialog" role="alertdialog" aria-modal="true" aria-describedby="shared-pet-already-added-description">
+              <p id="shared-pet-already-added-description">Этот питомец уже добавлен</p>
+              <button className="primary-button" type="button" onClick={dismissSharedPetAlreadyAddedPopup}>Хорошо</button>
+            </section>
+          </div>
+        )}
+
         {locationRequestSent && (
           <div className="information-overlay">
             <section className="information-dialog location-request-dialog" role="dialog" aria-modal="true" aria-describedby="location-request-description">
               <Hourglass className="location-request-dialog-icon" aria-hidden="true" />
               <p id="location-request-description">Пока вы ждёте добавления своей локации, можете выбрать другое место для прогулки</p>
               <button ref={locationRequestButtonRef} className="primary-button" type="button" onClick={() => setLocationRequestSent(false)}>Хорошо</button>
+            </section>
+          </div>
+        )}
+
+        {petToShare && (
+          <div className="information-overlay pet-share-overlay" role="presentation">
+            <section className="information-dialog pet-share-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-share-title">
+              <Forward className="pet-share-dialog-icon" aria-hidden="true" />
+              <h2 id="pet-share-title">Поделиться питомцем</h2>
+              <p>Отправьте эту ссылку человеку, с которым хотите вместе управлять питомцем</p>
+              {petShareLoading ? (
+                <div className="pet-share-loading" role="status">
+                  <span className="saving-spinner" aria-hidden="true" />
+                  <span>Получаем ссылку…</span>
+                </div>
+              ) : (
+                <>
+                  <div className="pet-share-link-row">
+                    <input
+                      aria-label="Ссылка на питомца"
+                      readOnly
+                      value={petShareLink}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                    <button
+                      className={`pet-share-copy-button ${petShareCopied ? "pet-share-copy-button--copied" : ""}`}
+                      type="button"
+                      disabled={!petShareLink}
+                      aria-label="Копировать ссылку"
+                      onClick={copyPetShareLink}
+                    >
+                      {petShareCopied ? <CheckCircle2 aria-hidden="true" /> : <Copy aria-hidden="true" />}
+                    </button>
+                  </div>
+                  <div className="pet-share-status" aria-live="polite">
+                    {petShareCopied && <span>Скопировано</span>}
+                  </div>
+                  <button
+                    className="pet-share-renew-button"
+                    type="button"
+                    disabled={!petShareLink || petShareRefreshing}
+                    onClick={() => requestPetShareLink(petToShare, true)}
+                  >
+                    <RefreshCw className={petShareRefreshing ? "pet-share-renew-icon--spinning" : ""} aria-hidden="true" />
+                    Получить новую ссылку
+                  </button>
+                </>
+              )}
+              {petShareError && <p className="form-error pet-share-error" role="alert">{petShareError}</p>}
+              <button ref={shareDoneButtonRef} className="primary-button" type="button" disabled={petShareLoading || petShareRefreshing} onClick={closePetShare}>Готово</button>
             </section>
           </div>
         )}
@@ -2571,8 +2810,12 @@ export default function Home() {
         {petPendingDelete && (
           <div className="delete-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !petDeleting) setPetPendingDelete(null); }}>
             <section className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-pet-title" aria-describedby="delete-pet-description">
-              <h2 id="delete-pet-title">Удалить питомца?</h2>
-              <p id="delete-pet-description">Вместе с питомцем будут удалены добавленные для него прогулки</p>
+              <h2 id="delete-pet-title">{petPendingDelete.isOwner ? "Удалить питомца?" : "Удалить добавленного питомца?"}</h2>
+              <p id="delete-pet-description">
+                {petPendingDelete.isOwner
+                  ? "Вместе с питомцем будут удалены добавленные для него прогулки"
+                  : "Питомец будет удалён только из вашего списка. У владельца он останется"}
+              </p>
               {petDeleteError && <p className="delete-confirm-error" role="alert">{petDeleteError}</p>}
               <div className="delete-confirm-actions">
                 <button className="delete-confirm-button" type="button" disabled={petDeleting} onClick={deletePet}>

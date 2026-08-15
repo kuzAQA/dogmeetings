@@ -1,6 +1,6 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { withDb } from "../../../db";
-import { pets, places, walks } from "../../../db/schema";
+import { petCollaborators, pets, places, walks } from "../../../db/schema";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const MAX_WALK_META_LENGTH = 40;
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
         })
         .from(walks)
         .innerJoin(pets, eq(walks.petId, pets.id))
-        .where(eq(pets.clientId, session.clientId))
+        .where(eq(walks.clientId, session.clientId))
         .orderBy(desc(walks.updatedAt), desc(walks.createdAt))
         .limit(100));
 
@@ -228,15 +228,27 @@ export async function POST(request: Request) {
       const [pet] = await tx
         .select({
           id: pets.id,
+          clientId: pets.clientId,
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
           updatedAt: pets.updatedAt
         })
         .from(pets)
-        .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
+        .where(eq(pets.id, petId))
         .limit(1);
       if (!pet) return null;
+      if (pet.clientId !== session.clientId) {
+        const [collaboration] = await tx
+          .select({ petId: petCollaborators.petId })
+          .from(petCollaborators)
+          .where(and(
+            eq(petCollaborators.petId, petId),
+            eq(petCollaborators.clientId, session.clientId)
+          ))
+          .limit(1);
+        if (!collaboration) return null;
+      }
 
       const insertedPlaces = await tx
         .insert(places)
@@ -280,6 +292,7 @@ export async function POST(request: Request) {
         .values({
           id: crypto.randomUUID(),
           petId,
+          clientId: session.clientId,
           city,
           district,
           residentialComplex,
@@ -387,23 +400,34 @@ export async function PATCH(request: Request) {
       const [ownedWalk] = await tx
         .select({ id: walks.id })
         .from(walks)
-        .innerJoin(pets, eq(walks.petId, pets.id))
-        .where(and(eq(walks.id, walkId), eq(pets.clientId, session.clientId)))
+        .where(and(eq(walks.id, walkId), eq(walks.clientId, session.clientId)))
         .limit(1);
       if (!ownedWalk) return null;
 
       const [pet] = await tx
         .select({
           id: pets.id,
+          clientId: pets.clientId,
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
           updatedAt: pets.updatedAt
         })
         .from(pets)
-        .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
+        .where(eq(pets.id, petId))
         .limit(1);
       if (!pet) return null;
+      if (pet.clientId !== session.clientId) {
+        const [collaboration] = await tx
+          .select({ petId: petCollaborators.petId })
+          .from(petCollaborators)
+          .where(and(
+            eq(petCollaborators.petId, petId),
+            eq(petCollaborators.clientId, session.clientId)
+          ))
+          .limit(1);
+        if (!collaboration) return null;
+      }
 
       const insertedPlaces = await tx
         .insert(places)
@@ -516,8 +540,7 @@ export async function DELETE(request: Request) {
       const [ownedWalk] = await db
         .select({ id: walks.id })
         .from(walks)
-        .innerJoin(pets, eq(walks.petId, pets.id))
-        .where(and(eq(walks.id, walkId), eq(pets.clientId, session.clientId)))
+        .where(and(eq(walks.id, walkId), eq(walks.clientId, session.clientId)))
         .limit(1);
 
       if (!ownedWalk) return false;

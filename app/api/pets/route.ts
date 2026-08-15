@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { withDb } from "../../../db";
-import { pets } from "../../../db/schema";
+import { petCollaborators, pets } from "../../../db/schema";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const MAX_PHOTO_SIZE = 1024 * 1024;
@@ -19,9 +19,10 @@ function normalizeName(value: FormDataEntryValue | null) {
   return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
 }
 
-type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
+type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
 
-function publicPet(pet: PetSummary) {
+function publicPet(pet: PetSummary, clientId: string, isShared = false) {
+  const isOwner = pet.clientId === clientId;
   return {
     id: pet.id,
     name: pet.name,
@@ -29,7 +30,12 @@ function publicPet(pet: PetSummary) {
     ownerName: pet.ownerName,
     photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}&v=${pet.updatedAt.getTime()}`,
     createdAt: pet.createdAt.toISOString(),
-    updatedAt: pet.updatedAt.toISOString()
+    updatedAt: pet.updatedAt.toISOString(),
+    isOwner,
+    isShared: isOwner && isShared,
+    canEdit: true,
+    canDelete: true,
+    canShare: isOwner
   };
 }
 
@@ -55,9 +61,20 @@ export async function GET(request: Request) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
 
-    const rows = await withDb((db) => db
+    const rows = await withDb(async (db) => {
+      const sharedRows = await db
+        .select({ petId: petCollaborators.petId })
+        .from(petCollaborators)
+        .where(eq(petCollaborators.clientId, session.clientId));
+      const sharedPetIds = sharedRows.map((row) => row.petId);
+      const accessCondition = sharedPetIds.length > 0
+        ? or(eq(pets.clientId, session.clientId), inArray(pets.id, sharedPetIds))
+        : eq(pets.clientId, session.clientId);
+
+      const petRows = await db
         .select({
           id: pets.id,
+          clientId: pets.clientId,
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
@@ -65,11 +82,25 @@ export async function GET(request: Request) {
           updatedAt: pets.updatedAt
         })
         .from(pets)
-        .where(eq(pets.clientId, session.clientId))
+        .where(accessCondition)
         .orderBy(desc(pets.createdAt))
-        .limit(100));
+        .limit(100);
 
-    return privateJson({ pets: rows.map(publicPet) });
+      const sharedByOwnerRows = await db
+        .select({ petId: petCollaborators.petId })
+        .from(petCollaborators)
+        .where(eq(petCollaborators.grantedByClientId, session.clientId));
+      const sharedByOwnerPetIds = new Set(sharedByOwnerRows.map((row) => row.petId));
+
+      return petRows.map((pet) => ({
+        pet,
+        isShared: pet.clientId === session.clientId && sharedByOwnerPetIds.has(pet.id)
+      }));
+    });
+
+    return privateJson({
+      pets: rows.map(({ pet, isShared }) => publicPet(pet, session.clientId, isShared))
+    });
   } catch (error) {
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
@@ -136,6 +167,7 @@ export async function POST(request: Request) {
         })
         .returning({
           id: pets.id,
+          clientId: pets.clientId,
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
@@ -143,7 +175,7 @@ export async function POST(request: Request) {
           updatedAt: pets.updatedAt
         }));
 
-    return privateJson({ pet: publicPet(pet) }, { status: 201 });
+    return privateJson({ pet: publicPet(pet, session.clientId) }, { status: 201 });
   } catch (error) {
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
@@ -190,6 +222,26 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const [existingPet] = await withDb((db) => db
+      .select({ id: pets.id, clientId: pets.clientId })
+      .from(pets)
+      .where(eq(pets.id, petId))
+      .limit(1));
+    if (!existingPet) {
+      return privateError("Питомец не найден.", 404);
+    }
+    if (existingPet.clientId !== session.clientId) {
+      const [collaboration] = await withDb((db) => db
+        .select({ petId: petCollaborators.petId })
+        .from(petCollaborators)
+        .where(and(
+          eq(petCollaborators.petId, petId),
+          eq(petCollaborators.clientId, session.clientId)
+        ))
+        .limit(1));
+      if (!collaboration) return privateError("Питомец не найден.", 404);
+    }
+
     const updatedAt = new Date();
     const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, updatedAt };
     if (hasPhoto) {
@@ -200,9 +252,10 @@ export async function PATCH(request: Request) {
     const [pet] = await withDb((db) => db
       .update(pets)
       .set(values)
-      .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
+      .where(eq(pets.id, petId))
       .returning({
         id: pets.id,
+        clientId: pets.clientId,
         name: pets.name,
         breed: pets.breed,
         ownerName: pets.ownerName,
@@ -214,7 +267,15 @@ export async function PATCH(request: Request) {
       return privateError("Питомец не найден.", 404);
     }
 
-    return privateJson({ pet: publicPet(pet) });
+    const [collaborator] = pet.clientId === session.clientId
+      ? await withDb((db) => db
+        .select({ petId: petCollaborators.petId })
+        .from(petCollaborators)
+        .where(eq(petCollaborators.petId, pet.id))
+        .limit(1))
+      : [];
+
+    return privateJson({ pet: publicPet(pet, session.clientId, Boolean(collaborator)) });
   } catch (error) {
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
@@ -238,16 +299,36 @@ export async function DELETE(request: Request) {
       return privateError("Некорректные данные питомца.", 400);
     }
 
-    const deleted = await withDb((db) => db
-      .delete(pets)
-      .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId)))
-      .returning({ id: pets.id }));
+    const [pet] = await withDb((db) => db
+      .select({ id: pets.id, clientId: pets.clientId })
+      .from(pets)
+      .where(eq(pets.id, petId))
+      .limit(1));
 
-    if (deleted.length === 0) {
+    if (!pet) {
       return privateError("Питомец не найден.", 404);
     }
 
-    return privateJson({ deleted: true });
+    if (pet.clientId === session.clientId) {
+      await withDb((db) => db
+        .delete(pets)
+        .where(and(eq(pets.id, petId), eq(pets.clientId, session.clientId))));
+      return privateJson({ deleted: true, detached: false });
+    }
+
+    const detached = await withDb((db) => db
+      .delete(petCollaborators)
+      .where(and(
+        eq(petCollaborators.petId, petId),
+        eq(petCollaborators.clientId, session.clientId)
+      ))
+      .returning({ petId: petCollaborators.petId }));
+
+    if (detached.length === 0) {
+      return privateError("Питомец не найден.", 404);
+    }
+
+    return privateJson({ deleted: true, detached: true });
   } catch (error) {
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
