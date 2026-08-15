@@ -2970,9 +2970,26 @@ strong {
  */
 .collection-screen--shared-highlight-active > .back-button,
 .collection-screen--shared-highlight-active > .screen-heading,
-.collection-screen--shared-highlight-active > .floating-pet-button,
-.collection-screen--shared-highlight-active .collection-pet-entry:not(.collection-pet-entry--shared-highlight) {
+.collection-screen--shared-highlight-active > .floating-pet-button {
   filter: blur(5px) saturate(0.82);
+}
+
+/*
+ * A scrollable element is promoted to its own compositing layer by WebKit.
+ * Lift that layer above the dimmer; otherwise iOS paints the overlay over the
+ * highlighted card regardless of the card's own z-index.
+ */
+.collection-screen--shared-highlight-active .collection-list {
+  position: relative;
+  z-index: 41;
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.collection-screen--shared-highlight-active .collection-pet-entry:not(.collection-pet-entry--shared-highlight) {
+  opacity: 0.42;
+  filter: blur(5px) saturate(0.82) brightness(0.58);
 }
 
 .collection-pet-entry--shared-highlight {
