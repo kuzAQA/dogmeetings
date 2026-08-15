@@ -2960,9 +2960,19 @@ strong {
   background:
     linear-gradient(145deg, rgba(71, 81, 74, 0.48), rgba(42, 50, 44, 0.54)),
     rgba(48, 57, 51, 0.5);
-  -webkit-backdrop-filter: blur(4px) saturate(0.9);
-  backdrop-filter: blur(4px) saturate(0.9);
   cursor: pointer;
+}
+
+/*
+ * WebKit applies a sibling's backdrop-filter to composited children even when
+ * they are painted above it. Blur the background elements themselves so the
+ * shared pet card always remains sharp in Safari and Chrome on iOS.
+ */
+.collection-screen--shared-highlight-active > .back-button,
+.collection-screen--shared-highlight-active > .screen-heading,
+.collection-screen--shared-highlight-active > .floating-pet-button,
+.collection-screen--shared-highlight-active .collection-pet-entry:not(.collection-pet-entry--shared-highlight) {
+  filter: blur(5px) saturate(0.82);
 }
 
 .collection-pet-entry--shared-highlight {

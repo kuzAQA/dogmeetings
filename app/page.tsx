@@ -2358,7 +2358,7 @@ export default function Home() {
 
         {screen === "my-pets" && (
           <div
-            className={`screen collection-screen subpage-screen-motion ${collectionClosing ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}`}
+            className={`screen collection-screen subpage-screen-motion ${collectionClosing ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"} ${highlightedPetId ? "collection-screen--shared-highlight-active" : ""}`}
             onPointerDownCapture={(event) => {
               if (!highlightedPetId) return;
               event.preventDefault();
