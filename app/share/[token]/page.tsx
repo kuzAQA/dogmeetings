@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
 import Image from "next/image";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 type SharedPet = {
   id: string;
@@ -39,6 +39,11 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [linkInactive, setLinkInactive] = useState(false);
+
+  useEffect(() => {
+    const isIPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    setGuidePlatform(/Android/i.test(navigator.userAgent) && !isIPadOs ? "android" : "ios");
+  }, []);
 
   async function continueFromBrowserGuide() {
     setStage("checking");
@@ -130,8 +135,8 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
                   </div>
                 </section>
               )}
-              <p className="browser-guide-note">Если сайт уже открыт в Safari или Chrome,<br />просто продолжите</p>
             </div>
+            <p className="browser-guide-note">Если сайт уже открыт в Safari или Chrome,<br />просто продолжите</p>
             <button className="primary-button browser-guide-continue" type="button" onClick={continueFromBrowserGuide}>Продолжить</button>
           </div>
         )}

@@ -1973,11 +1973,12 @@ export default function Home() {
                 </section>
               )}
 
-              <p className="browser-guide-note">
-                Если сайт уже открыт в Safari или Chrome,<br />
-                просто продолжите
-              </p>
             </div>
+
+            <p className="browser-guide-note">
+              Если сайт уже открыт в Safari или Chrome,<br />
+              просто продолжите
+            </p>
 
             <button className="primary-button browser-guide-continue" type="button" onClick={() => pushNavigation(hasLocation ? "walks" : "location")}>
               Продолжить

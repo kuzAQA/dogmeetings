@@ -357,6 +357,13 @@ strong {
   box-shadow: var(--shadow);
 }
 
+/* The Android preview has its own internal hint. Keep the card compact so
+   the guide note always retains clear space above the fixed action button. */
+.browser-tip-card--android {
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
 .browser-tip-copy {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
@@ -604,7 +611,7 @@ strong {
 .browser-preview--android .browser-preview-label {
   top: auto;
   right: var(--space-3);
-  bottom: 10px;
+  bottom: 18px;
 }
 
 .browser-preview-arrow {
@@ -638,8 +645,8 @@ strong {
 
 .browser-preview-arrow--android {
   z-index: 4;
-  top: 92px;
-  right: 13px;
+  top: 84px;
+  right: 23px;
   height: 23px;
 }
 
@@ -654,17 +661,16 @@ strong {
 }
 
 .browser-guide-note {
-  margin-top: auto;
+  flex: 0 0 auto;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
   color: var(--muted);
   font-size: var(--caption-text-size);
   line-height: var(--line-body);
   text-align: center;
 }
 
-.browser-guide-continue {
-  flex: 0 0 auto;
-  margin-top: var(--space-4);
-}
+.browser-guide-continue { flex: 0 0 auto; }
 
 /* The mobile composition is also used inside the fixed desktop frame.
    Keep the complete instruction card within that frame instead of shrinking
@@ -690,18 +696,19 @@ strong {
     min-height: 136px;
   }
   .browser-preview--android {
-    height: 156px;
-    min-height: 156px;
+    height: 140px;
+    min-height: 140px;
   }
   .browser-preview--android .browser-preview-label {
     top: auto;
     right: var(--space-3);
-    bottom: 10px;
+    bottom: 2px;
   }
-  .browser-preview-arrow--android { top: 87px; right: 19px; height: 23px; }
+
+  .browser-preview-arrow--android { top: 79px; right: 27px; height: 23px; }
   .browser-preview--ios .browser-preview-label { bottom: 86px; }
   .browser-preview-arrow--down { bottom: 66px; height: 14px; }
-  .browser-guide-continue { margin-top: var(--space-4); }
+  .browser-guide-continue { margin-top: 0; }
 }
 
 .primary-button {
@@ -3923,8 +3930,8 @@ textarea:focus-visible,
     min-height: 132px;
   }
   .browser-preview--android {
-    height: 142px;
-    min-height: 142px;
+    height: 126px;
+    min-height: 126px;
   }
   .android-inapp-toolbar {
     height: 78px;
@@ -3942,12 +3949,12 @@ textarea:focus-visible,
   .browser-preview--android .browser-preview-label {
     top: auto;
     right: var(--space-2);
-    bottom: 8px;
+    bottom: 2px;
   }
-  .browser-preview-arrow--android { top: 73px; right: 12px; height: 20px; }
+  .browser-preview-arrow--android { top: 66px; right: 20px; height: 20px; }
   .browser-preview--ios .browser-preview-label { bottom: 86px; }
   .browser-preview-arrow--down { bottom: 66px; height: 14px; }
-  .browser-guide-continue { margin-top: var(--space-4); }
+  .browser-guide-continue { margin-top: 0; }
   .pet-screen {
     padding-top: max(var(--space-4), env(safe-area-inset-top));
     padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
@@ -4038,7 +4045,7 @@ textarea:focus-visible,
   .browser-preview--ios .browser-preview-label,
   .browser-preview-arrow--down { display: none; }
   .browser-guide-note { display: none; }
-  .browser-guide-continue { margin-top: var(--space-2); }
+  .browser-guide-continue { margin-top: 0; }
   .pet-screen {
     padding-top: max(var(--space-2), env(safe-area-inset-top));
     padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
