@@ -1251,7 +1251,10 @@ export default function Home() {
       returnThroughHistory();
       return;
     }
-    if (screen === "my-pets" && petsSource === "dock") setPetsTransitionTarget("nearby");
+    if (screen === "my-pets" && petsSource === "dock") {
+      setDockSection("nearby");
+      setPetsTransitionTarget("nearby");
+    }
     if (screen === "my-pets" && petsSource === "profile") {
       setPetsTransitionTarget("profile");
       setDockTransitionVisible(true);

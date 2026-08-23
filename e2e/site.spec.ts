@@ -194,6 +194,17 @@ test("returns to nearby after opening pets from profile", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Прогулки рядом", exact: true })).toBeVisible();
 });
 
+test("updates dock immediately when leaving pets for nearby", async ({ page }) => {
+  await openWalksWithPet(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Рядом", exact: true }).click();
+  await expect(dock.locator(".dock-item--nearby")).toHaveAttribute("aria-current", "page");
+});
+
 test("opens, leaves, and reopens the dock walk form without stale pane state", async ({ page }) => {
   await openWalksWithPet(page);
 
