@@ -62,6 +62,7 @@ type DockSlide = {
   to: DockPanelSection;
   direction: "forward" | "backward";
 };
+type DockMotion = "enter-left" | "exit-left";
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
 type FilterMotion = "idle" | "exit-left" | "exit-right" | "enter-left" | "enter-right";
@@ -281,6 +282,7 @@ export default function Home() {
   const [dockReturnSection, setDockReturnSection] = useState<PrimaryDockSection>("nearby");
   const [dockVisibleSection, setDockVisibleSection] = useState<DockPanelSection>("nearby");
   const [dockSlide, setDockSlide] = useState<DockSlide | null>(null);
+  const [dockTransitionVisible, setDockTransitionVisible] = useState(false);
   const [petsSource, setPetsSource] = useState<AppNavigationState["petsSource"]>(null);
   const [petsDockDirection, setPetsDockDirection] = useState<"forward" | "backward">("forward");
   const [collectionClosing, setCollectionClosing] = useState(false);
@@ -344,12 +346,10 @@ export default function Home() {
   const informationButtonRef = useRef<HTMLButtonElement>(null);
   const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
   const shareDoneButtonRef = useRef<HTMLButtonElement>(null);
-  const filterTimersRef = useRef<number[]>([]);
   const formCloseModeRef = useRef<"back" | "replace">("back");
-  const dockSlideNavigationRef = useRef(false);
   const dockWalkFormRef = useRef<HTMLFormElement>(null);
 
-  const applyNavigationState = useCallback((navigation: AppNavigationState) => {
+  const applyNavigationState = useCallback((navigation: AppNavigationState, preserveDockSlide = false) => {
     setCollectionClosing(false);
     setPetsTransitionTarget(null);
     setProfileTransitionTarget(null);
@@ -364,17 +364,17 @@ export default function Home() {
     setDockReturnSection(navigation.dockReturnSection);
     setPetsSource(navigation.petsSource);
     setDockSection(navigation.petsSource === "dock" ? "pets" : navigation.dockWalkOpen ? "walk" : navigation.menuOpen ? "profile" : navigation.dockReturnSection);
-    if (!dockSlideNavigationRef.current) {
+    if (!preserveDockSlide) {
       setDockVisibleSection(navigation.dockWalkOpen ? "walk" : navigation.menuOpen ? "profile" : "nearby");
       setDockSlide(null);
     }
-    dockSlideNavigationRef.current = false;
     setScreen(navigation.screen);
   }, []);
 
   const pushNavigation = useCallback((
     nextScreen: Screen,
-    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "petsSource">> = {}
+    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "petsSource">> = {},
+    preserveDockSlide = false
   ) => {
     const currentDockSection: PrimaryDockSection = dockSection === "nearby" || dockSection === "profile" ? dockSection : dockReturnSection;
     const navigation: AppNavigationState = {
@@ -387,12 +387,13 @@ export default function Home() {
       petsSource: options.petsSource ?? null
     };
     window.history.pushState(navigation, "", window.location.href);
-    applyNavigationState(navigation);
+    applyNavigationState(navigation, preserveDockSlide);
   }, [applyNavigationState, dockReturnSection, dockSection]);
 
   const replaceNavigation = useCallback((
     nextScreen: Screen,
-    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "petsSource">> = {}
+    options: Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "petsSource">> = {},
+    preserveDockSlide = false
   ) => {
     const currentDockSection: PrimaryDockSection = dockSection === "nearby" || dockSection === "profile" ? dockSection : dockReturnSection;
     const navigation: AppNavigationState = {
@@ -405,7 +406,7 @@ export default function Home() {
       petsSource: options.petsSource ?? null
     };
     window.history.replaceState(navigation, "", window.location.href);
-    applyNavigationState(navigation);
+    applyNavigationState(navigation, preserveDockSlide);
   }, [applyNavigationState, dockReturnSection, dockSection]);
 
   const returnThroughHistory = useCallback(() => {
@@ -675,8 +676,20 @@ export default function Home() {
   }, [photoUrl]);
 
   useEffect(() => {
-    return () => filterTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-  }, []);
+    if (filterMotion !== "exit-left" && filterMotion !== "exit-right") return;
+    const movesRight = filterMotion === "exit-left";
+    const exitTimer = window.setTimeout(() => {
+      setDisplayedPeriod(period);
+      setFilterMotion(movesRight ? "enter-right" : "enter-left");
+    }, 120);
+    return () => window.clearTimeout(exitTimer);
+  }, [filterMotion, period]);
+
+  useEffect(() => {
+    if (filterMotion !== "enter-left" && filterMotion !== "enter-right") return;
+    const enterTimer = window.setTimeout(() => setFilterMotion("idle"), 170);
+    return () => window.clearTimeout(enterTimer);
+  }, [filterMotion]);
 
   const visibleWalks = useMemo(
     () => displayedPeriod === "Все" ? savedWalks : savedWalks.filter((walk) => walk.period === displayedPeriod),
@@ -804,19 +817,9 @@ export default function Home() {
   function selectPeriod(nextPeriod: Period) {
     if (nextPeriod === period) return;
 
-    filterTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     const movesRight = periodOptions.indexOf(nextPeriod) > periodOptions.indexOf(period);
     setPeriod(nextPeriod);
     setFilterMotion(movesRight ? "exit-left" : "exit-right");
-
-    const exitTimer = window.setTimeout(() => {
-      setDisplayedPeriod(nextPeriod);
-      setFilterMotion(movesRight ? "enter-right" : "enter-left");
-
-      const enterTimer = window.setTimeout(() => setFilterMotion("idle"), 170);
-      filterTimersRef.current = [enterTimer];
-    }, 120);
-    filterTimersRef.current = [exitTimer];
   }
 
   async function saveLocation(event: FormEvent<HTMLFormElement>) {
@@ -926,12 +929,18 @@ export default function Home() {
   function openFormScreen(nextScreen: FormScreen) {
     setFormClosing(false);
     setFormCloseTarget(null);
-    pushNavigation(nextScreen);
+    const source = screen === "my-pets" ? petsSource : null;
+    setDockTransitionVisible(screen === "walks" || source === "dock");
+    pushNavigation(nextScreen, { petsSource: source });
   }
 
   function beginFormClose(target: Screen, mode: "back" | "replace" = "back") {
     formCloseModeRef.current = mode;
     setFormCloseTarget(target);
+    const currentNavigation = window.history.state as Partial<AppNavigationState> | null;
+    if (target === "walks" || (target === "my-pets" && currentNavigation?.petsSource === "dock")) {
+      setDockTransitionVisible(true);
+    }
     setFormClosing(true);
   }
 
@@ -1119,7 +1128,7 @@ export default function Home() {
     if (fromSection === nextSection) {
       setDockVisibleSection(nextSection);
       setDockSlide(null);
-      return;
+      return false;
     }
 
     const sectionOrder: Record<DockPanelSection, number> = {
@@ -1127,12 +1136,12 @@ export default function Home() {
       walk: 2,
       profile: 3
     };
-    dockSlideNavigationRef.current = true;
     setDockSlide({
       from: fromSection,
       to: nextSection,
       direction: sectionOrder[nextSection] > sectionOrder[fromSection] ? "forward" : "backward"
     });
+    return true;
   }
 
   function startDockWalkAnnouncement() {
@@ -1145,8 +1154,8 @@ export default function Home() {
     prepareNewWalkAnnouncement();
     setAnimateMenuOpen(true);
     setDockWalkClosing(false);
-    beginDockSlide("walk");
-    pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: returnSection });
+    const preserveDockSlide = beginDockSlide("walk");
+    pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: returnSection }, preserveDockSlide);
   }
 
   function closeDockWalkAnnouncement() {
@@ -1215,11 +1224,13 @@ export default function Home() {
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets", source: AppNavigationState["petsSource"] = null) {
     if (nextScreen === "my-walks" && screen === "walks" && dockVisibleSection === "profile") {
       setCollectionClosing(false);
+      setDockTransitionVisible(true);
       setProfileTransitionTarget("my-walks");
       return;
     }
     if (nextScreen === "my-pets") {
       setPetsDockDirection(source === "dock" && dockSection === "profile" ? "backward" : "forward");
+      setDockTransitionVisible(source === "profile");
     }
     setCollectionClosing(false);
     setMenuOpen(false);
@@ -1241,14 +1252,24 @@ export default function Home() {
       return;
     }
     if (screen === "my-pets" && petsSource === "dock") setPetsTransitionTarget("nearby");
-    if (screen === "my-pets" && petsSource === "profile") setPetsTransitionTarget("profile");
-    if (screen === "my-walks") setProfileTransitionTarget("profile");
+    if (screen === "my-pets" && petsSource === "profile") {
+      setPetsTransitionTarget("profile");
+      setDockTransitionVisible(true);
+    }
+    if (screen === "my-walks") {
+      setProfileTransitionTarget("profile");
+      setDockTransitionVisible(true);
+    }
     setCollectionClosing(true);
   }
 
   function completeCollectionClose() {
     if (petsTransitionTarget === "walk") {
       pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: "nearby" });
+      return;
+    }
+    if (petsTransitionTarget === "nearby") {
+      replaceNavigation("walks", { menuOpen: false, dockWalkOpen: false, dockReturnSection: "nearby" });
       return;
     }
     returnThroughHistory();
@@ -1259,8 +1280,8 @@ export default function Home() {
     setDockSection("profile");
     setAnimateMenuOpen(true);
     setMenuClosing(false);
-    beginDockSlide("profile");
-    pushNavigation("walks", { menuOpen: true });
+    const preserveDockSlide = beginDockSlide("profile");
+    pushNavigation("walks", { menuOpen: true }, preserveDockSlide);
   }
 
   function selectDockSection(nextSection: DockPanelSection) {
@@ -1281,12 +1302,12 @@ export default function Home() {
     setAnimateMenuOpen(true);
     setMenuClosing(false);
     setDockWalkClosing(false);
-    beginDockSlide("nearby");
+    const preserveDockSlide = beginDockSlide("nearby");
     replaceNavigation("walks", {
       menuOpen: false,
       dockWalkOpen: false,
       dockReturnSection: nextSection
-    });
+    }, preserveDockSlide);
   }
 
   function handleDockWalkAction() {
@@ -1300,6 +1321,7 @@ export default function Home() {
         setAnimateMenuOpen(true);
         setDockWalkClosing(false);
         setDockReturnSection("nearby");
+        setDockSection("walk");
         setPetsTransitionTarget("walk");
         setCollectionClosing(true);
         return;
@@ -1311,9 +1333,19 @@ export default function Home() {
     dockWalkFormRef.current?.requestSubmit();
   }
 
-  function renderBottomDock() {
+  function renderBottomDock(motion: DockMotion | null = null) {
     return (
-      <nav className="walks-bottom-dock" aria-label="Основная навигация">
+      <nav
+        className={`walks-bottom-dock ${motion ? `walks-bottom-dock--${motion}` : ""}`}
+        aria-label="Основная навигация"
+        onAnimationEnd={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            dockTransitionVisible &&
+            (event.animationName === "dock-pane-exit-left" || event.animationName === "dock-pane-exit-right")
+          ) setDockTransitionVisible(false);
+        }}
+      >
         <button
           className={`dock-item dock-item--nearby ${dockSection === "nearby" ? "is-active" : ""}`}
           type="button"
@@ -1770,6 +1802,15 @@ export default function Home() {
   }
 
   const isProfileReturning = petsTransitionTarget === "profile" || profileTransitionTarget === "profile";
+  const dockMotion: DockMotion | null = isProfileReturning
+    ? "enter-left"
+    : dockTransitionVisible && formClosing
+      ? "enter-left"
+      : profileTransitionTarget === "my-walks" ||
+          (screen === "my-pets" && petsSource === "profile") ||
+          ((screen === "pet" || screen === "announce") && dockTransitionVisible)
+      ? "exit-left"
+      : null;
   const hasStaticSurface =
     isProfileReturning ||
     screen === "pet" ||
@@ -1779,7 +1820,7 @@ export default function Home() {
   const surfaceExitDirection =
     screen === "walks" && dockSlide?.to === "nearby"
       ? "right"
-      : screen === "my-pets" && petsSource === "dock" && collectionClosing
+      : screen === "my-pets" && petsSource === "dock" && collectionClosing && petsTransitionTarget !== "walk"
         ? petsDockDirection === "backward" ? "left" : "right"
         : null;
 
@@ -1790,7 +1831,7 @@ export default function Home() {
         {hasStaticSurface && (
           <span className={`app-surface-background ${surfaceExitDirection ? `app-surface-background--exit-${surfaceExitDirection}` : ""}`} aria-hidden="true" />
         )}
-        {(screen === "walks" || (screen === "my-pets" && petsSource === "dock") || profileTransitionTarget === "profile") && renderBottomDock()}
+        {(screen === "walks" || (screen === "my-pets" && petsSource === "dock") || dockTransitionVisible || isProfileReturning) && renderBottomDock(dockMotion)}
         {screen === "welcome" && (
           <div className="screen welcome-screen">
             <div className="welcome-copy">
@@ -2136,8 +2177,10 @@ export default function Home() {
                   return (
                     <article className={`walk-card ${hasCardActions ? "walk-card--editable" : ""}`} key={walk.id}>
                       {hasCardActions && (
-                        <span
+                        <div
                           className="walk-card-actions-menu"
+                          role="toolbar"
+                          aria-label={`Действия с прогулкой питомца ${walk.pet}`}
                           onBlur={(event) => {
                             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                               setOpenWalkActionsId(null);
@@ -2201,7 +2244,7 @@ export default function Home() {
                               </button>
                             </span>
                           )}
-                        </span>
+                        </div>
                       )}
                       <div className="walk-pet-visual">
                         <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />

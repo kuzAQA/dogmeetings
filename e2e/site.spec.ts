@@ -100,13 +100,15 @@ test("scrolls nearby walks under the dock with a fade", async ({ page }) => {
     const lastCard = [...document.querySelectorAll<HTMLElement>(".walk-card")].pop();
     if (!lastCard) throw new Error("Nearby walks did not render cards");
     const lastCardRect = lastCard.getBoundingClientRect();
-    const cardRect = document.querySelector<HTMLElement>(".walk-card")?.getBoundingClientRect();
     const listRect = document.querySelector<HTMLElement>(".walk-list")?.getBoundingClientRect();
     const dockRect = document.querySelector<HTMLElement>(".walks-bottom-dock")?.getBoundingClientRect();
-    return { lastCardBottom: lastCardRect.bottom, listBottom: listRect?.bottom ?? 0, dockBottom: dockRect?.bottom ?? 0, dockTop: dockRect?.top ?? 0, cardWidth: cardRect?.width ?? 0, dockWidth: dockRect?.width ?? 0 };
+    const shell = document.querySelector<HTMLElement>(".app-shell");
+    return { lastCardBottom: lastCardRect.bottom, listBottom: listRect?.bottom ?? 0, listLeft: listRect?.left ?? 0, listRight: listRect?.right ?? 0, dockBottom: dockRect?.bottom ?? 0, dockTop: dockRect?.top ?? 0, dockLeft: dockRect?.left ?? 0, dockRight: dockRect?.right ?? 0, dockWidth: dockRect?.width ?? 0, shellWidth: shell?.clientWidth ?? 0 };
   });
 
-  expect(overlap.dockWidth).toBeLessThan(overlap.cardWidth);
+  expect(overlap.dockWidth).toBe(overlap.shellWidth - 32);
+  expect(overlap.dockLeft).toBeGreaterThan(overlap.listLeft);
+  expect(overlap.dockRight).toBeLessThan(overlap.listRight);
   expect(overlap.listBottom).toBeGreaterThanOrEqual(overlap.dockBottom - 1);
   expect(overlap.lastCardBottom).toBeGreaterThan(overlap.dockTop);
 });
@@ -174,6 +176,24 @@ test("returns from dock pets and profile collections to the correct dock section
   await expectDockSection(page, "nearby");
 });
 
+test("returns to nearby after opening pets from profile", async ({ page }) => {
+  await openWalks(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Открыть профиль", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+  await dock.getByRole("button", { name: "Рядом", exact: true }).click();
+
+  await expectDockSection(page, "nearby");
+  await expect(page.getByRole("heading", { name: "Прогулки рядом", exact: true })).toBeVisible();
+});
+
 test("opens, leaves, and reopens the dock walk form without stale pane state", async ({ page }) => {
   await openWalksWithPet(page);
 
@@ -194,6 +214,19 @@ test("opens, leaves, and reopens the dock walk form without stale pane state", a
 
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
   await expectDockSection(page, "nearby");
+});
+
+test("updates dock immediately when leaving pets for a walk", async ({ page }) => {
+  await openWalksWithPet(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await expect(dock.locator(".dock-item--walk")).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".app-surface-background")).toBeVisible();
+  expect(await page.locator(".app-surface-background").evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
 });
 
 test("blocks walk creation until a pet is added", async ({ page }) => {

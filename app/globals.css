@@ -52,7 +52,7 @@
   --heading-subtitle-gap: var(--space-2);
   --heading-content-gap: var(--space-6);
   --back-heading-gap: var(--space-4);
-  --screen-inline-padding: var(--space-6);
+  --screen-inline-padding: 10px;
   --screen-inline-total: calc(var(--screen-inline-padding) + var(--screen-inline-padding));
   --control-height: 66px;
   --primary-button-height: 64px;
@@ -67,7 +67,7 @@
   --photo-label-size: var(--body-size);
   --photo-caption-size: var(--caption-text-size);
   --floating-action-clearance: calc(var(--primary-button-height) + var(--space-7));
-  --mobile-nav-gap: var(--space-4);
+  --mobile-nav-gap: 10px;
   --mobile-nav-height: 60px;
   --desktop-frame-padding: calc(var(--space-6) + var(--space-1));
   --desktop-frame-total: calc(var(--space-9) + var(--space-2));
@@ -1565,6 +1565,8 @@ strong {
   inset: 0;
   background: rgba(251, 250, 246, 0.82);
   pointer-events: none;
+  transform: translateZ(0);
+  will-change: opacity, transform;
 }
 
 .app-surface-background--exit-right {
@@ -1849,9 +1851,9 @@ strong {
 .walks-bottom-dock {
   position: absolute;
   z-index: 30;
-  right: calc(var(--mobile-nav-gap) + var(--space-3));
-  bottom: calc(var(--mobile-nav-gap) + env(safe-area-inset-bottom));
-  left: calc(var(--mobile-nav-gap) + var(--space-3));
+  right: var(--space-4);
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: var(--space-4);
   display: flex;
   width: auto;
   height: var(--mobile-nav-height);
@@ -1868,6 +1870,16 @@ strong {
     0 10px 24px rgba(31, 76, 49, 0.14);
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  will-change: transform;
+}
+
+.walks-bottom-dock--enter-left {
+  animation: dock-pane-enter-left 300ms cubic-bezier(.22, .82, .3, 1) both !important;
+}
+
+.walks-bottom-dock--exit-left {
+  pointer-events: none;
+  animation: dock-pane-exit-left 300ms cubic-bezier(.22, .82, .3, 1) both !important;
 }
 
 .dock-item {
@@ -4131,7 +4143,6 @@ textarea:focus-visible,
 
 @media (max-width: 380px) {
   .app-shell {
-    --screen-inline-padding: var(--space-5);
     --walk-visual-width: 104px;
   }
   .drawer { padding-inline: var(--screen-inline-padding); }
@@ -4654,7 +4665,7 @@ textarea:focus-visible,
 }
 
 /* Анимации включены только для согласованных переходов и интерактивных состояний. */
-*:not(.saving-spinner):not(.filter-indicator):not(.filter-button):not(.walk-list-content):not(.schedule-indicator):not(.schedule-button):not(.delete-confirm-overlay):not(.information-overlay):not(.saving-overlay):not(.delete-confirm):not(.information-dialog):not(.menu-overlay):not(.drawer):not(.drawer-menu-content):not(.walks-heading-copy):not(.walks-screen-track):not(.walks-pane):not(.app-surface-background):not(.dock-item):not(.dock-item-icon > svg):not(.dock-icon-fill):not(.dock-walk-label-text):not(.walk-setup-progress-animated):not(.walk-place-bubble):not(.subpage-screen-motion):not(.animated-form-screen):not(.pets-screen-motion):not(.pet-share-renew-icon--spinning),
+*:not(.saving-spinner):not(.filter-indicator):not(.filter-button):not(.walk-list-content):not(.schedule-indicator):not(.schedule-button):not(.delete-confirm-overlay):not(.information-overlay):not(.saving-overlay):not(.delete-confirm):not(.information-dialog):not(.menu-overlay):not(.drawer):not(.drawer-menu-content):not(.walks-heading-copy):not(.walks-screen-track):not(.walks-pane):not(.app-surface-background):not(.walks-bottom-dock):not(.dock-item):not(.dock-item-icon > svg):not(.dock-icon-fill):not(.dock-walk-label-text):not(.walk-setup-progress-animated):not(.walk-place-bubble):not(.subpage-screen-motion):not(.animated-form-screen):not(.pets-screen-motion):not(.pet-share-renew-icon--spinning),
 *:not(.walk-place-trigger):not(.menu-overlay)::before,
 *:not(.walk-place-trigger):not(.menu-overlay)::after {
   animation: none !important;
