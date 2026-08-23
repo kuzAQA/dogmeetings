@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { withDb } from "../../../db";
 import { petCollaborators, pets } from "../../../db/schema";
+import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const MAX_PHOTO_SIZE = 1024 * 1024;
@@ -40,14 +41,7 @@ function publicPet(pet: PetSummary, clientId: string, isShared = false) {
 }
 
 function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : "Неизвестная ошибка";
-  if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-    return "Не удалось подключиться к PostgreSQL.";
-  }
-  if (message.includes("does not exist")) {
-    return "База данных ещё не подготовлена. Попробуйте немного позже.";
-  }
-  return "Не удалось выполнить запрос к базе данных.";
+  return databaseErrorMessage(error, "Не удалось выполнить запрос к базе данных.", "База данных ещё не подготовлена. Попробуйте немного позже.");
 }
 
 function privateError(message: string, status: number) {

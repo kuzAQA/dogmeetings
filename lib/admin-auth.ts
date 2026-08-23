@@ -101,7 +101,7 @@ function passwordVerifier() {
 async function proofForChallenge(verifier: Uint8Array, challenge: string) {
   const key = await crypto.subtle.importKey(
     "raw",
-    verifier,
+    new Uint8Array(verifier),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]

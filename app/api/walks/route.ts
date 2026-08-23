@@ -1,6 +1,7 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { petCollaborators, pets, places, walks } from "../../../db/schema";
+import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const MAX_WALK_META_LENGTH = 40;
@@ -56,11 +57,7 @@ function moscowDate(offsetDays = 0) {
 }
 
 function databaseError(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-    return "Не удалось подключиться к PostgreSQL.";
-  }
-  return "Не удалось выполнить запрос к базе данных.";
+  return databaseErrorMessage(error, "Не удалось выполнить запрос к базе данных.");
 }
 
 function cleanPlaceName(value: string) {

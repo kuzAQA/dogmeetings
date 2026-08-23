@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { withDb } from "../../../../db";
 import { adminPushSubscriptions } from "../../../../db/schema";
-import { hasValidAdminSession } from "../../../../lib/admin-auth";
 import { adminPushPublicKey } from "../../../../lib/admin-push";
-import { isSameOriginRequest, privateJson } from "../../../../lib/session";
+import { authorizeAdminRequest } from "../../../../lib/admin-request";
+import { privateJson } from "../../../../lib/session";
 
 const ALLOWED_PUSH_HOSTS = [
   "fcm.googleapis.com",
@@ -40,14 +40,9 @@ function validEndpoint(value: unknown) {
   }
 }
 
-async function authorize(request: Request, mutation = false) {
-  if (mutation && !isSameOriginRequest(request)) return false;
-  return hasValidAdminSession(request);
-}
-
 export async function GET(request: Request) {
   try {
-    if (!await authorize(request)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const publicKey = adminPushPublicKey();
     if (!publicKey) {
       return privateJson({ error: "Уведомления ещё не настроены на сервере." }, { status: 503 });
@@ -60,7 +55,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!await authorize(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const payload = await request.json().catch(() => null) as SubscriptionPayload | null;
     const endpoint = validEndpoint(payload?.endpoint);
     const p256dh = String(payload?.keys?.p256dh ?? "");
@@ -97,7 +92,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!await authorize(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const payload = await request.json().catch(() => null) as { endpoint?: unknown } | null;
     const endpoint = validEndpoint(payload?.endpoint);
     if (!endpoint) return privateJson({ error: "Некорректная push-подписка." }, { status: 400 });

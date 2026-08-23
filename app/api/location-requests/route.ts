@@ -1,6 +1,7 @@
 import { withDb } from "../../../db";
 import { locationRequests } from "../../../db/schema";
 import { sendAdminLocationRequestNotification } from "../../../lib/admin-push";
+import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 
 const containsLetter = /\p{L}/u;
@@ -13,14 +14,7 @@ function normalizeText(value: unknown) {
 }
 
 function databaseError(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-    return "Не удалось подключиться к PostgreSQL.";
-  }
-  if (message.includes("does not exist")) {
-    return "База данных ещё не подготовлена. Примените последнюю миграцию.";
-  }
-  return "Не удалось отправить заявку.";
+  return databaseErrorMessage(error, "Не удалось отправить заявку.", "База данных ещё не подготовлена. Примените последнюю миграцию.");
 }
 
 export async function POST(request: Request) {

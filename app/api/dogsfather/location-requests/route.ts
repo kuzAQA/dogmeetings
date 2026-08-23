@@ -1,17 +1,12 @@
 import { asc, eq } from "drizzle-orm";
 import { withDb } from "../../../../db";
 import { locationRequests, locations } from "../../../../db/schema";
-import { hasValidAdminSession } from "../../../../lib/admin-auth";
-import { isSameOriginRequest, privateJson } from "../../../../lib/session";
-
-async function authorize(request: Request, mutation = false) {
-  if (mutation && !isSameOriginRequest(request)) return false;
-  return hasValidAdminSession(request);
-}
+import { authorizeAdminRequest } from "../../../../lib/admin-request";
+import { privateJson } from "../../../../lib/session";
 
 export async function GET(request: Request) {
   try {
-    if (!await authorize(request)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const rows = await withDb((db) => db
       .select()
       .from(locationRequests)
@@ -40,7 +35,7 @@ async function requestId(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    if (!await authorize(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const id = await requestId(request);
     if (!id) return privateJson({ error: "Некорректная заявка." }, { status: 400 });
 
@@ -72,7 +67,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!await authorize(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const id = await requestId(request);
     if (!id) return privateJson({ error: "Некорректная заявка." }, { status: 400 });
     const removed = await withDb((db) => db

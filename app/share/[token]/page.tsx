@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
 import Image from "next/image";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 
 type SharedPet = {
   id: string;
@@ -39,11 +39,18 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [linkInactive, setLinkInactive] = useState(false);
+  const guidePlatformSelected = useRef(false);
 
   useEffect(() => {
+    if (guidePlatformSelected.current) return;
     const isIPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
     setGuidePlatform(/Android/i.test(navigator.userAgent) && !isIPadOs ? "android" : "ios");
   }, []);
+
+  function selectGuidePlatform(platform: GuidePlatform) {
+    guidePlatformSelected.current = true;
+    setGuidePlatform(platform);
+  }
 
   async function continueFromBrowserGuide() {
     setStage("checking");
@@ -100,8 +107,8 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
             <div className="browser-guide-content">
               <div className="browser-guide-platforms" role="group" aria-label="Выберите устройство">
                 <span className="filter-indicator browser-guide-platform-indicator" aria-hidden="true" style={{ left: guidePlatform === "ios" ? "var(--space-1)" : "50%" }} />
-                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "ios" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "ios"} onClick={() => setGuidePlatform("ios")}><span>iPhone</span></button>
-                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "android" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "android"} onClick={() => setGuidePlatform("android")}><span>Android</span></button>
+                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "ios" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "ios"} onClick={() => selectGuidePlatform("ios")}><span>iPhone</span></button>
+                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "android" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "android"} onClick={() => selectGuidePlatform("android")}><span>Android</span></button>
               </div>
               {guidePlatform === "ios" ? (
                 <section className="browser-tip-card browser-tip-card--ios">

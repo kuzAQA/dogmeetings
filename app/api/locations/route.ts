@@ -1,14 +1,7 @@
 import { asc } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { locations } from "../../../db/schema";
-
-function databaseError(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-    return "Не удалось подключиться к PostgreSQL.";
-  }
-  return "Не удалось получить список локаций.";
-}
+import { databaseErrorMessage } from "../../../lib/database-error";
 
 export async function GET() {
   try {
@@ -27,6 +20,6 @@ export async function GET() {
 
     return Response.json({ locations: rows });
   } catch (error) {
-    return Response.json({ error: databaseError(error) }, { status: 500 });
+    return Response.json({ error: databaseErrorMessage(error, "Не удалось получить список локаций.") }, { status: 500 });
   }
 }

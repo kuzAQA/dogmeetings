@@ -2,8 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { withDb } from "../../../../db";
 import { pets } from "../../../../db/schema";
-import { hasValidAdminSession } from "../../../../lib/admin-auth";
-import { isSameOriginRequest, privateJson } from "../../../../lib/session";
+import { authorizeAdminRequest } from "../../../../lib/admin-request";
+import { privateJson } from "../../../../lib/session";
 
 const MAX_PHOTO_SIZE = 1024 * 1024;
 const MAX_BREED_LENGTH = 20;
@@ -34,18 +34,13 @@ function normalizeName(value: FormDataEntryValue | null) {
   return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
 }
 
-async function authorize(request: Request, mutation = false) {
-  if (mutation && !isSameOriginRequest(request)) return false;
-  return hasValidAdminSession(request);
-}
-
 function adminError(message: string, status: number) {
   return privateJson({ error: message }, { status });
 }
 
 export async function GET(request: Request) {
   try {
-    if (!await authorize(request)) return adminError("Требуется вход.", 401);
+    if (!await authorizeAdminRequest(request)) return adminError("Требуется вход.", 401);
 
     const rows = await withDb((db) => db
       .select({
@@ -67,7 +62,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    if (!await authorize(request, true)) return adminError("Требуется вход.", 401);
+    if (!await authorizeAdminRequest(request, true)) return adminError("Требуется вход.", 401);
 
     const formData = await request.formData();
     const petId = String(formData.get("petId") ?? "").trim();
@@ -124,7 +119,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!await authorize(request, true)) return adminError("Требуется вход.", 401);
+    if (!await authorizeAdminRequest(request, true)) return adminError("Требуется вход.", 401);
 
     const payload = await request.json().catch(() => null) as { petId?: unknown } | null;
     const petId = String(payload?.petId ?? "").trim();

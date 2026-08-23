@@ -6,6 +6,7 @@ import { sites } from "./build/sites-vite-plugin";
 const PLACEHOLDER_DATABASE_ID = "00000000-0000-4000-8000-000000000000";
 const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
+const isPlaywrightTest = process.env.PLAYWRIGHT_TEST === "1";
 
 export default defineConfig(async ({ mode }) => {
   process.env.WRANGLER_WRITE_LOGS ??= "false";
@@ -32,6 +33,7 @@ export default defineConfig(async ({ mode }) => {
       vinext(),
       sites(),
       cloudflare({
+        inspectorPort: isPlaywrightTest ? false : undefined,
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         config: localBindingConfig
       })

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { locations } from "../../../db/schema";
+import { databaseErrorMessage } from "../../../lib/database-error";
 import {
   createClientSession,
   getClientSession,
@@ -45,14 +46,7 @@ async function knownLocation(location: SessionLocation) {
 }
 
 function databaseError(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-    return "Не удалось подключиться к PostgreSQL.";
-  }
-  if (message.includes("does not exist")) {
-    return "База данных ещё не подготовлена. Примените последнюю миграцию.";
-  }
-  return "Не удалось создать безопасную сессию.";
+  return databaseErrorMessage(error, "Не удалось создать безопасную сессию.", "База данных ещё не подготовлена. Примените последнюю миграцию.");
 }
 
 export async function GET(request: Request) {
