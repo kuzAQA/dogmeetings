@@ -3066,6 +3066,7 @@ strong {
 }
 
 .pets-screen-motion {
+  animation: none !important;
   will-change: transform;
 }
 

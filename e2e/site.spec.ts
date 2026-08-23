@@ -352,6 +352,8 @@ test("slides dock walk form out when opening pets", async ({ page }) => {
   await expect(page.locator(".walks-pane--walk")).toHaveAttribute("data-dock-pane", "from");
   await expect(page.locator(".pets-screen-motion--entering-from-walk")).toHaveCSS("animation-name", "dock-pane-enter-right");
   await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+  await page.waitForTimeout(360);
+  await expect(page.locator(".collection-screen")).toHaveCSS("animation-name", "none");
 });
 
 test("updates dock immediately when leaving pets for a walk", async ({ page }) => {

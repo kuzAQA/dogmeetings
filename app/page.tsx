@@ -288,6 +288,7 @@ export default function Home() {
   const [petsSource, setPetsSource] = useState<AppNavigationState["petsSource"]>(null);
   const [petsDockDirection, setPetsDockDirection] = useState<"forward" | "backward">("forward");
   const [collectionClosing, setCollectionClosing] = useState(false);
+  const [petsEntryComplete, setPetsEntryComplete] = useState(false);
   const [petsTransitionTarget, setPetsTransitionTarget] = useState<"nearby" | "walk" | "profile" | null>(null);
   const [profileTransitionTarget, setProfileTransitionTarget] = useState<"my-walks" | "my-pets" | "profile" | null>(null);
   const [browserGuideClosing, setBrowserGuideClosing] = useState(false);
@@ -1344,6 +1345,7 @@ export default function Home() {
   }
 
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets", source: AppNavigationState["petsSource"] = null) {
+    if (nextScreen === "my-pets") setPetsEntryComplete(false);
     if (nextScreen === "my-walks" && screen === "walks" && dockVisibleSection === "profile") {
       setCollectionClosing(false);
       setDockTransitionVisible(true);
@@ -2574,7 +2576,7 @@ export default function Home() {
 
         {(screen === "my-pets" || profileTransitionTarget === "my-pets") && (
           <div
-            className={`screen collection-screen ${profileTransitionTarget === "my-pets" ? `pets-screen-motion pets-screen-motion--entering-from-${dockWalkOpen ? "walk" : "profile"}` : petsSource ? `pets-screen-motion pets-screen-motion--${petsDockDirection} ${collectionClosing ? "pets-screen-motion--exit" : "pets-screen-motion--enter"}` : ""} ${petsSource === "dock" ? "collection-screen--dock" : ""} ${petsTransitionTarget ? "collection-screen--returning-to-dock" : ""} ${highlightedPetId ? "collection-screen--shared-highlight-active" : ""}`}
+            className={`screen collection-screen ${profileTransitionTarget === "my-pets" ? `pets-screen-motion pets-screen-motion--entering-from-${dockWalkOpen ? "walk" : "profile"}` : petsSource ? `pets-screen-motion pets-screen-motion--${petsDockDirection} ${collectionClosing ? "pets-screen-motion--exit" : petsEntryComplete ? "" : "pets-screen-motion--enter"}` : ""} ${petsSource === "dock" ? "collection-screen--dock" : ""} ${petsTransitionTarget ? "collection-screen--returning-to-dock" : ""} ${highlightedPetId ? "collection-screen--shared-highlight-active" : ""}`}
             onPointerDownCapture={(event) => {
               if (!highlightedPetId) return;
               event.preventDefault();
@@ -2587,8 +2589,15 @@ export default function Home() {
                 event.animationName === "dock-pane-enter-right" &&
                 profileTransitionTarget === "my-pets"
               ) {
+                setPetsEntryComplete(true);
                 pushNavigation("my-pets", { petsSource: dockWalkOpen ? "dock" : "profile" });
                 return;
+              }
+              if (
+                event.target === event.currentTarget &&
+                (event.animationName === "pets-screen-enter" || event.animationName === "pets-screen-enter-left")
+              ) {
+                setPetsEntryComplete(true);
               }
               if (
                 event.target === event.currentTarget &&
