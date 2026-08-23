@@ -120,6 +120,8 @@ test("opens the profile drawer and reaches the pets collection", async ({ page }
   await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
 
   await page.getByRole("button", { name: "Мои питомцы", exact: true }).click();
+  await expect(page.locator(".walks-pane--profile")).toHaveAttribute("data-dock-pane", "from");
+  await expect(page.locator(".pets-screen-motion--entering-from-profile")).toHaveCSS("animation-name", "dock-pane-enter-right");
   await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Добавить питомца", exact: true })).toBeVisible();
 });
@@ -161,11 +163,14 @@ test("returns from dock pets and profile collections to the correct dock section
   await expect(dock).toHaveCount(0);
 
   await page.getByRole("button", { name: "Назад в меню", exact: true }).click();
+  await expect(page.locator(".app-surface-background")).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".app-surface-background")).toHaveCSS("transform", "none");
   await expect(profile).toBeVisible();
   await expectDockSection(page, "profile");
 
   await profile.getByRole("button", { name: "Мои прогулки", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мои прогулки", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Сообщить о прогулке", exact: true })).toHaveClass(/floating-pet-button/);
   await expect(dock).toHaveCount(0);
 
   await page.getByRole("button", { name: "Назад в меню", exact: true }).click();
@@ -227,6 +232,128 @@ test("opens, leaves, and reopens the dock walk form without stale pane state", a
   await expectDockSection(page, "nearby");
 });
 
+test("aligns collection back buttons with the pet form heading", async ({ page }) => {
+  await openWalksWithPet(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Открыть профиль", exact: true }).click();
+  await page.getByRole("dialog", { name: "Профиль" }).getByRole("button", { name: "Мои питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+  const collectionBackTop = await page.locator(".collection-screen .back-button").boundingBox();
+
+  await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Добавить питомца", exact: true })).toBeVisible();
+  const petFormBackTop = await page.locator(".pet-screen .back-button").boundingBox();
+
+  expect(collectionBackTop?.y).toBe(petFormBackTop?.y);
+});
+
+test("keeps the welcome CTA active and slides into the browser guide", async ({ page }) => {
+  await page.goto("/");
+
+  const cta = page.getByRole("button", { name: "Найти компанию", exact: true });
+  await expect(cta).toBeVisible();
+  await expect(cta).toBeEnabled();
+  await expect(cta).toHaveCSS("opacity", "1");
+
+  await cta.click();
+  await expect(page.getByRole("heading", { name: "Откройте сайт в браузере", exact: true })).toBeVisible();
+  await expect(page.locator(".app-surface-background")).toBeVisible();
+  await expect(page.locator(".app-surface-background")).toHaveCSS("background-color", "rgb(251, 250, 246)");
+  await expect(page.locator(".browser-guide-screen")).toHaveCSS("animation-name", "dock-pane-enter-right");
+
+  await page.getByRole("button", { name: "Продолжить", exact: true }).click();
+  await expect(page.locator(".browser-guide-screen")).toHaveCSS("animation-name", "dock-pane-exit-left");
+  await expect(page.getByRole("heading", { name: "Где будем гулять?", exact: true })).toBeVisible();
+  await expect(page.locator(".location-screen:not(.location-request-screen)")).toHaveCSS("animation-name", "dock-pane-enter-right");
+
+  await page.getByRole("button", { name: "Оставьте заявку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Оставить заявку", exact: true })).toBeVisible();
+  await expect(page.locator(".location-request-screen")).toHaveCSS("animation-name", "dock-pane-enter-right");
+
+  await page.getByRole("button", { name: "Назад к выбору локации", exact: true }).click();
+  await expect(page.locator(".location-request-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("heading", { name: "Где будем гулять?", exact: true })).toBeVisible();
+});
+
+test("reverses browser guide with the site back button", async ({ page }) => {
+  await page.goto("/");
+  const cta = page.getByRole("button", { name: "Найти компанию", exact: true });
+  await expect(cta).toBeVisible();
+  await cta.click();
+  await expect(page.getByRole("heading", { name: "Откройте сайт в браузере", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.locator(".browser-guide-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("button", { name: "Найти компанию", exact: true })).toBeVisible();
+});
+
+test("reverses browser guide with the system back action", async ({ page }) => {
+  await page.goto("/");
+  const cta = page.getByRole("button", { name: "Найти компанию", exact: true });
+  await expect(cta).toBeVisible();
+  await cta.click();
+  await expect(page.getByRole("heading", { name: "Откройте сайт в браузере", exact: true })).toBeVisible();
+
+  await page.evaluate(() => window.history.back());
+  await expect(page.locator(".browser-guide-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("button", { name: "Найти компанию", exact: true })).toBeVisible();
+});
+
+test("animates location editor from the profile", async ({ page }) => {
+  await openWalks(page);
+
+  await page.getByRole("button", { name: "Открыть профиль", exact: true }).click();
+  const profile = page.getByRole("dialog", { name: "Профиль" });
+  await expect(profile).toBeVisible();
+  await profile.locator(".location-card").click();
+  await expect(page.getByRole("heading", { name: "Где будем гулять?", exact: true })).toBeVisible();
+  await expect(page.locator(".location-screen")).toHaveCSS("animation-name", "dock-pane-enter-right");
+
+  await page.getByRole("button", { name: "Назад в меню", exact: true }).click();
+  await expect(page.locator(".location-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
+});
+
+test("slides location continuation and system back", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Найти компанию", exact: true }).click();
+  await page.getByRole("button", { name: "Продолжить", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Где будем гулять?", exact: true })).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Город" }).click();
+  await page.getByRole("option", { name: "Москва", exact: true }).click();
+  await page.getByRole("combobox", { name: "Район" }).click();
+  await page.getByRole("option", { name: "Коммунарка", exact: true }).click();
+  await page.getByRole("combobox", { name: "Жилой комплекс" }).click();
+  await page.getByRole("option", { name: "Москвичка", exact: true }).click();
+  await page.getByRole("button", { name: "Продолжить", exact: true }).click();
+  await expect(page.locator(".location-screen:not(.location-request-screen)")).toHaveCSS("animation-name", "dock-pane-exit-left");
+  await expect(page.getByRole("heading", { name: "Прогулки рядом", exact: true })).toBeVisible();
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Открыть профиль", exact: true }).click();
+  await page.getByRole("dialog", { name: "Профиль" }).locator(".location-card").click();
+  await page.getByRole("button", { name: "Оставьте заявку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Оставить заявку", exact: true })).toBeVisible();
+  await page.evaluate(() => window.history.back());
+  await expect(page.locator(".location-request-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("heading", { name: "Где будем гулять?", exact: true })).toBeVisible();
+});
+
+test("slides dock walk form out when opening pets", async ({ page }) => {
+  await openWalksWithPet(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Сообщить о прогулке", exact: true })).toBeVisible();
+
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.locator(".walks-pane--walk")).toHaveAttribute("data-dock-pane", "from");
+  await expect(page.locator(".pets-screen-motion--entering-from-walk")).toHaveCSS("animation-name", "dock-pane-enter-right");
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+});
+
 test("updates dock immediately when leaving pets for a walk", async ({ page }) => {
   await openWalksWithPet(page);
 
@@ -251,6 +378,36 @@ test("blocks walk creation until a pet is added", async ({ page }) => {
   await expect(page.getByRole("dialog")).toContainText("Добавьте информацию о своём питомце");
   await page.getByRole("dialog").getByRole("button", { name: "Хорошо", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Добавить питомца", exact: true })).toBeVisible();
+});
+
+test("restores nearby immediately after guided pet back", async ({ page }) => {
+  await openWalks(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Хорошо", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Добавить питомца", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Назад к прогулкам", exact: true }).click();
+  await expect(page.locator(".pet-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("heading", { name: "Прогулки рядом", exact: true })).toBeVisible();
+  await expectDockSection(page, "nearby");
+  await expect(page.locator(".walks-pane--nearby")).toHaveAttribute("data-dock-pane", "static");
+});
+
+test("restores nearby immediately after system back from guided pet", async ({ page }) => {
+  await openWalks(page);
+
+  const dock = page.locator(".walks-bottom-dock");
+  await dock.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Хорошо", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Добавить питомца", exact: true })).toBeVisible();
+
+  await page.evaluate(() => window.history.back());
+  await expect(page.locator(".pet-screen")).toHaveCSS("animation-name", "dock-pane-exit-right");
+  await expect(page.getByRole("heading", { name: "Прогулки рядом", exact: true })).toBeVisible();
+  await expectDockSection(page, "nearby");
+  await expect(page.locator(".walks-pane--nearby")).toHaveAttribute("data-dock-pane", "static");
 });
 
 test("handles the share guide and invalid share link", async ({ page }) => {

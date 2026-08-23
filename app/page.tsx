@@ -63,10 +63,12 @@ type DockSlide = {
   direction: "forward" | "backward";
 };
 type DockMotion = "enter-left" | "exit-left";
+type BrowserGuideTarget = "walks" | "location";
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
 type FilterMotion = "idle" | "exit-left" | "exit-right" | "enter-left" | "enter-right";
-type LocationCloseTarget = "menu" | "walks" | null;
+type LocationCloseTarget = "history" | "menu" | "walks" | null;
+type ScreenMotion = "enter-right" | "exit-left" | "exit-right" | null;
 type FormScreen = "pet" | "announce";
 
 type Location = {
@@ -287,9 +289,14 @@ export default function Home() {
   const [petsDockDirection, setPetsDockDirection] = useState<"forward" | "backward">("forward");
   const [collectionClosing, setCollectionClosing] = useState(false);
   const [petsTransitionTarget, setPetsTransitionTarget] = useState<"nearby" | "walk" | "profile" | null>(null);
-  const [profileTransitionTarget, setProfileTransitionTarget] = useState<"my-walks" | "profile" | null>(null);
+  const [profileTransitionTarget, setProfileTransitionTarget] = useState<"my-walks" | "my-pets" | "profile" | null>(null);
+  const [browserGuideClosing, setBrowserGuideClosing] = useState(false);
+  const [browserGuideExitDirection, setBrowserGuideExitDirection] = useState<"left" | "right">("right");
+  const [browserGuideTransitionTarget, setBrowserGuideTransitionTarget] = useState<BrowserGuideTarget | null>(null);
   const [locationOpenedFromMenu, setLocationOpenedFromMenu] = useState(false);
   const [locationCloseTarget, setLocationCloseTarget] = useState<LocationCloseTarget>(null);
+  const [locationMotion, setLocationMotion] = useState<ScreenMotion>(null);
+  const [locationRequestClosing, setLocationRequestClosing] = useState(false);
   const [formClosing, setFormClosing] = useState(false);
   const [formCloseTarget, setFormCloseTarget] = useState<Screen | null>(null);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -343,6 +350,12 @@ export default function Home() {
   const [walkComment, setWalkComment] = useState("");
   const [walkFormDirty, setWalkFormDirty] = useState(false);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const browserGuidePendingNavigationRef = useRef<AppNavigationState | null>(null);
+  const browserGuideRestoringHistoryRef = useRef(false);
+  const browserGuideFinalizingHistoryRef = useRef(false);
+  const formPendingNavigationRef = useRef<AppNavigationState | null>(null);
+  const formRestoringHistoryRef = useRef(false);
+  const formFinalizingHistoryRef = useRef(false);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
   const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
   const shareDoneButtonRef = useRef<HTMLButtonElement>(null);
@@ -356,6 +369,8 @@ export default function Home() {
     setLocationCloseTarget(null);
     setFormClosing(false);
     setFormCloseTarget(null);
+    setBrowserGuideClosing(false);
+    setBrowserGuideTransitionTarget(null);
     setMenuClosing(false);
     setDockWalkClosing(false);
     setLocationOpenedFromMenu(navigation.locationOpenedFromMenu);
@@ -440,6 +455,25 @@ export default function Home() {
     pushNavigation("browser-guide");
   }
 
+  function continueFromBrowserGuide() {
+    setBrowserGuideExitDirection("left");
+    setBrowserGuideTransitionTarget(hasLocation ? "walks" : "location");
+    setBrowserGuideClosing(true);
+  }
+
+  function completeBrowserGuideClose() {
+    if (browserGuideTransitionTarget) {
+      if (browserGuideTransitionTarget === "location") setLocationMotion("enter-right");
+      pushNavigation(browserGuideTransitionTarget);
+      return;
+    }
+    if (browserGuidePendingNavigationRef.current) {
+      browserGuidePendingNavigationRef.current = null;
+      browserGuideFinalizingHistoryRef.current = true;
+      window.history.back();
+    }
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -514,8 +548,7 @@ export default function Home() {
     const handlePopState = (event: PopStateEvent) => {
       const navigation = event.state as Partial<AppNavigationState> | null;
       if (!navigation?.dogmeetNavigation || !navigation.screen) return;
-      setAnimateMenuOpen(false);
-      applyNavigationState({
+      const nextNavigation: AppNavigationState = {
         dogmeetNavigation: true,
         screen: navigation.screen,
         menuOpen: Boolean(navigation.menuOpen),
@@ -523,11 +556,63 @@ export default function Home() {
         dockWalkOpen: Boolean(navigation.dockWalkOpen),
         dockReturnSection: navigation.dockReturnSection ?? "nearby",
         petsSource: navigation.petsSource === "dock" || navigation.petsSource === "profile" ? navigation.petsSource : null
-      });
+      };
+      if (browserGuideRestoringHistoryRef.current) {
+        browserGuideRestoringHistoryRef.current = false;
+        return;
+      }
+      if (browserGuideFinalizingHistoryRef.current) {
+        browserGuideFinalizingHistoryRef.current = false;
+        applyNavigationState(nextNavigation);
+        return;
+      }
+      if (formRestoringHistoryRef.current) {
+        formRestoringHistoryRef.current = false;
+        return;
+      }
+      if (formFinalizingHistoryRef.current) {
+        formFinalizingHistoryRef.current = false;
+        applyNavigationState(nextNavigation);
+        return;
+      }
+      if (screen === "browser-guide" && navigation.screen !== "browser-guide") {
+        browserGuidePendingNavigationRef.current = nextNavigation;
+        browserGuideRestoringHistoryRef.current = true;
+        setBrowserGuideExitDirection("right");
+        setBrowserGuideClosing(true);
+        window.history.forward();
+        return;
+      }
+      if (screen === "location" && navigation.screen !== "location" && !locationCloseTarget && !formPendingNavigationRef.current) {
+        formPendingNavigationRef.current = nextNavigation;
+        formRestoringHistoryRef.current = true;
+        setLocationCloseTarget("history");
+        setLocationMotion("exit-right");
+        window.history.forward();
+        return;
+      }
+      if (screen === "location-request" && navigation.screen !== "location-request" && !locationRequestClosing && !formPendingNavigationRef.current) {
+        formPendingNavigationRef.current = nextNavigation;
+        formRestoringHistoryRef.current = true;
+        setLocationRequestClosing(true);
+        window.history.forward();
+        return;
+      }
+      if (screen === "pet" && navigation.screen === "walks" && !formClosing) {
+        formPendingNavigationRef.current = nextNavigation;
+        formRestoringHistoryRef.current = true;
+        setFormCloseTarget("walks");
+        setDockTransitionVisible(true);
+        setFormClosing(true);
+        window.history.forward();
+        return;
+      }
+      setAnimateMenuOpen(false);
+      applyNavigationState(nextNavigation);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [applyNavigationState]);
+  }, [applyNavigationState, formClosing, locationCloseTarget, locationRequestClosing, screen]);
 
   useEffect(() => {
     let active = true;
@@ -766,13 +851,16 @@ export default function Home() {
     setLocationRequestDraft(defaultLocation);
     setLocationRequestError("");
     setTouchedFields({});
+    setLocationRequestClosing(false);
+    setLocationMotion("enter-right");
     pushNavigation("location-request");
   }
 
   function leaveLocationRequest() {
+    if (locationRequestClosing) return;
     setLocationRequestError("");
     setTouchedFields({});
-    returnThroughHistory();
+    setLocationRequestClosing(true);
   }
 
   async function sendLocationRequest(event: FormEvent<HTMLFormElement>) {
@@ -868,10 +956,12 @@ export default function Home() {
       setTouchedFields({});
       if (locationOpenedFromMenu) {
         setLocationCloseTarget("walks");
+        setLocationMotion("exit-right");
         return;
       }
       setLocationOpenedFromMenu(false);
-      pushNavigation("walks");
+      setLocationCloseTarget("walks");
+      setLocationMotion("exit-left");
     } catch (error) {
       setLocationSubmitError(error instanceof Error ? error.message : "Не удалось сохранить локацию.");
     } finally {
@@ -885,16 +975,19 @@ export default function Home() {
 
     if (locationOpenedFromMenu) {
       setLocationCloseTarget("menu");
+      setLocationMotion("exit-right");
       return;
     }
 
-    returnThroughHistory();
+    setLocationCloseTarget("history");
+    setLocationMotion("exit-right");
   }
 
   function openLocationEditor() {
     setLocationDraft(location);
     setTouchedFields({});
     setLocationCloseTarget(null);
+    setLocationMotion("enter-right");
     setLocationOpenedFromMenu(true);
     setMenuOpen(false);
     pushNavigation("location", { locationOpenedFromMenu: true });
@@ -902,10 +995,23 @@ export default function Home() {
 
   function completeLocationClose() {
     const target = locationCloseTarget;
+    setLocationMotion(null);
+    if (formPendingNavigationRef.current) {
+      formPendingNavigationRef.current = null;
+      formFinalizingHistoryRef.current = true;
+      window.history.back();
+      return;
+    }
     if (target === "menu") {
       returnThroughHistory();
     } else if (target === "walks") {
-      window.history.go(-2);
+      if (locationOpenedFromMenu) {
+        window.history.go(-2);
+      } else {
+        pushNavigation("walks");
+      }
+    } else if (target === "history") {
+      returnThroughHistory();
     }
   }
 
@@ -974,9 +1080,15 @@ export default function Home() {
       if (target === "my-walks" || target === "walks") setWalkBeingEdited(null);
     }
 
-    if (formCloseModeRef.current === "replace") {
+    if (formPendingNavigationRef.current) {
+      formPendingNavigationRef.current = null;
+      formFinalizingHistoryRef.current = true;
+      setDockTransitionVisible(false);
+      window.history.back();
+    } else if (formCloseModeRef.current === "replace") {
       replaceNavigation(target);
     } else {
+      if (target === "walks") setDockTransitionVisible(false);
       returnThroughHistory();
     }
     formCloseModeRef.current = "back";
@@ -1221,11 +1333,36 @@ export default function Home() {
     setPlaceMenuOpen(false);
   }
 
+  function refreshPets() {
+    fetch("/api/pets")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json() as { pets?: Pet[] };
+        if (Array.isArray(data.pets)) setSavedPets(data.pets);
+      })
+      .catch(() => undefined);
+  }
+
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets", source: AppNavigationState["petsSource"] = null) {
     if (nextScreen === "my-walks" && screen === "walks" && dockVisibleSection === "profile") {
       setCollectionClosing(false);
       setDockTransitionVisible(true);
       setProfileTransitionTarget("my-walks");
+      return;
+    }
+    if (nextScreen === "my-pets" && source === "dock" && screen === "walks" && dockWalkOpen) {
+      setCollectionClosing(false);
+      setPetsDockDirection("forward");
+      setProfileTransitionTarget("my-pets");
+      refreshPets();
+      return;
+    }
+    if (nextScreen === "my-pets" && source === "profile" && screen === "walks" && dockVisibleSection === "profile") {
+      setCollectionClosing(false);
+      setDockTransitionVisible(true);
+      setPetsDockDirection("forward");
+      setProfileTransitionTarget("my-pets");
+      refreshPets();
       return;
     }
     if (nextScreen === "my-pets") {
@@ -1235,15 +1372,7 @@ export default function Home() {
     setCollectionClosing(false);
     setMenuOpen(false);
     pushNavigation(nextScreen, { petsSource: nextScreen === "my-pets" ? source : null });
-    if (nextScreen === "my-pets") {
-      fetch("/api/pets")
-        .then(async (response) => {
-          if (!response.ok) return;
-          const data = await response.json() as { pets?: Pet[] };
-          if (Array.isArray(data.pets)) setSavedPets(data.pets);
-        })
-        .catch(() => undefined);
-    }
+    if (nextScreen === "my-pets") refreshPets();
   }
 
   function returnToMenu() {
@@ -1809,8 +1938,9 @@ export default function Home() {
     ? "enter-left"
     : dockTransitionVisible && formClosing
       ? "enter-left"
-      : profileTransitionTarget === "my-walks" ||
-          (screen === "my-pets" && petsSource === "profile") ||
+    : profileTransitionTarget === "my-walks" ||
+        profileTransitionTarget === "my-pets" ||
+        (screen === "my-pets" && petsSource === "profile") ||
           ((screen === "pet" || screen === "announce") && dockTransitionVisible)
       ? "exit-left"
       : null;
@@ -1818,6 +1948,7 @@ export default function Home() {
     isProfileReturning ||
     screen === "pet" ||
     screen === "announce" ||
+    screen === "browser-guide" ||
     (screen === "my-pets" && petsSource === "dock") ||
     (screen === "walks" && (dockVisibleSection !== "nearby" || dockSlide !== null));
   const surfaceExitDirection =
@@ -1858,7 +1989,16 @@ export default function Home() {
         )}
 
         {screen === "browser-guide" && (
-          <div className="screen browser-guide-screen">
+          <div
+            className={`screen browser-guide-screen animated-form-screen ${browserGuideClosing ? `animated-form-screen--exit-${browserGuideExitDirection}` : "animated-form-screen--enter"}`}
+            onAnimationEnd={(event) => {
+              if (
+                event.target === event.currentTarget &&
+                (event.animationName === "dock-pane-exit-left" || event.animationName === "dock-pane-exit-right") &&
+                browserGuideClosing
+              ) completeBrowserGuideClose();
+            }}
+          >
             <button className="icon-button back-button" type="button" aria-label="Назад" onClick={returnThroughHistory}>
               <ArrowLeft />
             </button>
@@ -1939,7 +2079,7 @@ export default function Home() {
               просто продолжите
             </p>
 
-            <button className="primary-button browser-guide-continue" type="button" onClick={() => pushNavigation(hasLocation ? "walks" : "location")}>
+            <button className="primary-button browser-guide-continue" type="button" onClick={continueFromBrowserGuide}>
               Продолжить
             </button>
           </div>
@@ -1947,11 +2087,11 @@ export default function Home() {
 
         {screen === "location" && (
           <div
-            className={`screen form-screen location-screen ${locationOpenedFromMenu ? `subpage-screen-motion ${locationCloseTarget ? "subpage-screen-motion--exit" : "subpage-screen-motion--enter"}` : "location-default"}`}
+            className={`screen form-screen location-screen ${locationMotion ? `animated-form-screen animated-form-screen--${locationMotion}` : locationOpenedFromMenu ? "animated-form-screen animated-form-screen--enter" : "location-default"}`}
             onAnimationEnd={(event) => {
               if (
                 event.target === event.currentTarget &&
-                event.animationName === "subpage-screen-exit" &&
+                (event.animationName === "dock-pane-exit-left" || event.animationName === "dock-pane-exit-right") &&
                 locationCloseTarget
               ) completeLocationClose();
             }}
@@ -2030,7 +2170,26 @@ export default function Home() {
         )}
 
         {screen === "location-request" && (
-          <div className="screen form-screen location-screen location-request-screen">
+          <div
+            className={`screen form-screen location-screen location-request-screen animated-form-screen ${locationRequestClosing ? "animated-form-screen--exit-right" : "animated-form-screen--enter-right"}`}
+            onAnimationEnd={(event) => {
+              if (
+                event.target === event.currentTarget &&
+                event.animationName === "dock-pane-exit-right" &&
+                locationRequestClosing
+              ) {
+                setLocationRequestClosing(false);
+                setLocationMotion(null);
+                if (formPendingNavigationRef.current) {
+                  formPendingNavigationRef.current = null;
+                  formFinalizingHistoryRef.current = true;
+                  window.history.back();
+                } else {
+                  returnThroughHistory();
+                }
+              }
+            }}
+          >
             <button className="icon-button back-button" type="button" aria-label="Назад к выбору локации" onClick={leaveLocationRequest}>
               <ArrowLeft />
             </button>
@@ -2116,7 +2275,10 @@ export default function Home() {
           const paneState = (section: DockPanelSection) => {
             if (petsTransitionTarget) return section === petsTransitionTarget ? "static" : "hidden";
             if (profileTransitionTarget === "profile") return section === "profile" ? "static" : "hidden";
-            if (profileTransitionTarget === "my-walks") return section === "profile" ? "from" : "hidden";
+            if (profileTransitionTarget === "my-walks" || profileTransitionTarget === "my-pets") {
+              const fromSection = profileTransitionTarget === "my-pets" && dockWalkOpen ? "walk" : "profile";
+              return section === fromSection ? "from" : "hidden";
+            }
             if (!dockSlide) return section === dockVisibleSection ? "static" : "hidden";
             if (section === dockSlide.from) return "from";
             if (section === dockSlide.to) return "to";
@@ -2125,7 +2287,7 @@ export default function Home() {
           const nearbyPane = paneState("nearby");
           const walkPane = paneState("walk");
           const profilePane = paneState("profile");
-          const paneDirection = profileTransitionTarget === "my-walks" ? "forward" : dockSlide?.direction;
+          const paneDirection = profileTransitionTarget === "my-walks" || profileTransitionTarget === "my-pets" ? "forward" : dockSlide?.direction;
           return (
           <div className={`screen walks-screen ${petsTransitionTarget || profileTransitionTarget === "profile" ? "walks-screen--collection-return" : ""}`}>
             <div
@@ -2403,16 +2565,16 @@ export default function Home() {
                 <p className="collection-empty">У вас пока нет добавленных прогулок</p>
               )}
             </div>
-            <button className="primary-button floating-walk-button" type="button" disabled={!petsLoaded} onClick={startWalkAnnouncement}>
+              <button className="floating-pet-button" type="button" disabled={!petsLoaded} onClick={startWalkAnnouncement}>
               <Plus aria-hidden="true" />
               Сообщить о прогулке
             </button>
           </div>
         )}
 
-        {screen === "my-pets" && (
+        {(screen === "my-pets" || profileTransitionTarget === "my-pets") && (
           <div
-            className={`screen collection-screen ${petsSource ? `pets-screen-motion pets-screen-motion--${petsDockDirection} ${collectionClosing ? "pets-screen-motion--exit" : "pets-screen-motion--enter"}` : ""} ${petsSource === "dock" ? "collection-screen--dock" : ""} ${petsTransitionTarget ? "collection-screen--returning-to-dock" : ""} ${highlightedPetId ? "collection-screen--shared-highlight-active" : ""}`}
+            className={`screen collection-screen ${profileTransitionTarget === "my-pets" ? `pets-screen-motion pets-screen-motion--entering-from-${dockWalkOpen ? "walk" : "profile"}` : petsSource ? `pets-screen-motion pets-screen-motion--${petsDockDirection} ${collectionClosing ? "pets-screen-motion--exit" : "pets-screen-motion--enter"}` : ""} ${petsSource === "dock" ? "collection-screen--dock" : ""} ${petsTransitionTarget ? "collection-screen--returning-to-dock" : ""} ${highlightedPetId ? "collection-screen--shared-highlight-active" : ""}`}
             onPointerDownCapture={(event) => {
               if (!highlightedPetId) return;
               event.preventDefault();
@@ -2420,6 +2582,14 @@ export default function Home() {
               dismissSharedPetHighlight();
             }}
             onAnimationEnd={(event) => {
+              if (
+                event.target === event.currentTarget &&
+                event.animationName === "dock-pane-enter-right" &&
+                profileTransitionTarget === "my-pets"
+              ) {
+                pushNavigation("my-pets", { petsSource: dockWalkOpen ? "dock" : "profile" });
+                return;
+              }
               if (
                 event.target === event.currentTarget &&
                 (event.animationName === "pets-screen-exit" || event.animationName === "pets-screen-exit-left") &&

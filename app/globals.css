@@ -285,6 +285,8 @@ strong {
 .welcome-screen .primary-button {
   min-height: var(--primary-button-height);
   flex: 0 0 auto;
+  opacity: 1;
+  cursor: pointer;
 }
 
 .browser-guide-screen {
@@ -1565,15 +1567,19 @@ strong {
   inset: 0;
   background: rgba(251, 250, 246, 0.82);
   pointer-events: none;
-  transform: translateZ(0);
-  will-change: opacity, transform;
+}
+
+.screen-browser-guide .app-surface-background {
+  background: var(--paper);
 }
 
 .app-surface-background--exit-right {
+  will-change: transform;
   animation: dock-pane-exit-right 300ms cubic-bezier(.22, .82, .3, 1) both;
 }
 
 .app-surface-background--exit-left {
+  will-change: transform;
   animation: dock-pane-exit-left 300ms cubic-bezier(.22, .82, .3, 1) both;
 }
 
@@ -1831,21 +1837,6 @@ strong {
   font-size: var(--body-large-size);
   line-height: var(--line-body);
   text-align: center;
-}
-
-.floating-walk-button {
-  position: absolute;
-  z-index: 10;
-  bottom: max(var(--space-4), env(safe-area-inset-bottom));
-  right: var(--screen-inline-padding);
-  left: var(--screen-inline-padding);
-  width: auto;
-  min-height: var(--primary-button-height);
-  box-shadow: 0 12px 28px rgba(31, 76, 49, 0.3);
-}
-
-.floating-walk-button:active {
-  transform: scale(0.985);
 }
 
 .walks-bottom-dock {
@@ -3053,6 +3044,7 @@ strong {
   position: relative;
   height: 100svh;
   min-height: 0;
+  padding-top: max(var(--space-5), env(safe-area-inset-top));
   overflow: hidden;
   will-change: opacity, transform;
 }
@@ -3139,6 +3131,14 @@ strong {
   animation: dock-pane-enter-right 300ms cubic-bezier(.22, .82, .3, 1) both !important;
 }
 
+.pets-screen-motion--entering-from-profile,
+.pets-screen-motion--entering-from-walk {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  animation: dock-pane-enter-right 300ms cubic-bezier(.22, .82, .3, 1) both !important;
+}
+
 .my-walks-screen--exit {
   pointer-events: none;
   animation: dock-pane-exit-right 300ms cubic-bezier(.22, .82, .3, 1) both !important;
@@ -3148,13 +3148,20 @@ strong {
   will-change: transform;
 }
 
-.animated-form-screen--enter {
+.animated-form-screen--enter,
+.animated-form-screen--enter-right {
   animation: dock-pane-enter-right 300ms cubic-bezier(.22, .82, .3, 1) both !important;
 }
 
-.animated-form-screen--exit {
+.animated-form-screen--exit,
+.animated-form-screen--exit-right {
   pointer-events: none;
   animation: dock-pane-exit-right 300ms cubic-bezier(.22, .82, .3, 1) both !important;
+}
+
+.animated-form-screen--exit-left {
+  pointer-events: none;
+  animation: dock-pane-exit-left 300ms cubic-bezier(.22, .82, .3, 1) both !important;
 }
 
 @keyframes subpage-screen-enter {
