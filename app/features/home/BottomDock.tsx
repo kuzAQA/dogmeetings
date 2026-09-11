@@ -67,13 +67,13 @@ export function BottomDock({
     const mutationObserver = new MutationObserver(scheduleOcclusionUpdate);
 
     updateOcclusion();
-    document.addEventListener("scroll", scheduleOcclusionUpdate, { capture: true, passive: true });
+    document.addEventListener("scroll", updateOcclusion, { capture: true, passive: true });
     window.addEventListener("resize", scheduleOcclusionUpdate);
     mutationObserver.observe(root, { childList: true, subtree: true });
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      document.removeEventListener("scroll", scheduleOcclusionUpdate, true);
+      document.removeEventListener("scroll", updateOcclusion, true);
       window.removeEventListener("resize", scheduleOcclusionUpdate);
       mutationObserver.disconnect();
     };
