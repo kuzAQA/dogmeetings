@@ -3,6 +3,7 @@ import { locationRequests } from "../../../db/schema";
 import { sendAdminLocationRequestNotification } from "../../../lib/admin-push";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
+import { readJsonRecord } from "../../../server/transport/request-json";
 
 const containsLetter = /\p{L}/u;
 
@@ -28,11 +29,7 @@ export async function POST(request: Request) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
 
-    const payload = await request.json().catch(() => null) as {
-      city?: unknown;
-      district?: unknown;
-      complex?: unknown;
-    } | null;
+    const payload = await readJsonRecord(request);
     const city = normalizeText(payload?.city);
     const district = normalizeText(payload?.district);
     const residentialComplex = normalizeText(payload?.complex);

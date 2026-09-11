@@ -1,30 +1,19 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
-import { petCollaborators, pets, places, walks } from "../../../db/schema";
+import { walks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
-
-const MAX_WALK_META_LENGTH = 40;
-const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
-
-type WalkRow = {
-  id: string;
-  petId: string;
-  petName: string;
-  petBreed: string;
-  ownerName: string;
-  city: string;
-  district: string;
-  residentialComplex: string;
-  placeId: string;
-  place: string;
-  comment: string | null;
-  scheduleType: string;
-  walkDate: string;
-  walkTime: string;
-  updatedAt: Date;
-  petUpdatedAt: Date;
-};
+import { parseWalkMutation } from "../../../server/application/walk-input";
+import { getSavedLocation } from "../../../server/domain/location";
+import {
+  findOrCreateSharedPlace,
+  findWalkPetForClient,
+  listWalksForLocation,
+  listWalksForOwner,
+  type WalkRow
+} from "../../../server/infrastructure/walk-repository";
+import { moscowDate } from "../../../server/domain/walk";
+import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
 function publicWalk(walk: WalkRow) {
   return {
@@ -47,33 +36,8 @@ function publicWalk(walk: WalkRow) {
   };
 }
 
-function moscowDate(offsetDays = 0) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Moscow",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000));
-}
-
 function databaseError(error: unknown) {
   return databaseErrorMessage(error, "Не удалось выполнить запрос к базе данных.");
-}
-
-function cleanPlaceName(value: string) {
-  return value.normalize("NFKC").trim().replace(/\s+/g, " ");
-}
-
-function capitalizePlaceName(value: string) {
-  return cleanPlaceName(value).replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
-}
-
-function normalizePlaceName(value: string) {
-  return cleanPlaceName(value).toLocaleLowerCase("ru-RU");
-}
-
-function cleanComment(value: string) {
-  return value.normalize("NFKC").trim().replace(/\s+/g, " ");
 }
 
 function privateError(message: string, status: number) {
@@ -99,63 +63,12 @@ export async function GET(request: Request) {
         return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
       }
 
-      const rows = await withDb((db) => db
-        .select({
-          id: walks.id,
-          petId: pets.id,
-          petName: pets.name,
-          petBreed: pets.breed,
-          ownerName: pets.ownerName,
-          city: walks.city,
-          district: walks.district,
-          residentialComplex: walks.residentialComplex,
-          placeId: walks.placeId,
-          place: walks.place,
-          comment: walks.comment,
-          scheduleType: walks.scheduleType,
-          walkDate: walks.walkDate,
-          walkTime: walks.walkTime,
-          updatedAt: walks.updatedAt,
-          petUpdatedAt: pets.updatedAt
-        })
-        .from(walks)
-        .innerJoin(pets, eq(walks.petId, pets.id))
-        .where(eq(walks.clientId, session.clientId))
-        .orderBy(desc(walks.updatedAt), desc(walks.createdAt))
-        .limit(100));
+      const rows = await listWalksForOwner(session.clientId);
 
       return privateJson({ walks: rows.map(publicWalk) });
     }
 
-    const rows = await withDb((db) => db
-        .select({
-          id: walks.id,
-          petId: pets.id,
-          petName: pets.name,
-          petBreed: pets.breed,
-          ownerName: pets.ownerName,
-          city: walks.city,
-          district: walks.district,
-          residentialComplex: walks.residentialComplex,
-          placeId: walks.placeId,
-          place: walks.place,
-          comment: walks.comment,
-          scheduleType: walks.scheduleType,
-          walkDate: walks.walkDate,
-          walkTime: walks.walkTime,
-          updatedAt: walks.updatedAt,
-          petUpdatedAt: pets.updatedAt
-        })
-        .from(walks)
-        .innerJoin(pets, eq(walks.petId, pets.id))
-        .where(and(
-          eq(walks.city, city),
-          eq(walks.district, district),
-          eq(walks.residentialComplex, residentialComplex),
-          or(eq(walks.scheduleType, "always"), eq(walks.walkDate, today))
-        ))
-        .orderBy(desc(walks.updatedAt), desc(walks.createdAt))
-        .limit(100));
+    const rows = await listWalksForLocation({ city, district, residentialComplex }, today);
 
     return Response.json({ walks: rows.map(publicWalk) });
   } catch (error) {
@@ -175,114 +88,28 @@ export async function POST(request: Request) {
     if (!session) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
+    const savedLocation = getSavedLocation(session);
+    if (!savedLocation) {
+      return privateError("Сначала сохраните локацию прогулки.", 400);
+    }
 
-    const payload = await request.json() as {
-      petId?: string;
-      place?: string;
-      comment?: string;
-      scheduleType?: string;
-      walkTime?: string;
-      city?: string;
-      district?: string;
-      complex?: string;
-    };
-    const petId = payload.petId?.trim() ?? "";
-    const place = capitalizePlaceName(payload.place ?? "");
-    const normalizedPlace = normalizePlaceName(place);
-    const comment = cleanComment(payload.comment ?? "");
-    const city = payload.city?.trim() ?? "";
-    const district = payload.district?.trim() ?? "";
-    const residentialComplex = payload.complex?.trim() ?? "";
-    const scheduleType = payload.scheduleType?.trim() ?? "";
-    const walkTime = payload.walkTime?.trim() ?? "";
-
-    if (!/^[0-9a-f-]{36}$/i.test(petId)) {
-      return privateError("Выберите питомца.", 400);
-    }
-    if (!place || place.length > MAX_WALK_PLACE_LENGTH) {
-      return privateError(`Укажите место прогулки до ${MAX_WALK_PLACE_LENGTH} символов.`, 400);
-    }
-    if (!/\p{L}/u.test(place)) {
-      return privateError("Название места прогулки должно содержать хотя бы одну букву.", 400);
-    }
-    if (comment.length > MAX_WALK_META_LENGTH) {
-      return privateError(`Комментарий должен содержать не более ${MAX_WALK_META_LENGTH} символов.`, 400);
-    }
-    if (!city || !district || !residentialComplex) {
-      return privateError("Не выбрана локация прогулки.", 400);
-    }
-    if (!new Set(["today", "tomorrow", "always"]).has(scheduleType)) {
-      return privateError("Выберите день прогулки.", 400);
-    }
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime)) {
-      return privateError("Укажите корректное время прогулки.", 400);
-    }
+    const parsedInput = parseWalkMutation(await readJsonRecord(request), "create");
+    if (!parsedInput.ok) return privateError(parsedInput.error, 400);
+    const { petId, place, normalizedPlace, comment, scheduleType, walkTime } = parsedInput.value;
+    const { city, district, complex: residentialComplex } = savedLocation;
 
     const walkDate = moscowDate(scheduleType === "tomorrow" ? 1 : 0);
     const startsAt = new Date(`${walkDate}T${walkTime}:00+03:00`);
 
     const result = await withDb((db) => db.transaction(async (tx) => {
-      const [pet] = await tx
-        .select({
-          id: pets.id,
-          clientId: pets.clientId,
-          name: pets.name,
-          breed: pets.breed,
-          ownerName: pets.ownerName,
-          updatedAt: pets.updatedAt
-        })
-        .from(pets)
-        .where(eq(pets.id, petId))
-        .limit(1);
+      const pet = await findWalkPetForClient(tx, petId, session.clientId);
       if (!pet) return null;
-      if (pet.clientId !== session.clientId) {
-        const [collaboration] = await tx
-          .select({ petId: petCollaborators.petId })
-          .from(petCollaborators)
-          .where(and(
-            eq(petCollaborators.petId, petId),
-            eq(petCollaborators.clientId, session.clientId)
-          ))
-          .limit(1);
-        if (!collaboration) return null;
-      }
-
-      const insertedPlaces = await tx
-        .insert(places)
-        .values({
-          id: crypto.randomUUID(),
-          city,
-          district,
-          residentialComplex,
-          name: place,
-          normalizedName: normalizedPlace
-        })
-        .onConflictDoNothing({
-          target: [places.city, places.district, places.residentialComplex, places.normalizedName]
-        })
-        .returning({ id: places.id, name: places.name });
-
-      let [sharedPlace] = insertedPlaces.length > 0 ? insertedPlaces : await tx
-        .select({ id: places.id, name: places.name })
-        .from(places)
-        .where(and(
-          eq(places.city, city),
-          eq(places.district, district),
-          eq(places.residentialComplex, residentialComplex),
-          eq(places.normalizedName, normalizedPlace)
-        ))
-        .limit(1);
-
-      if (!sharedPlace) throw new Error("Не удалось сохранить место прогулки.");
-
-      const capitalizedSharedPlaceName = capitalizePlaceName(sharedPlace.name);
-      if (sharedPlace.name !== capitalizedSharedPlaceName) {
-        [sharedPlace] = await tx
-          .update(places)
-          .set({ name: capitalizedSharedPlaceName })
-          .where(eq(places.id, sharedPlace.id))
-          .returning({ id: places.id, name: places.name });
-      }
+      const sharedPlace = await findOrCreateSharedPlace(
+        tx,
+        { city, district, residentialComplex },
+        place,
+        normalizedPlace
+      );
 
       const [walk] = await tx
         .insert(walks)
@@ -346,50 +173,15 @@ export async function PATCH(request: Request) {
     if (!session) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
+    const savedLocation = getSavedLocation(session);
+    if (!savedLocation) {
+      return privateError("Сначала сохраните локацию прогулки.", 400);
+    }
 
-    const payload = await request.json() as {
-      walkId?: string;
-      petId?: string;
-      place?: string;
-      comment?: string;
-      scheduleType?: string;
-      walkTime?: string;
-      city?: string;
-      district?: string;
-      complex?: string;
-    };
-    const walkId = payload.walkId?.trim() ?? "";
-    const petId = payload.petId?.trim() ?? "";
-    const place = capitalizePlaceName(payload.place ?? "");
-    const normalizedPlace = normalizePlaceName(place);
-    const comment = cleanComment(payload.comment ?? "");
-    const city = payload.city?.trim() ?? "";
-    const district = payload.district?.trim() ?? "";
-    const residentialComplex = payload.complex?.trim() ?? "";
-    const scheduleType = payload.scheduleType?.trim() ?? "";
-    const walkTime = payload.walkTime?.trim() ?? "";
-
-    if (!/^[0-9a-f-]{36}$/i.test(walkId) || !/^[0-9a-f-]{36}$/i.test(petId)) {
-      return privateError("Некорректные данные прогулки.", 400);
-    }
-    if (!place || place.length > MAX_WALK_PLACE_LENGTH) {
-      return privateError(`Укажите место прогулки до ${MAX_WALK_PLACE_LENGTH} символов.`, 400);
-    }
-    if (!/\p{L}/u.test(place)) {
-      return privateError("Название места прогулки должно содержать хотя бы одну букву.", 400);
-    }
-    if (comment.length > MAX_WALK_META_LENGTH) {
-      return privateError(`Комментарий должен содержать не более ${MAX_WALK_META_LENGTH} символов.`, 400);
-    }
-    if (!city || !district || !residentialComplex) {
-      return privateError("Не выбрана локация прогулки.", 400);
-    }
-    if (!new Set(["today", "tomorrow", "always"]).has(scheduleType)) {
-      return privateError("Выберите день прогулки.", 400);
-    }
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime)) {
-      return privateError("Укажите корректное время прогулки.", 400);
-    }
+    const parsedInput = parseWalkMutation(await readJsonRecord(request), "update");
+    if (!parsedInput.ok) return privateError(parsedInput.error, 400);
+    const { walkId, petId, place, normalizedPlace, comment, scheduleType, walkTime } = parsedInput.value;
+    const { city, district, complex: residentialComplex } = savedLocation;
 
     const walkDate = moscowDate(scheduleType === "tomorrow" ? 1 : 0);
     const startsAt = new Date(`${walkDate}T${walkTime}:00+03:00`);
@@ -401,66 +193,14 @@ export async function PATCH(request: Request) {
         .limit(1);
       if (!ownedWalk) return null;
 
-      const [pet] = await tx
-        .select({
-          id: pets.id,
-          clientId: pets.clientId,
-          name: pets.name,
-          breed: pets.breed,
-          ownerName: pets.ownerName,
-          updatedAt: pets.updatedAt
-        })
-        .from(pets)
-        .where(eq(pets.id, petId))
-        .limit(1);
+      const pet = await findWalkPetForClient(tx, petId, session.clientId);
       if (!pet) return null;
-      if (pet.clientId !== session.clientId) {
-        const [collaboration] = await tx
-          .select({ petId: petCollaborators.petId })
-          .from(petCollaborators)
-          .where(and(
-            eq(petCollaborators.petId, petId),
-            eq(petCollaborators.clientId, session.clientId)
-          ))
-          .limit(1);
-        if (!collaboration) return null;
-      }
-
-      const insertedPlaces = await tx
-        .insert(places)
-        .values({
-          id: crypto.randomUUID(),
-          city,
-          district,
-          residentialComplex,
-          name: place,
-          normalizedName: normalizedPlace
-        })
-        .onConflictDoNothing({
-          target: [places.city, places.district, places.residentialComplex, places.normalizedName]
-        })
-        .returning({ id: places.id, name: places.name });
-
-      let [sharedPlace] = insertedPlaces.length > 0 ? insertedPlaces : await tx
-        .select({ id: places.id, name: places.name })
-        .from(places)
-        .where(and(
-          eq(places.city, city),
-          eq(places.district, district),
-          eq(places.residentialComplex, residentialComplex),
-          eq(places.normalizedName, normalizedPlace)
-        ))
-        .limit(1);
-      if (!sharedPlace) throw new Error("Не удалось сохранить место прогулки.");
-
-      const capitalizedSharedPlaceName = capitalizePlaceName(sharedPlace.name);
-      if (sharedPlace.name !== capitalizedSharedPlaceName) {
-        [sharedPlace] = await tx
-          .update(places)
-          .set({ name: capitalizedSharedPlaceName })
-          .where(eq(places.id, sharedPlace.id))
-          .returning({ id: places.id, name: places.name });
-      }
+      const sharedPlace = await findOrCreateSharedPlace(
+        tx,
+        { city, district, residentialComplex },
+        place,
+        normalizedPlace
+      );
 
       const [walk] = await tx
         .update(walks)
@@ -526,8 +266,8 @@ export async function DELETE(request: Request) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
 
-    const payload = await request.json().catch(() => null) as { walkId?: string } | null;
-    const walkId = payload?.walkId?.trim() ?? "";
+    const payload = await readJsonRecord(request);
+    const walkId = readJsonString(payload, "walkId").trim();
 
     if (!/^[0-9a-f-]{36}$/i.test(walkId)) {
       return privateError("Некорректные данные прогулки.", 400);

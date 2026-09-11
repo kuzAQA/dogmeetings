@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import {
-  ArrowLeft,
   Bell,
   BellOff,
   BellRing,
@@ -20,105 +19,33 @@ import {
   UserRound
 } from "lucide-react";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
+import { ApiRequestError } from "../features/api/client";
+import {
+  approveLocationRequest,
+  deleteAdminPet,
+  deletePushSubscription,
+  getAdminSession,
+  getLoginChallenge,
+  getPushPublicKey,
+  loadAdminPets,
+  loadLocationRequests,
+  logoutAdmin,
+  rejectLocationRequest,
+  saveAdminPet as saveAdminPetRequest,
+  savePushSubscription as savePushSubscriptionRequest,
+  submitLogin
+} from "../features/admin/api";
+import {
+  type AdminPet,
+  type LocationRequest,
+  type PendingRequestAction,
+  type NotificationStatus
+} from "../features/admin/model";
+import { base64UrlBytes, createLoginProof } from "../features/admin/login-proof";
+import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../features/shared/validation";
 import { compressPetPhoto } from "../../lib/pet-photo";
 
 type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet";
-
-type LocationRequest = {
-  id: string;
-  city: string;
-  district: string;
-  complex: string;
-  createdAt: string;
-};
-
-type AdminPet = {
-  id: string;
-  name: string;
-  breed: string;
-  ownerName: string;
-  photoUrl: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type PendingRequestAction = {
-  request: LocationRequest;
-  type: "approve" | "reject";
-};
-
-type LoginChallenge = {
-  challenge?: string;
-  iterations?: number;
-  salt?: string;
-  error?: string;
-};
-
-type NotificationStatus = "checking" | "off" | "on" | "denied" | "unsupported" | "busy";
-
-const loginEncoder = new TextEncoder();
-const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_SOURCE_PHOTO_SIZE = 10 * 1024 * 1024;
-const containsLetter = /\p{L}/u;
-
-function loginBase64Url(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
-function loginBase64UrlBytes(value: string) {
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
-async function createLoginProof(
-  username: string,
-  password: string,
-  challenge: Required<Pick<LoginChallenge, "challenge" | "iterations" | "salt">>
-) {
-  const accountHash = new Uint8Array(await crypto.subtle.digest(
-    "SHA-256",
-    loginEncoder.encode(username.normalize("NFKC").trim())
-  ));
-  const passwordKey = await crypto.subtle.importKey(
-    "raw",
-    loginEncoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-  const verifier = new Uint8Array(await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: loginBase64UrlBytes(challenge.salt),
-      iterations: challenge.iterations
-    },
-    passwordKey,
-    256
-  ));
-  const proofKey = await crypto.subtle.importKey(
-    "raw",
-    verifier,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const proof = new Uint8Array(await crypto.subtle.sign(
-    "HMAC",
-    proofKey,
-    loginEncoder.encode(`dogmeet-login:v1:${challenge.challenge}`)
-  ));
-
-  verifier.fill(0);
-  return { accountHash: loginBase64Url(accountHash), proof: loginBase64Url(proof) };
-}
 
 function formatRequestDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -161,18 +88,12 @@ export default function AdminPage() {
     setContentLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/dogsfather/location-requests", {
-        cache: "no-store",
-        credentials: "same-origin"
-      });
-      if (response.status === 401) {
+      setRequests(await loadLocationRequests());
+    } catch (loadError) {
+      if (loadError instanceof ApiRequestError && loadError.status === 401) {
         returnToLogin();
         return;
       }
-      const payload = await response.json().catch(() => null) as { requests?: LocationRequest[]; error?: string } | null;
-      if (!response.ok) throw new Error(payload?.error || "Не удалось загрузить заявки.");
-      setRequests(payload?.requests ?? []);
-    } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить заявки.");
     } finally {
       setContentLoading(false);
@@ -183,18 +104,12 @@ export default function AdminPage() {
     setContentLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/dogsfather/pets", {
-        cache: "no-store",
-        credentials: "same-origin"
-      });
-      if (response.status === 401) {
+      setPets(await loadAdminPets());
+    } catch (loadError) {
+      if (loadError instanceof ApiRequestError && loadError.status === 401) {
         returnToLogin();
         return;
       }
-      const payload = await response.json().catch(() => null) as { pets?: AdminPet[]; error?: string } | null;
-      if (!response.ok) throw new Error(payload?.error || "Не удалось загрузить питомцев.");
-      setPets(payload?.pets ?? []);
-    } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить питомцев.");
     } finally {
       setContentLoading(false);
@@ -203,9 +118,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     let active = true;
-    void fetch("/api/dogsfather/session", { cache: "no-store", credentials: "same-origin" })
-      .then((response) => response.json())
-      .then((payload: { authenticated?: boolean }) => {
+    void getAdminSession()
+      .then((payload) => {
         if (!active) return;
         setPhase(payload.authenticated ? "dashboard" : "login");
       })
@@ -219,14 +133,7 @@ export default function AdminPage() {
   }, []);
 
   const savePushSubscription = useCallback(async (subscription: PushSubscription) => {
-    const response = await fetch("/api/dogsfather/push-subscriptions", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(subscription.toJSON())
-    });
-    const payload = await response.json().catch(() => null) as { error?: string } | null;
-    if (!response.ok) throw new Error(payload?.error || "Не удалось включить уведомления.");
+    await savePushSubscriptionRequest(subscription);
   }, []);
 
   useEffect(() => {
@@ -270,33 +177,22 @@ export default function AdminPage() {
     setSubmitting(true);
     setError("");
     try {
-      const challengeResponse = await fetch("/api/dogsfather/challenge", {
-        cache: "no-store",
-        credentials: "same-origin"
-      });
-      const challengePayload = await challengeResponse.json().catch(() => null) as LoginChallenge | null;
+      const challengePayload = await getLoginChallenge();
       if (
-        !challengeResponse.ok
-        || !challengePayload?.challenge
+        !challengePayload.challenge
         || !challengePayload.salt
+        || typeof challengePayload.iterations !== "number"
         || !Number.isSafeInteger(challengePayload.iterations)
       ) {
-        throw new Error(challengePayload?.error || "Не удалось подготовить защищённый вход.");
+        throw new Error(challengePayload.error || "Не удалось подготовить защищённый вход.");
       }
       const credentialsProof = await createLoginProof(username, password, {
         challenge: challengePayload.challenge,
-        iterations: challengePayload.iterations!,
+        iterations: challengePayload.iterations,
         salt: challengePayload.salt
       });
       setPassword("");
-      const response = await fetch("/api/dogsfather/session", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentialsProof)
-      });
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
-      if (!response.ok) throw new Error(payload?.error || "Не удалось выполнить вход.");
+      await submitLogin(credentialsProof);
       setPhase("dashboard");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Не удалось выполнить вход.");
@@ -307,7 +203,7 @@ export default function AdminPage() {
 
   async function signOut() {
     await disableNotifications().catch(() => undefined);
-    await fetch("/api/dogsfather/session", { method: "DELETE", credentials: "same-origin" });
+    await logoutAdmin();
     setRequests([]);
     setPets([]);
     setUsername("");
@@ -323,12 +219,7 @@ export default function AdminPage() {
       setNotificationStatus("off");
       return;
     }
-    await fetch("/api/dogsfather/push-subscriptions", {
-      method: "DELETE",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint: subscription.endpoint })
-    });
+    await deletePushSubscription(subscription.endpoint);
     await subscription.unsubscribe();
     setNotificationStatus("off");
   }
@@ -353,20 +244,13 @@ export default function AdminPage() {
         setNotificationHint("Разрешите уведомления в настройках браузера. На iPhone сайт должен быть добавлен на экран «Домой».");
         return;
       }
-      const keyResponse = await fetch("/api/dogsfather/push-subscriptions", {
-        cache: "no-store",
-        credentials: "same-origin"
-      });
-      const keyPayload = await keyResponse.json().catch(() => null) as { publicKey?: string; error?: string } | null;
-      if (!keyResponse.ok || !keyPayload?.publicKey) {
-        throw new Error(keyPayload?.error || "Уведомления ещё не настроены на сервере.");
-      }
+      const publicKey = await getPushPublicKey();
       await navigator.serviceWorker.register("/admin-push-sw.js", { scope: "/" });
       const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
       const subscription = existing ?? await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: loginBase64UrlBytes(keyPayload.publicKey)
+        applicationServerKey: base64UrlBytes(publicKey)
       });
       await savePushSubscription(subscription);
       setNotificationStatus("on");
@@ -434,22 +318,19 @@ export default function AdminPage() {
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/dogsfather/location-requests", {
-        method: pendingRequestAction.type === "approve" ? "PATCH" : "DELETE",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: pendingRequestAction.request.id })
-      });
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
-      if (response.status === 401) {
+      if (pendingRequestAction.type === "approve") {
+        await approveLocationRequest(pendingRequestAction.request.id);
+      } else {
+        await rejectLocationRequest(pendingRequestAction.request.id);
+      }
+      setRequests((current) => current.filter((item) => item.id !== pendingRequestAction.request.id));
+      setPendingRequestAction(null);
+    } catch (actionError) {
+      if (actionError instanceof ApiRequestError && actionError.status === 401) {
         returnToLogin();
         setPendingRequestAction(null);
         return;
       }
-      if (!response.ok) throw new Error(payload?.error || "Не удалось обработать заявку.");
-      setRequests((current) => current.filter((item) => item.id !== pendingRequestAction.request.id));
-      setPendingRequestAction(null);
-    } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Не удалось обработать заявку.");
     } finally {
       setSubmitting(false);
@@ -477,20 +358,14 @@ export default function AdminPage() {
         formData.set("photo", compressedPhoto, compressedPhoto.name);
       }
 
-      const response = await fetch("/api/dogsfather/pets", {
-        method: "PATCH",
-        credentials: "same-origin",
-        body: formData
-      });
-      const payload = await response.json().catch(() => null) as { pet?: AdminPet; error?: string } | null;
-      if (response.status === 401) {
+      const savedPet = await saveAdminPetRequest(formData);
+      setPets((current) => current.map((pet) => pet.id === savedPet.id ? savedPet : pet));
+      closePetEditor();
+    } catch (saveError) {
+      if (saveError instanceof ApiRequestError && saveError.status === 401) {
         returnToLogin();
         return;
       }
-      if (!response.ok || !payload?.pet) throw new Error(payload?.error || "Не удалось сохранить питомца.");
-      setPets((current) => current.map((pet) => pet.id === payload.pet!.id ? payload.pet! : pet));
-      closePetEditor();
-    } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить питомца.");
     } finally {
       setSubmitting(false);
@@ -502,22 +377,15 @@ export default function AdminPage() {
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/dogsfather/pets", {
-        method: "DELETE",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ petId: petPendingDelete.id })
-      });
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
-      if (response.status === 401) {
+      await deleteAdminPet(petPendingDelete.id);
+      setPets((current) => current.filter((pet) => pet.id !== petPendingDelete.id));
+      setPetPendingDelete(null);
+    } catch (deleteError) {
+      if (deleteError instanceof ApiRequestError && deleteError.status === 401) {
         returnToLogin();
         setPetPendingDelete(null);
         return;
       }
-      if (!response.ok) throw new Error(payload?.error || "Не удалось удалить питомца.");
-      setPets((current) => current.filter((pet) => pet.id !== petPendingDelete.id));
-      setPetPendingDelete(null);
-    } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить питомца.");
     } finally {
       setSubmitting(false);
@@ -549,14 +417,9 @@ export default function AdminPage() {
     );
   }
 
-  function sectionHeading(title: string, subtitle: string, showBack = false) {
+  function sectionHeading(title: string, subtitle: string) {
     return (
-      <header className={`admin-screen-heading ${showBack ? "has-back" : ""}`}>
-        {showBack && (
-          <button className="admin-section-back" type="button" onClick={() => { setError(""); setPhase("dashboard"); }} aria-label="Назад к разделам">
-            <ArrowLeft />
-          </button>
-        )}
+      <header className="admin-screen-heading">
         <div className="admin-heading-copy">
           <h1>{title}</h1>
           <p>{subtitle}</p>
@@ -578,7 +441,6 @@ export default function AdminPage() {
       <section className="admin-shell">
         {phase === "checking" && (
           <div className="admin-checking" aria-live="polite">
-            <span className="saving-spinner" aria-hidden="true" />
             <p>Проверяем защищённую сессию…</p>
           </div>
         )}
@@ -628,11 +490,11 @@ export default function AdminPage() {
 
         {phase === "requests" && (
           <div className="admin-requests-screen admin-section-screen">
-            {sectionHeading("Заявки", "Новые локации от пользователей", true)}
+            {sectionHeading("Заявки", "Новые локации от пользователей")}
             {notificationHint && <p className="admin-notification-hint" role="status">{notificationHint}</p>}
             {error && <p className="error-message admin-section-error" role="alert">{error}</p>}
             <div className="admin-request-list" aria-busy={contentLoading}>
-              {contentLoading && <div className="admin-content-loading"><span className="saving-spinner" /><span>Загружаем заявки…</span></div>}
+ {contentLoading && <div className="admin-content-loading"><span>Загружаем заявки…</span></div>}
               {!contentLoading && requests.length === 0 && !error && <p className="admin-empty">Новых заявок пока нет</p>}
               {!contentLoading && requests.map((item) => (
                 <article className="admin-request-card" key={item.id}>
@@ -659,10 +521,10 @@ export default function AdminPage() {
 
         {phase === "pets" && (
           <div className="admin-pets-screen admin-section-screen">
-            {sectionHeading("Питомцы", "Все добавленные питомцы", true)}
+            {sectionHeading("Питомцы", "Все добавленные питомцы")}
             {error && <p className="error-message admin-section-error" role="alert">{error}</p>}
             <div className="admin-pet-list" aria-busy={contentLoading}>
-              {contentLoading && <div className="admin-content-loading"><span className="saving-spinner" /><span>Загружаем питомцев…</span></div>}
+ {contentLoading && <div className="admin-content-loading"><span>Загружаем питомцев…</span></div>}
               {!contentLoading && pets.length === 0 && !error && <p className="admin-empty">Добавленных питомцев пока нет</p>}
               {!contentLoading && pets.map((pet) => (
                 <article className="admin-pet-card" key={pet.id}>
@@ -688,9 +550,6 @@ export default function AdminPage() {
 
         {phase === "edit-pet" && petBeingEdited && (
           <div className="admin-pet-edit-screen admin-section-screen">
-            <button className="icon-button back-button admin-edit-back" type="button" onClick={closePetEditor} aria-label="Назад к питомцам">
-              <ArrowLeft />
-            </button>
             <div className="admin-edit-heading">
               <h1>Редактировать питомца</h1>
               <p>Обновите информацию о питомце</p>

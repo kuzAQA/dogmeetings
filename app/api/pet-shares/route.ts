@@ -2,23 +2,18 @@ import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { petShareLinks, pets } from "../../../db/schema";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
+import { PUBLIC_ORIGIN } from "../../../server/infrastructure/public-origin";
+import { uuidPattern } from "../../../server/domain/pet";
+import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const shareTokenPattern = /^[0-9a-f]{20}$/i;
 
 function createShareToken() {
   return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
 }
 
-function publicOrigin(request: Request) {
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const url = new URL(request.url);
-  return `${forwardedProto || url.protocol.replace(":", "")}://${forwardedHost || request.headers.get("host") || url.host}`;
-}
-
-function sharePayload(request: Request, token: string) {
-  return { link: `${publicOrigin(request)}/share/${encodeURIComponent(token)}` };
+function sharePayload(token: string) {
+  return { link: `${PUBLIC_ORIGIN}/share/${encodeURIComponent(token)}` };
 }
 
 async function ownedPet(petId: string, clientId: string) {
@@ -39,8 +34,8 @@ export async function POST(request: Request) {
     const session = await getClientSession(request);
     if (!session) return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
 
-    const payload = await request.json().catch(() => null) as { petId?: string } | null;
-    const petId = payload?.petId?.trim() ?? "";
+    const payload = await readJsonRecord(request);
+    const petId = readJsonString(payload, "petId").trim();
     if (!uuidPattern.test(petId)) {
       return privateJson({ error: "Некорректные данные питомца." }, { status: 400 });
     }
@@ -54,7 +49,7 @@ export async function POST(request: Request) {
       .where(eq(petShareLinks.petId, petId))
       .limit(1));
     if (existing && shareTokenPattern.test(existing.token)) {
-      return privateJson(sharePayload(request, existing.token));
+      return privateJson(sharePayload(existing.token));
     }
 
     const token = createShareToken();
@@ -66,7 +61,7 @@ export async function POST(request: Request) {
         set: { token, updatedAt: new Date() }
       })
       .returning({ token: petShareLinks.token }));
-    return privateJson(sharePayload(request, created.token), { status: 201 });
+    return privateJson(sharePayload(created.token), { status: 201 });
   } catch {
     return privateJson({ error: "Не удалось получить ссылку на питомца." }, { status: 500 });
   }
@@ -81,8 +76,8 @@ export async function PATCH(request: Request) {
     const session = await getClientSession(request);
     if (!session) return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
 
-    const payload = await request.json().catch(() => null) as { petId?: string } | null;
-    const petId = payload?.petId?.trim() ?? "";
+    const payload = await readJsonRecord(request);
+    const petId = readJsonString(payload, "petId").trim();
     if (!uuidPattern.test(petId)) {
       return privateJson({ error: "Некорректные данные питомца." }, { status: 400 });
     }
@@ -100,7 +95,7 @@ export async function PATCH(request: Request) {
       })
       .returning({ token: petShareLinks.token }));
 
-    return privateJson(sharePayload(request, link.token));
+    return privateJson(sharePayload(link.token));
   } catch {
     return privateJson({ error: "Не удалось создать новую ссылку." }, { status: 500 });
   }

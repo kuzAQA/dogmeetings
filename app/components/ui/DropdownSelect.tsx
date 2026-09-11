@@ -3,7 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export type DropdownOption = {
+type DropdownOption = {
   value: string;
   label: string;
 };
@@ -46,7 +46,7 @@ export function DropdownSelect({
     if (!open) return;
 
     const closeOnOutsidePress = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target instanceof Node ? event.target : null)) setOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);

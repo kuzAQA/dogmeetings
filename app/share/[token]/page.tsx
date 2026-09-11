@@ -1,35 +1,13 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
+import { ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { use, useEffect, useRef, useState } from "react";
-
-type SharedPet = {
-  id: string;
-  name: string;
-  breed: string;
-  ownerName: string;
-  photoUrl: string;
-};
+import { ApiRequestError } from "../../features/api/client";
+import { addSharedPet, ensureClientSession, loadSharedPet, type SharedPet } from "../../features/share/api";
 
 type ShareStage = "guide" | "checking" | "preview" | "already-added" | "error";
 type GuidePlatform = "ios" | "android";
-
-async function ensureClientSession() {
-  const current = await fetch("/api/session", { cache: "no-store" });
-  if (current.ok) return;
-  if (current.status !== 401) throw new Error("Не удалось восстановить сессию.");
-
-  const created = await fetch("/api/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({})
-  });
-  if (!created.ok) {
-    const data = await created.json().catch(() => ({})) as { error?: string };
-    throw new Error(data.error || "Браузер не сохранил безопасную сессию.");
-  }
-}
 
 export default function SharedPetPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -58,13 +36,13 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
     setLinkInactive(false);
     try {
       await ensureClientSession();
-      const response = await fetch(`/api/pet-shares/${encodeURIComponent(token)}`, { cache: "no-store" });
-      const data = await response.json() as { pet?: SharedPet; alreadyAdded?: boolean; inactive?: boolean; error?: string };
-      if (data.inactive || response.status === 410) setLinkInactive(true);
-      if (!response.ok || !data.pet) throw new Error(data.error || "Ссылка недействительна.");
+      const data = await loadSharedPet(token);
+      if (data.inactive) setLinkInactive(true);
+      if (!data.pet) throw new Error(data.error || "Ссылка недействительна.");
       setPet(data.pet);
       setStage(data.alreadyAdded ? "already-added" : "preview");
     } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.status === 410) setLinkInactive(true);
       setError(requestError instanceof Error ? requestError.message : "Не удалось открыть питомца.");
       setStage("error");
     }
@@ -76,10 +54,9 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
     setError("");
     try {
       await ensureClientSession();
-      const response = await fetch(`/api/pet-shares/${encodeURIComponent(token)}`, { method: "POST" });
-      const data = await response.json() as { petId?: string; added?: boolean; alreadyAdded?: boolean; inactive?: boolean; error?: string };
-      if (data.inactive || response.status === 410) setLinkInactive(true);
-      if (!response.ok || !data.petId) throw new Error(data.error || "Не удалось добавить питомца.");
+      const data = await addSharedPet(token);
+      if (data.inactive) setLinkInactive(true);
+      if (!data.petId) throw new Error(data.error || "Не удалось добавить питомца.");
       if (data.alreadyAdded) {
         setStage("already-added");
         setAdding(false);
@@ -87,6 +64,7 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
       }
       window.location.replace(`/?sharedPet=${encodeURIComponent(data.petId)}`);
     } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.status === 410) setLinkInactive(true);
       setError(requestError instanceof Error ? requestError.message : "Не удалось добавить питомца.");
       setAdding(false);
     }
@@ -97,9 +75,6 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
       <section className="app-shell shared-pet-page" aria-label="Добавление питомца по ссылке">
         {stage === "guide" && (
           <div className="screen browser-guide-screen shared-pet-browser-guide">
-            <button className="icon-button back-button" type="button" aria-label="Назад на главную" onClick={() => window.location.replace("/")}>
-              <ArrowLeft />
-            </button>
             <div className="screen-heading browser-guide-heading">
               <h1>Откройте сайт в браузере</h1>
               <p>Если ссылка открылась внутри Telegram или другого мессенджера, перейдите в обычный браузер</p>
@@ -150,16 +125,12 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
 
         {stage === "checking" && (
           <div className="share-page-status" role="status">
-            <span className="saving-spinner" aria-hidden="true" />
             <p>Загружаем</p>
           </div>
         )}
 
         {stage === "preview" && pet && (
           <>
-            <button className="icon-button back-button" type="button" aria-label="Отказаться и вернуться на главную" onClick={() => window.location.replace("/")}>
-              <ArrowLeft />
-            </button>
           <div className="shared-pet-content">
             <div className="screen-heading shared-pet-heading">
               <h1>С вами поделились питомцем!</h1>
@@ -206,8 +177,7 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
 
         {adding && (
           <div className="saving-overlay" role="status" aria-live="polite">
-            <span className="saving-spinner" aria-hidden="true" />
-            <p>Добавляем питомца</p>
+              <p>Добавляем питомца</p>
           </div>
         )}
       </section>

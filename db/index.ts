@@ -16,7 +16,7 @@ function createDb(client: Client) {
   return drizzle(client, { schema });
 }
 
-type Database = ReturnType<typeof createDb>;
+export type Database = ReturnType<typeof createDb>;
 
 export async function withDb<T>(operation: (db: Database) => Promise<T>) {
   const client = new Client({

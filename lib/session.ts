@@ -11,7 +11,7 @@ export type SessionLocation = {
   complex: string;
 };
 
-export type ClientSession = {
+type ClientSession = {
   token: string;
   tokenHash: string;
   clientId: string;

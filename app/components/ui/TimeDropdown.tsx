@@ -26,7 +26,6 @@ export function TimeDropdown({ value, futureOnly = false, invalid = false, descr
   const [referenceTime, setReferenceTime] = useState(() => new Date());
   const [draftHour, setDraftHour] = useState("00");
   const [draftMinute, setDraftMinute] = useState("00");
-  const [reducedMotion, setReducedMotion] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -62,7 +61,7 @@ export function TimeDropdown({ value, futureOnly = false, invalid = false, descr
   const closeTimeMenu = useCallback(() => {
     setOpen(false);
     onOpenChange?.(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    triggerRef.current?.focus();
   }, [onOpenChange]);
 
   useEffect(() => {
@@ -72,19 +71,11 @@ export function TimeDropdown({ value, futureOnly = false, invalid = false, descr
       if (event.key === "Escape") closeTimeMenu();
     };
     document.addEventListener("keydown", closeOnEscape);
-    requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>("[data-rwp]")?.focus());
+    dialogRef.current?.querySelector<HTMLElement>("[data-rwp]")?.focus();
     return () => {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [open, closeTimeMenu]);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateReducedMotion = () => setReducedMotion(query.matches);
-    updateReducedMotion();
-    query.addEventListener("change", updateReducedMotion);
-    return () => query.removeEventListener("change", updateReducedMotion);
-  }, []);
 
   return (
     <div className="custom-select time-dropdown">
@@ -134,8 +125,8 @@ export function TimeDropdown({ value, futureOnly = false, invalid = false, descr
                   infinite={false}
                   visibleCount={12}
                   optionItemHeight={44}
-                  dragSensitivity={reducedMotion ? 10000 : undefined}
-                  scrollSensitivity={reducedMotion ? 1000000 : undefined}
+                  dragSensitivity={10000}
+                  scrollSensitivity={1000000}
                   classNames={{
                     optionItem: "time-picker-option",
                     highlightWrapper: "time-picker-highlight",
@@ -151,8 +142,8 @@ export function TimeDropdown({ value, futureOnly = false, invalid = false, descr
                   infinite={false}
                   visibleCount={12}
                   optionItemHeight={44}
-                  dragSensitivity={reducedMotion ? 10000 : undefined}
-                  scrollSensitivity={reducedMotion ? 1000000 : undefined}
+                  dragSensitivity={10000}
+                  scrollSensitivity={1000000}
                   classNames={{
                     optionItem: "time-picker-option",
                     highlightWrapper: "time-picker-highlight",

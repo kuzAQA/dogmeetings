@@ -13,16 +13,15 @@ import {
   type SessionLocation,
   updateSessionLocation
 } from "../../../lib/session";
-
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { uuidPattern } from "../../../server/domain/pet";
+import { isJsonRecord, readJsonRecord } from "../../../server/transport/request-json";
 
 function normalizeLocation(value: unknown): SessionLocation | null {
-  if (!value || typeof value !== "object") return null;
-  const source = value as Partial<SessionLocation>;
+  if (!isJsonRecord(value)) return null;
   const location = {
-    city: String(source.city ?? "").normalize("NFKC").trim(),
-    district: String(source.district ?? "").normalize("NFKC").trim(),
-    complex: String(source.complex ?? "").normalize("NFKC").trim()
+    city: String(value.city ?? "").normalize("NFKC").trim(),
+    district: String(value.district ?? "").normalize("NFKC").trim(),
+    complex: String(value.complex ?? "").normalize("NFKC").trim()
   };
 
   if (!location.city || !location.district || !location.complex) return null;
@@ -83,20 +82,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = await request.json().catch(() => ({})) as {
-      legacyClientId?: string;
-      legacyLocation?: unknown;
-      legacyHasLocation?: boolean;
-    };
-    const legacyClientId = String(payload.legacyClientId ?? "").trim();
+    const payload = await readJsonRecord(request);
+    const legacyClientId = String(payload?.legacyClientId ?? "").trim();
     if (legacyClientId && !uuidPattern.test(legacyClientId)) {
       return privateJson({ error: "Некорректные данные переноса сессии." }, { status: 400 });
     }
     const migratingLegacyClient = uuidPattern.test(legacyClientId);
     const clientId = migratingLegacyClient ? legacyClientId : crypto.randomUUID();
-    const legacyLocation = normalizeLocation(payload.legacyLocation);
+    const legacyLocation = normalizeLocation(payload?.legacyLocation);
     const migrateLocation = Boolean(
-      payload.legacyHasLocation && legacyLocation && await knownLocation(legacyLocation)
+      payload?.legacyHasLocation && legacyLocation && await knownLocation(legacyLocation)
     );
 
     const session = await createClientSession({
@@ -126,7 +121,7 @@ export async function PATCH(request: Request) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
 
-    const payload = await request.json().catch(() => null) as { location?: unknown } | null;
+    const payload = await readJsonRecord(request);
     const location = normalizeLocation(payload?.location);
     if (!location || !await knownLocation(location)) {
       return privateJson({ error: "Выберите доступную локацию." }, { status: 400 });

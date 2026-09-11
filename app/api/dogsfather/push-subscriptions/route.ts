@@ -4,6 +4,7 @@ import { adminPushSubscriptions } from "../../../../db/schema";
 import { adminPushPublicKey } from "../../../../lib/admin-push";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { privateJson } from "../../../../lib/session";
+import { isJsonRecord, readJsonRecord } from "../../../../server/transport/request-json";
 
 const ALLOWED_PUSH_HOSTS = [
   "fcm.googleapis.com",
@@ -14,14 +15,6 @@ const ALLOWED_PUSH_HOSTS = [
   "notify.windows.com",
   "wns.windows.com"
 ];
-
-type SubscriptionPayload = {
-  endpoint?: unknown;
-  keys?: {
-    p256dh?: unknown;
-    auth?: unknown;
-  } | null;
-};
 
 async function endpointHash(endpoint: string) {
   const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint)));
@@ -56,10 +49,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
-    const payload = await request.json().catch(() => null) as SubscriptionPayload | null;
+    const payload = await readJsonRecord(request);
     const endpoint = validEndpoint(payload?.endpoint);
-    const p256dh = String(payload?.keys?.p256dh ?? "");
-    const auth = String(payload?.keys?.auth ?? "");
+    const keys = isJsonRecord(payload?.keys) ? payload.keys : null;
+    const p256dh = String(keys?.p256dh ?? "");
+    const auth = String(keys?.auth ?? "");
     if (
       !endpoint
       || !/^[A-Za-z0-9_-]{40,180}$/.test(p256dh)
@@ -93,7 +87,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
-    const payload = await request.json().catch(() => null) as { endpoint?: unknown } | null;
+    const payload = await readJsonRecord(request);
     const endpoint = validEndpoint(payload?.endpoint);
     if (!endpoint) return privateJson({ error: "Некорректная push-подписка." }, { status: 400 });
     const hash = await endpointHash(endpoint);

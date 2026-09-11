@@ -10,6 +10,7 @@ import {
   verifyAdminLoginProof
 } from "../../../../lib/admin-auth";
 import { isSameOriginRequest, privateJson } from "../../../../lib/session";
+import { readJsonRecord } from "../../../../server/transport/request-json";
 
 const MAX_FAILURES = 5;
 const LOCK_MINUTES = 15;
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = await request.json().catch(() => null) as { accountHash?: unknown; proof?: unknown } | null;
+    const payload = await readJsonRecord(request);
     const accountHash = String(payload?.accountHash ?? "");
     const proof = String(payload?.proof ?? "");
     const clearChallengeCookie = clearAdminLoginChallengeCookie(request);

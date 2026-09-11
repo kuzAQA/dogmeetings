@@ -4,21 +4,9 @@ import { withDb } from "../../../db";
 import { petCollaborators, pets } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
-
-const MAX_PHOTO_SIZE = 1024 * 1024;
-const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_BREED_LENGTH = 20;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const containsLetter = /\p{L}/u;
-
-function normalizeName(value: FormDataEntryValue | null) {
-  const normalized = String(value ?? "")
-    .normalize("NFKC")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
-}
+import { parsePetMutation } from "../../../server/application/pet-input";
+import { canEditPet, uuidPattern } from "../../../server/domain/pet";
+import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
 type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
 
@@ -112,42 +100,12 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
-    const name = normalizeName(formData.get("petName"));
-    const breed = String(formData.get("breed") ?? "").trim();
-    const ownerName = normalizeName(formData.get("ownerName"));
-    const photo = formData.get("photo");
-
-    if (!name || name.length > 40) {
-      return privateError("Укажите имя питомца до 40 символов.", 400);
-    }
-    if (!containsLetter.test(name)) {
-      return privateError("Имя питомца должно содержать хотя бы одну букву.", 400);
-    }
-    if (!breed || breed.length > MAX_BREED_LENGTH) {
-      return privateError(`Укажите породу до ${MAX_BREED_LENGTH} символов.`, 400);
-    }
-    if (!containsLetter.test(breed)) {
-      return privateError("Порода должна содержать хотя бы одну букву.", 400);
-    }
-    if (!ownerName || ownerName.length > 60) {
-      return privateError("Укажите имя хозяина до 60 символов.", 400);
-    }
-    if (!containsLetter.test(ownerName)) {
-      return privateError("Имя хозяина должно содержать хотя бы одну букву.", 400);
-    }
-
-    const hasPhoto = photo instanceof File && photo.size > 0;
-    if (hasPhoto) {
-      if (!allowedPhotoTypes.has(photo.type)) {
-        return privateError("Поддерживаются фотографии JPEG, PNG и WebP.", 400);
-      }
-      if (photo.size > MAX_PHOTO_SIZE) {
-        return privateError("Фотография после сжатия должна быть меньше 1 МБ.", 400);
-      }
-    }
+    const parsedInput = parsePetMutation(formData, "create");
+    if (!parsedInput.ok) return privateError(parsedInput.error, 400);
+    const { name, breed, ownerName, photo } = parsedInput.value;
 
     const id = crypto.randomUUID();
-    const photoBytes = hasPhoto ? Buffer.from(await photo.arrayBuffer()) : null;
+    const photoBytes = photo ? Buffer.from(await photo.arrayBuffer()) : null;
     const [pet] = await withDb((db) => db
         .insert(pets)
         .values({
@@ -157,7 +115,7 @@ export async function POST(request: Request) {
           breed,
           ownerName,
           photo: photoBytes,
-          photoType: hasPhoto ? photo.type : null
+          photoType: photo?.type ?? null
         })
         .returning({
           id: pets.id,
@@ -187,34 +145,9 @@ export async function PATCH(request: Request) {
     }
 
     const formData = await request.formData();
-    const petId = String(formData.get("petId") ?? "").trim();
-    const name = normalizeName(formData.get("petName"));
-    const breed = String(formData.get("breed") ?? "").trim();
-    const ownerName = normalizeName(formData.get("ownerName"));
-    const photo = formData.get("photo");
-
-    if (!uuidPattern.test(petId)) {
-      return privateError("Некорректные данные питомца.", 400);
-    }
-    if (!name || name.length > 40 || !containsLetter.test(name)) {
-      return privateError("Укажите корректное имя питомца до 40 символов.", 400);
-    }
-    if (!breed || breed.length > MAX_BREED_LENGTH || !containsLetter.test(breed)) {
-      return privateError(`Укажите корректную породу до ${MAX_BREED_LENGTH} символов.`, 400);
-    }
-    if (!ownerName || ownerName.length > 60 || !containsLetter.test(ownerName)) {
-      return privateError("Укажите корректное имя хозяина до 60 символов.", 400);
-    }
-
-    const hasPhoto = photo instanceof File && photo.size > 0;
-    if (hasPhoto) {
-      if (!allowedPhotoTypes.has(photo.type)) {
-        return privateError("Поддерживаются фотографии JPEG, PNG и WebP.", 400);
-      }
-      if (photo.size > MAX_PHOTO_SIZE) {
-        return privateError("Фотография после сжатия должна быть меньше 1 МБ.", 400);
-      }
-    }
+    const parsedInput = parsePetMutation(formData, "update");
+    if (!parsedInput.ok) return privateError(parsedInput.error, 400);
+    const { petId, name, breed, ownerName, photo } = parsedInput.value;
 
     const [existingPet] = await withDb((db) => db
       .select({ id: pets.id, clientId: pets.clientId })
@@ -224,6 +157,7 @@ export async function PATCH(request: Request) {
     if (!existingPet) {
       return privateError("Питомец не найден.", 404);
     }
+    let isCollaborator = false;
     if (existingPet.clientId !== session.clientId) {
       const [collaboration] = await withDb((db) => db
         .select({ petId: petCollaborators.petId })
@@ -233,12 +167,15 @@ export async function PATCH(request: Request) {
           eq(petCollaborators.clientId, session.clientId)
         ))
         .limit(1));
-      if (!collaboration) return privateError("Питомец не найден.", 404);
+      isCollaborator = Boolean(collaboration);
+    }
+    if (!canEditPet(existingPet.clientId, session.clientId, isCollaborator)) {
+      return privateError("Питомец не найден.", 404);
     }
 
     const updatedAt = new Date();
     const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, updatedAt };
-    if (hasPhoto) {
+    if (photo) {
       values.photo = Buffer.from(await photo.arrayBuffer());
       values.photoType = photo.type;
     }
@@ -286,8 +223,8 @@ export async function DELETE(request: Request) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
 
-    const payload = await request.json().catch(() => null) as { petId?: string } | null;
-    const petId = payload?.petId?.trim() ?? "";
+    const payload = await readJsonRecord(request);
+    const petId = readJsonString(payload, "petId").trim();
 
     if (!uuidPattern.test(petId)) {
       return privateError("Некорректные данные питомца.", 400);

@@ -3,6 +3,7 @@ import { withDb } from "../../../../db";
 import { locationRequests, locations } from "../../../../db/schema";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { privateJson } from "../../../../lib/session";
+import { readJsonRecord } from "../../../../server/transport/request-json";
 
 export async function GET(request: Request) {
   try {
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
 }
 
 async function requestId(request: Request) {
-  const payload = await request.json().catch(() => null) as { id?: unknown } | null;
+  const payload = await readJsonRecord(request);
   const id = String(payload?.id ?? "");
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
     ? id

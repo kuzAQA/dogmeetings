@@ -4,12 +4,8 @@ import { withDb } from "../../../../db";
 import { pets } from "../../../../db/schema";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { privateJson } from "../../../../lib/session";
-
-const MAX_PHOTO_SIZE = 1024 * 1024;
-const MAX_BREED_LENGTH = 20;
-const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const containsLetter = /\p{L}/u;
+import { allowedPhotoTypes, containsLetter, MAX_BREED_LENGTH, MAX_PHOTO_SIZE, normalizeName, uuidPattern } from "../../../../server/domain/pet";
+import { readJsonRecord } from "../../../../server/transport/request-json";
 
 type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
 
@@ -23,15 +19,6 @@ function publicPet(pet: PetSummary) {
     createdAt: pet.createdAt.toISOString(),
     updatedAt: pet.updatedAt.toISOString()
   };
-}
-
-function normalizeName(value: FormDataEntryValue | null) {
-  const normalized = String(value ?? "")
-    .normalize("NFKC")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  return normalized.replace(/\p{L}/u, (letter) => letter.toLocaleUpperCase("ru-RU"));
 }
 
 function adminError(message: string, status: number) {
@@ -121,7 +108,7 @@ export async function DELETE(request: Request) {
   try {
     if (!await authorizeAdminRequest(request, true)) return adminError("Требуется вход.", 401);
 
-    const payload = await request.json().catch(() => null) as { petId?: unknown } | null;
+    const payload = await readJsonRecord(request);
     const petId = String(payload?.petId ?? "").trim();
     if (!uuidPattern.test(petId)) return adminError("Некорректные данные питомца.", 400);
 
