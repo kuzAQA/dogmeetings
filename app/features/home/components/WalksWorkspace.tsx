@@ -2,7 +2,7 @@
 
 import { CalendarDays, ChevronDown, ChevronRight, Clock3, Dog, EllipsisVertical, MessageCircle } from "lucide-react";
 import Image from "next/image";
-import { type FormEvent, type RefObject } from "react";
+import { type FormEvent, type RefObject, useEffect, useRef } from "react";
 import { formatResidentialComplex, type ApiWalk, type Period, type Walk } from "../../../../lib/walks";
 import { MAX_BREED_LENGTH, MAX_WALK_META_LENGTH, type Location, type Pet } from "../model";
 import type { DockPanelSection, DockSection } from "../use-home-navigation";
@@ -75,6 +75,11 @@ export function WalksWorkspace({
   onOpenMyWalks,
   onOpenMyPets
 }: WalksWorkspaceProps) {
+  const walkListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = walkListRef.current;
+    if (list) list.dataset.scrolled = list.scrollTop > 0 ? "true" : "false";
+  }, []);
   const activeDockSection: DockPanelSection = dockSection === "walk" || dockSection === "profile" ? dockSection : "nearby";
   const paneState = (section: DockPanelSection) => section === activeDockSection ? "static" : "hidden";
   const nearbyPane = paneState("nearby");
@@ -96,7 +101,7 @@ export function WalksWorkspace({
               <button key={item} type="button" className={`filter-button ${period === item ? "active" : ""}`} aria-pressed={period === item} onClick={() => onPeriodChange(item)}><span>{item}</span></button>
             ))}
           </div>
-          <div className="walk-list">
+          <div ref={walkListRef} className="walk-list" data-scrolled="false" onScroll={(event) => { event.currentTarget.dataset.scrolled = event.currentTarget.scrollTop > 0 ? "true" : "false"; }}>
             <div className="walk-list-content" aria-live="polite">
               {!walksLoaded ? (
                 <p className="visually-hidden" role="status">Загружаем прогулки</p>

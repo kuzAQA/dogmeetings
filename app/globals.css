@@ -1539,8 +1539,8 @@ strong {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 0 var(--floating-action-clearance);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
+  -webkit-mask-image: none;
+  mask-image: none;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
@@ -1548,6 +1548,11 @@ strong {
   scrollbar-color: rgba(40, 90, 59, 0.35) transparent;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
+}
+
+.walk-list[data-scrolled="true"] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
 }
 
 .walk-list-content {
