@@ -1539,6 +1539,12 @@ strong {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 0 var(--floating-action-clearance);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.72) 32px, #000 64px, #000 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
   scrollbar-color: rgba(40, 90, 59, 0.35) transparent;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
@@ -2726,7 +2732,7 @@ strong {
 }
 
 .collection-screen--dock {
-  padding-bottom: max(112px, calc(var(--mobile-nav-height) + var(--space-8) + env(safe-area-inset-bottom)));
+  padding-bottom: 0;
 }
 
 .collection-screen--dock .screen-heading,
@@ -2760,11 +2766,11 @@ strong {
 }
 
 .collection-screen:has(> .floating-pet-button) .collection-list {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
 }
 
 .collection-screen:has(> .floating-pet-button) .collection-list-with-action {
-  padding-bottom: var(--space-2);
+  padding-bottom: var(--floating-action-clearance);
 }
 
 .collection-screen.my-walks-screen .collection-list {
@@ -2781,6 +2787,19 @@ strong {
   bottom: max(var(--space-4), env(safe-area-inset-bottom));
   margin-top: 0;
   transform: translateX(-50%);
+}
+
+.collection-screen:has(> .floating-pet-button) > .floating-pet-button {
+  position: absolute;
+  z-index: 10;
+  inset-inline-start: 50%;
+  bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  margin-top: 0;
+  transform: translateX(-50%);
+}
+
+.collection-screen--dock:has(> .floating-pet-button) > .floating-pet-button {
+  bottom: max(112px, calc(var(--mobile-nav-height) + var(--space-8) + env(safe-area-inset-bottom)));
 }
 
 .floating-pet-button {
