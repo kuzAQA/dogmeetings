@@ -1,0 +1,46 @@
+// The catalog is shared by the review gallery and the browser coverage check.
+const resource = ['base', 'empty', 'loading', 'error'];
+const form = ['base', 'validation', 'loading', 'error', 'success'];
+const action = ['base', 'loading', 'error', 'success'];
+export const states = {base:'Обычное', empty:'Пусто', loading:'Загрузка', error:'Ошибка', validation:'Валидация', success:'Успех', android:'Android', shared:'Общий питомец', expired:'Ссылка недействительна', used:'Ссылка использована', denied:'Доступ запрещён', unsupported:'Не поддерживается'};
+export const screens = [
+ ['welcome','Знакомство','/ · welcome','Понять назначение и начать',['base']],
+ ['guide','Открыть в браузере','/ · browser-guide и /share/[token]','Открыть сайт в Safari / Chrome',['base','android']],
+ ['location','Мой район','/ · location + выпадающие списки','Выбрать город, район и ЖК', [...form,'empty']],
+ ['request','Новая локация','/ · location-request + подтверждение','Предложить город, район и ЖК',form],
+ ['nearby','Расписание двора','/ · walks','Посмотреть сегодняшние прогулки',resource],
+ ['filters','Время прогулки','/ · walks / фильтры','Показать утро, день или вечер',['base']],
+ ['walk','Встреча на прогулке','/ · walks / карточка','Узнать время, место, хозяина, породу и комментарий',['base']],
+ ['announce','Сообщить о прогулке','/ · announce + dockWalkOpen','Выбрать питомца, место, расписание, время, комментарий',form],
+ ['edit-walk','Изменить прогулку','/ · announce / editing','Изменить свою прогулку',form],
+ ['choose-pet','С кем гуляем','/ · announce / список питомцев','Выбрать питомца',resource],
+ ['choose-place','Место встречи','/ · announce / список мест','Найти общее место или указать своё',[...resource,'validation']],
+ ['choose-time','Время встречи','/ · announce / TimeDropdown','Указать время прогулки',['base']],
+ ['pet-required','Сначала питомец','/ · showPetRequiredPopup','Добавить питомца и продолжить публикацию',['base']],
+ ['plans','Мои планы','/ · my-walks','Посмотреть свои разовые и постоянные прогулки',resource],
+ ['walk-actions','Управление прогулкой','/ · openWalkActionsId','Изменить, удалить прогулку или поделиться питомцем',['base']],
+ ['delete-walk','Удалить прогулку','/ · walkPendingDelete','Подтвердить удаление своей прогулки',action],
+ ['pets','Мои питомцы','/ · my-pets (dock / profile)','Управлять собственными и общими питомцами',resource],
+ ['pet','Паспорт питомца','/ · my-pets / карточка','Посмотреть данные и доступные действия',['base','shared']],
+ ['new-pet','Добавить питомца','/ · pet / создание','Добавить имя, хозяина, породу и фото',form],
+ ['edit-pet','Изменить питомца','/ · pet / редактирование','Изменить данные и фото',form],
+ ['photo','Фотография','/ · pet / photo-upload','Выбрать и проверить фотографию',['base','validation','loading','success']],
+ ['delete-pet','Удалить питомца','/ · petPendingDelete','Удалить своего питомца или убрать общего',[...action,'shared']],
+ ['share','Поделиться питомцем','/ · petToShare','Скопировать одноразовую ссылку для совместного управления',action],
+ ['rotate-link','Обновить ссылку','/ · petShareRefreshing','Отозвать старую и получить новую ссылку',action],
+ ['accept','Приглашение','/share/[token]','Принять питомца или отказаться',[...action,'expired','used']],
+ ['already-added','Питомец уже добавлен','/ · sharedPetAlreadyAdded и /share/[token]','Вернуться к существующему питомцу',['base']],
+ ['profile','Мой район и настройки','/ · menuOpen / profile','Изменить локацию, открыть коллекции и связь',['base']],
+ ['contact','Связь с разработчиком','/ · developer-link','Получить контакт разработчика',['base','success']],
+ ['admin-login','Вход администратора','/dogsfather · login / checking','Войти в панель управления',form],
+ ['admin','Управление','/dogsfather · dashboard','Выбрать заявки, питомцев и уведомления',['base','loading','error']],
+ ['requests','Заявки жителей','/dogsfather · requests','Просмотреть предложения новых локаций',resource],
+ ['approve','Добавить локацию','/dogsfather · pendingRequestAction approve','Подтвердить добавление локации',action],
+ ['reject','Отклонить заявку','/dogsfather · pendingRequestAction reject','Подтвердить отклонение заявки',action],
+ ['admin-pets','Все питомцы','/dogsfather · pets','Просмотреть и управлять питомцами сайта',resource],
+ ['admin-edit','Правка питомца','/dogsfather · edit-pet','Изменить данные питомца администратором',form],
+ ['admin-delete','Удаление администратором','/dogsfather · petPendingDelete','Подтвердить удаление питомца и прогулок',action],
+ ['notifications','Уведомления','/dogsfather · notificationStatus','Включить или отключить уведомления',['base','loading','error','success','denied','unsupported']],
+ ['admin-logout','Выход','/dogsfather · signOut','Завершить сессию администратора',action],
+].map(([id,title,source,task,variants])=>({id,title,source,task,states:variants}));
+export const captures = screens.flatMap(screen => screen.states.map(state=>({id:screen.id,title:screen.title,state,label:states[state],file:`${screen.id}--${state}.png`})));

@@ -16,3 +16,9 @@ export function normalizeName(value: FormDataEntryValue | null) {
 export function canEditPet(ownerClientId: string, sessionClientId: string, isCollaborator: boolean) {
   return ownerClientId === sessionClientId || isCollaborator;
 }
+
+export function petPhotoUrl(id: string, updatedAt: Date, photoType: string | null) {
+  return photoType
+    ? `/api/pet-photo?id=${encodeURIComponent(id)}&v=${updatedAt.getTime()}`
+    : "/dog-placeholder.webp";
+}

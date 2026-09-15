@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { directionFor, skipPageTransition, transitionPage } from "../../components/ui/motion.mjs";
 
-export type Screen = "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
+export type Screen = "walk-detail" | "contact" | "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
 export type PrimaryDockSection = "nearby" | "profile";
 export type DockSection = PrimaryDockSection | "walk" | "pets";
 export type DockPanelSection = "nearby" | "walk" | "profile";
@@ -52,10 +54,26 @@ function dockSectionFor(navigation: AppNavigationState | null): DockSection {
 
 export function useHomeNavigation(hasLocation: boolean) {
   const [navigation, setNavigation] = useState<AppNavigationState | null>(null);
+  const previousNavigation = useRef<AppNavigationState | null>(null);
   const dockSection = dockSectionFor(navigation);
 
-  const applyNavigationState = useCallback((nextNavigation: AppNavigationState) => {
-    setNavigation(nextNavigation);
+  const applyNavigationState = useCallback((nextNavigation: AppNavigationState, back = false) => {
+    const previous = previousNavigation.current;
+    previousNavigation.current = nextNavigation;
+    if (!previous) { setNavigation(nextNavigation); return; }
+    const page = (value: AppNavigationState) => value.screen === "my-pets" ? "pets" : value.screen === "my-walks" ? "plans" : value.menuOpen ? "profile" : value.dockWalkOpen ? "announce" : value.screen === "walks" ? "nearby" : value.screen;
+    const from = page(previous), to = page(nextNavigation);
+    const photo = (from === "pets" && to === "pet") || (from === "pet" && to === "pets")
+      ? document.activeElement?.closest(".pet-row")?.querySelector<HTMLElement>("[data-pet-photo]")?.dataset.petPhoto ?? document.querySelector<HTMLElement>("main .portrait")?.dataset.petPhoto
+      : undefined;
+    void transitionPage(() => {
+      if (previousNavigation.current !== nextNavigation) return;
+      flushSync(() => setNavigation(nextNavigation));
+      window.scrollTo(0, 0);
+      const heading = document.querySelector<HTMLElement>("main h1");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus({ preventScroll: true });
+    }, { direction: directionFor(from, to, back), photoId: photo, keyboard: document.documentElement.dataset.motionInput === "keyboard" });
   }, []);
 
   const buildNavigationState = useCallback((nextScreen: Screen, options: NavigationOptions = {}) => {
@@ -102,11 +120,27 @@ export function useHomeNavigation(hasLocation: boolean) {
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const nextNavigation = normalizeNavigationState(event.state as Partial<AppNavigationState>);
-      if (nextNavigation) applyNavigationState(nextNavigation);
+      if (nextNavigation) applyNavigationState(nextNavigation, true);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [applyNavigationState]);
+
+  useEffect(() => {
+    const pointer = () => { document.documentElement.dataset.motionInput = "pointer"; };
+    const keyboard = () => { document.documentElement.dataset.motionInput = "keyboard"; };
+    const preference = () => { skipPageTransition(); };
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    window.addEventListener("pointerdown", pointer);
+    window.addEventListener("keydown", keyboard);
+    motion.addEventListener("change", preference);
+    return () => {
+      window.removeEventListener("pointerdown", pointer);
+      window.removeEventListener("keydown", keyboard);
+      motion.removeEventListener("change", preference);
+      skipPageTransition();
+    };
+  }, []);
 
   return {
     screen: navigation?.screen ?? null,

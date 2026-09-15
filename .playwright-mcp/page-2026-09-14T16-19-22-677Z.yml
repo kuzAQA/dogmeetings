@@ -1,0 +1,72 @@
+- generic [ref=f17e4]:
+  - generic [ref=f17e6]: 9:41
+  - main [ref=f17e11]:
+    - button "Дзен-Кварталы" [ref=f17e12] [cursor=pointer]
+    - generic [ref=f17e19]:
+      - heading [active] [level=1] [ref=f17e20]:
+        - text: Кто сегодня
+        - emphasis [ref=f17e21]: на прогулку?
+      - generic [ref=f17e22]:
+        - strong [ref=f17e23]: "14"
+        - text: сентябряпонедельник
+    - generic [ref=f17e24]:
+      - generic [ref=f17e25]:
+        - img "Ричи" [ref=f17e26]
+        - img "Луна" [ref=f17e27]
+        - img "Боня" [ref=f17e28]
+      - paragraph [ref=f17e29]:
+        - text: Знакомьтесь во дворе.
+        - strong [ref=f17e30]: У каждого есть время для прогулки.
+    - generic [ref=f17e31]:
+      - heading "Сегодня рядом" [level=2] [ref=f17e32]
+      - button "Весь день" [ref=f17e33] [cursor=pointer]
+    - generic [ref=f17e35]:
+      - article [ref=f17e36]:
+        - generic [ref=f17e37]:
+          - strong [ref=f17e38]: 08:00
+          - generic [ref=f17e39]: Каждый день
+        - button "Собака Боня Боня Анна · Корги Сквер у фонтана Наша утренняя прогулка" [ref=f17e41] [cursor=pointer]:
+          - img "Собака Боня" [ref=f17e42]
+          - generic [ref=f17e43]:
+            - strong [ref=f17e44]: Боня
+            - generic [ref=f17e45]: Анна · Корги
+          - generic [ref=f17e46]: Сквер у фонтана
+          - generic [ref=f17e50]: Наша утренняя прогулка
+      - article [ref=f17e51]:
+        - generic [ref=f17e52]:
+          - strong [ref=f17e53]: 08:30
+          - generic [ref=f17e54]: Сегодня
+        - button "Собака Ричи Ричи Михаил · Джек-рассел-терьер Площадка у 3-го корпуса Возьмём мячик. Приходите!" [ref=f17e56] [cursor=pointer]:
+          - img "Собака Ричи" [ref=f17e57]
+          - generic [ref=f17e58]:
+            - strong [ref=f17e59]: Ричи
+            - generic [ref=f17e60]: Михаил · Джек-рассел-терьер
+          - generic [ref=f17e61]: Площадка у 3-го корпуса
+          - generic [ref=f17e65]: Возьмём мячик. Приходите!
+      - article [ref=f17e66]:
+        - generic [ref=f17e67]:
+          - strong [ref=f17e68]: 13:00
+          - generic [ref=f17e69]: Сегодня
+        - button "Собака Луна Луна Мария · Хаски Аллея вдоль пруда Спокойно гуляем вдоль воды" [ref=f17e71] [cursor=pointer]:
+          - img "Собака Луна" [ref=f17e72]
+          - generic [ref=f17e73]:
+            - strong [ref=f17e74]: Луна
+            - generic [ref=f17e75]: Мария · Хаски
+          - generic [ref=f17e76]: Аллея вдоль пруда
+          - generic [ref=f17e80]: Спокойно гуляем вдоль воды
+      - article [ref=f17e81]:
+        - generic [ref=f17e82]:
+          - strong [ref=f17e83]: 18:30
+          - generic [ref=f17e84]: Сегодня
+        - button "Собака Боня Боня Анна · Корги Площадка у 3-го корпуса Будем рады новой компании" [ref=f17e86] [cursor=pointer]:
+          - img "Собака Боня" [ref=f17e87]
+          - generic [ref=f17e88]:
+            - strong [ref=f17e89]: Боня
+            - generic [ref=f17e90]: Анна · Корги
+          - generic [ref=f17e91]: Площадка у 3-го корпуса
+          - generic [ref=f17e95]: Будем рады новой компании
+    - button "Я иду гулять" [ref=f17e96] [cursor=pointer]
+  - navigation "Основная навигация" [ref=f17e98]:
+    - button "Рядом" [ref=f17e99] [cursor=pointer]
+    - button "Мои планы" [ref=f17e104] [cursor=pointer]
+    - button "Питомцы" [ref=f17e108] [cursor=pointer]

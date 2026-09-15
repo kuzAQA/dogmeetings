@@ -5,10 +5,10 @@ import { petCollaborators, pets } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 import { parsePetMutation } from "../../../server/application/pet-input";
-import { canEditPet, uuidPattern } from "../../../server/domain/pet";
+import { canEditPet, petPhotoUrl, uuidPattern } from "../../../server/domain/pet";
 import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
-type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
+type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "photoType" | "createdAt" | "updatedAt">;
 
 function publicPet(pet: PetSummary, clientId: string, isShared = false) {
   const isOwner = pet.clientId === clientId;
@@ -17,7 +17,7 @@ function publicPet(pet: PetSummary, clientId: string, isShared = false) {
     name: pet.name,
     breed: pet.breed,
     ownerName: pet.ownerName,
-    photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}&v=${pet.updatedAt.getTime()}`,
+    photoUrl: petPhotoUrl(pet.id, pet.updatedAt, pet.photoType),
     createdAt: pet.createdAt.toISOString(),
     updatedAt: pet.updatedAt.toISOString(),
     isOwner,
@@ -60,6 +60,7 @@ export async function GET(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
+          photoType: pets.photoType,
           createdAt: pets.createdAt,
           updatedAt: pets.updatedAt
         })
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
+          photoType: pets.photoType,
           createdAt: pets.createdAt,
           updatedAt: pets.updatedAt
         }));
@@ -190,6 +192,7 @@ export async function PATCH(request: Request) {
         name: pets.name,
         breed: pets.breed,
         ownerName: pets.ownerName,
+        photoType: pets.photoType,
         createdAt: pets.createdAt,
         updatedAt: pets.updatedAt
       }));

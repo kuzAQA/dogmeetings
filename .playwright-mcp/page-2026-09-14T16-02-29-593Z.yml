@@ -1,0 +1,166 @@
+- generic [active] [ref=f1e1]:
+  - region [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - img "логотип" [ref=f1e7]
+      - tabpanel "Согласие" [ref=f1e9]:
+        - generic [ref=f1e11]:
+          - heading "Этот сайт использует файлы «куки»" [level=2] [ref=f1e12]
+          - paragraph [ref=f1e14]:
+            - text: Мы используем обязательные файлы cookie для обеспечения работы нашего сайта. Мы также устанавливаем дополнительные файлы cookie для улучшения взаимодействия с сайтом, повышения его производительности, для аналитики, а также для целевой рекламы. Эти дополнительные файлы cookie будут установлены, только если вы нажмете кнопку «Принять все». Чтобы получить дополнительную информацию об используемых нами файлах cookie или изменить свои настройки, ознакомьтесь с нашей
+            - link "Политикой в отношении файлов cookie" [ref=f1e15] [cursor=pointer]:
+              - /url: https://https://www.strava.com/legal/cookie_policy
+            - text: .
+        - link "Показать сведения" [ref=f1e18] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=f1e22]:
+        - button "Принять все" [ref=f1e23] [cursor=pointer]
+        - button "Настроить" [ref=f1e24] [cursor=pointer]
+        - button "Отклонить необязательные" [ref=f1e26] [cursor=pointer]
+  - generic [ref=f1e28]:
+    - navigation [ref=f1e30]:
+      - generic [ref=f1e32]:
+        - generic [ref=f1e33]:
+          - button "Strava" [ref=f1e34] [cursor=pointer]:
+            - img "Strava" [ref=f1e35]
+            - img "Strava" [ref=f1e38]
+          - list [ref=f1e40]:
+            - listitem [ref=f1e41]:
+              - button "Тренировки" [ref=f1e42] [cursor=pointer]
+            - listitem [ref=f1e45]:
+              - link "Функции" [ref=f1e46] [cursor=pointer]:
+                - /url: /features
+            - listitem [ref=f1e47]:
+              - link "Карты" [ref=f1e48] [cursor=pointer]:
+                - /url: /maps
+            - listitem [ref=f1e49]:
+              - link "Челленджи" [ref=f1e50] [cursor=pointer]:
+                - /url: /challenges
+            - listitem [ref=f1e51]:
+              - link "Подписка" [ref=f1e52] [cursor=pointer]:
+                - /url: /subscribe?origin=website_header
+        - button "Войти" [ref=f1e54] [cursor=pointer]
+    - main [ref=f1e55]:
+      - generic [ref=f1e57]:
+        - generic [ref=f1e59]:
+          - heading "Поддержка спортивного сообщества" [level=1] [ref=f1e60]
+          - paragraph [ref=f1e61]: Отслеживайте прогресс и заряжайтесь мотивацией. Присоединяйтесь к 100 миллионам активных пользователей Strava.
+          - paragraph [ref=f1e62]:
+            - text: Уже зарегистрировались?
+            - link "Вход" [ref=f1e63] [cursor=pointer]:
+              - /url: /login
+          - generic [ref=f1e64]:
+            - button "Зарегистрироваться с помощью Google" [ref=f1e65] [cursor=pointer]
+            - button "Зарегистрироваться с помощью Apple" [ref=f1e71] [cursor=pointer]
+            - button "Зарегистрироваться с помощью эл. почты" [ref=f1e74] [cursor=pointer]
+            - paragraph [ref=f1e75]:
+              - text: Продолжая, вы принимаете
+              - link "Условия предоставления услуг" [ref=f1e76] [cursor=pointer]:
+                - /url: /legal/terms
+              - text: и
+              - link "Политику конфиденциальности" [ref=f1e77] [cursor=pointer]:
+                - /url: /legal/privacy
+              - text: .
+        - img "device" [ref=f1e82]
+    - contentinfo [ref=f1e84]:
+      - generic [ref=f1e85]:
+        - generic [ref=f1e86]:
+          - img "Strava" [ref=f1e87]
+          - list [ref=f1e90]:
+            - listitem [ref=f1e91]:
+              - link [ref=f1e92] [cursor=pointer]:
+                - /url: https://itunes.apple.com/app/strava-cycling/id426826309?mt=8
+                - img "Скачать в App Store" [ref=f1e94]
+            - listitem [ref=f1e95]:
+              - link [ref=f1e96] [cursor=pointer]:
+                - /url: https://itunes.apple.com/app/strava-cycling/id426826309?mt=8
+                - img "Скачать в Google Play" [ref=f1e98]
+          - navigation "Соцсети" [ref=f1e99]:
+            - link [ref=f1e100] [cursor=pointer]:
+              - /url: https://twitter.com/strava
+              - img "Twitter" [ref=f1e101]
+            - link [ref=f1e102] [cursor=pointer]:
+              - /url: https://www.youtube.com/stravainc
+              - img "YouTube" [ref=f1e103]
+            - link [ref=f1e104] [cursor=pointer]:
+              - /url: https://www.instagram.com/strava/
+              - img "Instagram" [ref=f1e105]
+            - link [ref=f1e106] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/strava-inc.
+              - img "LinkedIn" [ref=f1e107]
+            - link [ref=f1e108] [cursor=pointer]:
+              - /url: https://www.facebook.com/Strava
+              - img "Facebook" [ref=f1e109]
+        - navigation "Ссылки внизу страницы" [ref=f1e110]:
+          - list [ref=f1e111]:
+            - listitem [ref=f1e112]:
+              - list [ref=f1e113]:
+                - listitem [ref=f1e114]:
+                  - link "Функции" [ref=f1e115] [cursor=pointer]:
+                    - /url: /features
+                - listitem [ref=f1e116]:
+                  - link "Новинки" [ref=f1e117] [cursor=pointer]:
+                    - /url: /whats-new
+                - listitem [ref=f1e118]:
+                  - link "Истории" [ref=f1e119] [cursor=pointer]:
+                    - /url: https://stories.strava.com/
+                - listitem [ref=f1e120]:
+                  - link "Маршруты" [ref=f1e121] [cursor=pointer]:
+                    - /url: /routes/hiking/usa
+                - listitem [ref=f1e122]:
+                  - link "О компании" [ref=f1e123] [cursor=pointer]:
+                    - /url: /about
+            - listitem [ref=f1e124]:
+              - list [ref=f1e125]:
+                - listitem [ref=f1e126]:
+                  - link "Подписка" [ref=f1e127] [cursor=pointer]:
+                    - /url: /subscribe?origin=logged_out_footer
+                - listitem [ref=f1e128]:
+                  - link "Семейный план" [ref=f1e129] [cursor=pointer]:
+                    - /url: /family?origin=logged_out_footer
+                - listitem [ref=f1e130]:
+                  - link "Массовые подписки" [ref=f1e131] [cursor=pointer]:
+                    - /url: https://www.strava.com/bulk-subscriptions?utm_source=subsfooter&utm_medium=referral
+                - listitem [ref=f1e132]:
+                  - link "Скидка для студентов" [ref=f1e133] [cursor=pointer]:
+                    - /url: /student?origin=global_footer
+                - listitem [ref=f1e134]:
+                  - link "Скидка для учителей, военных и медиков (только в США)" [ref=f1e135] [cursor=pointer]:
+                    - /url: /subscribe#discount-plans?origin=global_footer
+                - listitem [ref=f1e136]:
+                  - link "Отправьте подарок" [ref=f1e137] [cursor=pointer]:
+                    - /url: /gift?origin=global_footer
+            - listitem [ref=f1e138]:
+              - list [ref=f1e139]:
+                - listitem [ref=f1e140]:
+                  - link "Поддержка" [ref=f1e141] [cursor=pointer]:
+                    - /url: https://support.strava.com
+                - listitem [ref=f1e142]:
+                  - link "Партнерам" [ref=f1e143] [cursor=pointer]:
+                    - /url: https://business.strava.com/?utm_source=footer&utm_medium=referral
+                - listitem [ref=f1e144]:
+                  - link "Партнерский центр" [ref=f1e145] [cursor=pointer]:
+                    - /url: https://partners.strava.com
+                - listitem [ref=f1e146]:
+                  - link "Вакансии" [ref=f1e147] [cursor=pointer]:
+                    - /url: /careers
+                - listitem [ref=f1e148]:
+                  - link "Новости" [ref=f1e149] [cursor=pointer]:
+                    - /url: https://press.strava.com
+            - listitem [ref=f1e150]:
+              - list [ref=f1e151]:
+                - listitem [ref=f1e152]:
+                  - link "Конфиденциальность" [ref=f1e153] [cursor=pointer]:
+                    - /url: /legal/privacy
+                - listitem [ref=f1e154]:
+                  - link "Политика в отношении файлов cookie" [ref=f1e155] [cursor=pointer]:
+                    - /url: /legal/cookie_policy
+                - listitem [ref=f1e156]:
+                  - button "Не передавать мои личные данные" [ref=f1e157] [cursor=pointer]
+                - listitem [ref=f1e158]:
+                  - link "Условия использования" [ref=f1e159] [cursor=pointer]:
+                    - /url: /legal/terms
+                - listitem [ref=f1e160]:
+                  - link "Войти" [ref=f1e161] [cursor=pointer]:
+                    - /url: https://www.strava.com/login
+  - iframe [aria-hidden] [ref=f1e162]
+  - alert [ref=f1e163]

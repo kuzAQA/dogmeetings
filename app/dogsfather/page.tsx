@@ -1,22 +1,21 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   Bell,
-  BellOff,
-  BellRing,
   Camera,
   Check,
   ChevronRight,
-  ClipboardList,
-  Dog,
-  House,
+  ArrowRight,
+  Compass,
+  PawPrint,
+  Plus,
+  Search,
   LogOut,
   MapPin,
-  Pencil,
   ShieldCheck,
   Trash2,
-  UserRound
 } from "lucide-react";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
 import { ApiRequestError } from "../features/api/client";
@@ -44,8 +43,10 @@ import {
 import { base64UrlBytes, createLoginProof } from "../features/admin/login-proof";
 import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../features/shared/validation";
 import { compressPetPhoto } from "../../lib/pet-photo";
+import { DogmeetState } from "../components/ui/DogmeetState";
+import { DogmeetDialog, DogmeetFrame, DogmeetHeader } from "../components/ui/DogmeetFrame";
 
-type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet";
+type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "notifications";
 
 function formatRequestDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -77,6 +78,10 @@ export default function AdminPage() {
   const [petPhotoObjectUrl, setPetPhotoObjectUrl] = useState("");
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>("checking");
   const [notificationHint, setNotificationHint] = useState("");
+  const [signOutPending, setSignOutPending] = useState(false);
+  const [query, setQuery] = useState("");
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [result, setResult] = useState<{ title: string; message: string; heading: string; action?: string; sheet?: boolean } | null>(null);
 
   const returnToLogin = useCallback(() => {
     setPhase("login");
@@ -194,6 +199,7 @@ export default function AdminPage() {
       setPassword("");
       await submitLogin(credentialsProof);
       setPhase("dashboard");
+      setResult({ title: "Вы вошли", message: "Панель управления доступна.", heading: "Вход администратора", action: "Открыть управление" });
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Не удалось выполнить вход.");
     } finally {
@@ -208,7 +214,9 @@ export default function AdminPage() {
     setPets([]);
     setUsername("");
     setPassword("");
+    setSignOutPending(false);
     setPhase("login");
+    setResult({ title: "Вы вышли", message: "Сессия администратора завершена.", heading: "Выход" });
   }
 
   async function disableNotifications() {
@@ -324,6 +332,7 @@ export default function AdminPage() {
         await rejectLocationRequest(pendingRequestAction.request.id);
       }
       setRequests((current) => current.filter((item) => item.id !== pendingRequestAction.request.id));
+      setResult({ title: pendingRequestAction.type === "approve" ? "Локация добавлена" : "Заявка отклонена", message: pendingRequestAction.type === "approve" ? "Жители смогут выбрать её при поиске прогулок." : "Локация не добавлена в список.", heading: pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку", sheet: true });
       setPendingRequestAction(null);
     } catch (actionError) {
       if (actionError instanceof ApiRequestError && actionError.status === 401) {
@@ -361,6 +370,7 @@ export default function AdminPage() {
       const savedPet = await saveAdminPetRequest(formData);
       setPets((current) => current.map((pet) => pet.id === savedPet.id ? savedPet : pet));
       closePetEditor();
+      setResult({ title: "Изменения сохранены", message: "Данные питомца обновлены.", heading: "Правка питомца" });
     } catch (saveError) {
       if (saveError instanceof ApiRequestError && saveError.status === 401) {
         returnToLogin();
@@ -380,6 +390,7 @@ export default function AdminPage() {
       await deleteAdminPet(petPendingDelete.id);
       setPets((current) => current.filter((pet) => pet.id !== petPendingDelete.id));
       setPetPendingDelete(null);
+      setResult({ title: "Питомец удалён", message: "Связанные прогулки также удалены.", heading: "Удаление администратором", sheet: true });
     } catch (deleteError) {
       if (deleteError instanceof ApiRequestError && deleteError.status === 401) {
         returnToLogin();
@@ -392,40 +403,9 @@ export default function AdminPage() {
     }
   }
 
-  function adminHeaderActions() {
-    return (
-      <div className="admin-header-actions">
-        <button
-          className={`admin-header-button admin-notification-button ${notificationStatus === "on" ? "active" : ""}`}
-          type="button"
-          onClick={toggleNotifications}
-          disabled={notificationStatus === "busy" || notificationStatus === "checking"}
-          aria-label={notificationStatus === "on" ? "Отключить уведомления" : "Включить уведомления"}
-          title={notificationStatus === "on" ? "Отключить уведомления" : "Включить уведомления"}
-        >
-          {notificationStatus === "on" ? <BellRing /> : notificationStatus === "denied" || notificationStatus === "unsupported" ? <BellOff /> : <Bell />}
-        </button>
-        <form className="admin-home-form" action="/" method="get">
-          <button className="admin-header-button" type="submit" aria-label="Перейти на главную страницу" title="На главную">
-            <House />
-          </button>
-        </form>
-        <button className="admin-header-button" type="button" onClick={signOut} aria-label="Выйти из панели администратора" title="Выйти">
-          <LogOut />
-        </button>
-      </div>
-    );
-  }
-
   function sectionHeading(title: string, subtitle: string) {
     return (
-      <header className="admin-screen-heading">
-        <div className="admin-heading-copy">
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
-        </div>
-        {adminHeaderActions()}
-      </header>
+      <><DogmeetHeader admin onBack={phase === "edit-pet" ? closePetEditor : () => setPhase("dashboard")} /><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</>
     );
   }
 
@@ -436,193 +416,70 @@ export default function AdminPage() {
     && ownerName.trim().length <= 60
     && breed.trim().length <= 20;
 
-  return (
-    <main className="admin-page">
-      <section className="admin-shell">
-        {phase === "checking" && (
-          <div className="admin-checking" aria-live="polite">
-            <p>Проверяем защищённую сессию…</p>
-          </div>
-        )}
+  if (result && !result.sheet) return <DogmeetFrame><main><DogmeetHeader admin /><h1>{result.heading}</h1><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => setResult(null)} /></main></DogmeetFrame>;
 
-        {phase === "login" && (
-          <div className="admin-login-screen">
-            <div className="admin-login-heading">
-              <span className="admin-shield" aria-hidden="true"><ShieldCheck /></span>
-              <h1>Авторизация</h1>
-              <p>Введите данные доступа</p>
-            </div>
-            <form className="admin-login-form" onSubmit={signIn} noValidate>
-              <label className="field text-field">
-                <span>Логин</span>
-                <input autoComplete="username" maxLength={128} value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Введите логин" />
-              </label>
-              <label className="field text-field">
-                <span>Пароль</span>
-                <input type="password" autoComplete="current-password" maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Введите пароль" />
-              </label>
-              {error && <p className="error-message" role="alert">{error}</p>}
-              <button className="primary-button admin-login-submit" type="submit" disabled={!username.trim() || !password || submitting}>
-                {submitting ? "Входим…" : "Войти"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {phase === "dashboard" && (
-          <div className="admin-dashboard-screen">
-            {sectionHeading("Управление", "Выберите раздел")}
-            {notificationHint && <p className="admin-notification-hint" role="status">{notificationHint}</p>}
-            <nav className="admin-dashboard-menu" aria-label="Разделы панели администратора">
-              <button type="button" onClick={openRequests}>
-                <span className="admin-dashboard-icon"><ClipboardList /></span>
-                <span><strong>Заявки</strong><small>Добавление новых локаций</small></span>
-                <ChevronRight aria-hidden="true" />
-              </button>
-              <button type="button" onClick={openPets}>
-                <span className="admin-dashboard-icon"><Dog /></span>
-                <span><strong>Питомцы</strong><small>Все питомцы сайта</small></span>
-                <ChevronRight aria-hidden="true" />
-              </button>
-            </nav>
-          </div>
-        )}
-
-        {phase === "requests" && (
-          <div className="admin-requests-screen admin-section-screen">
-            {sectionHeading("Заявки", "Новые локации от пользователей")}
-            {notificationHint && <p className="admin-notification-hint" role="status">{notificationHint}</p>}
-            {error && <p className="error-message admin-section-error" role="alert">{error}</p>}
-            <div className="admin-request-list" aria-busy={contentLoading}>
- {contentLoading && <div className="admin-content-loading"><span>Загружаем заявки…</span></div>}
-              {!contentLoading && requests.length === 0 && !error && <p className="admin-empty">Новых заявок пока нет</p>}
-              {!contentLoading && requests.map((item) => (
-                <article className="admin-request-card" key={item.id}>
-                  <span className="admin-request-icon" aria-hidden="true"><MapPin /></span>
-                  <div className="admin-request-info">
-                    <strong>{item.city}</strong>
-                    <span>{item.district}</span>
-                    <span className="admin-request-complex"><House />{item.complex}</span>
-                    <small>{formatRequestDate(item.createdAt)}</small>
-                  </div>
-                  <div className="admin-request-actions">
-                    <button type="button" className="admin-approve-button" onClick={() => setPendingRequestAction({ request: item, type: "approve" })}>
-                      <Check /> <span>Добавить</span>
-                    </button>
-                    <button type="button" className="admin-reject-button" onClick={() => setPendingRequestAction({ request: item, type: "reject" })}>
-                      <Trash2 /> <span>Отклонить</span>
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {phase === "pets" && (
-          <div className="admin-pets-screen admin-section-screen">
-            {sectionHeading("Питомцы", "Все добавленные питомцы")}
-            {error && <p className="error-message admin-section-error" role="alert">{error}</p>}
-            <div className="admin-pet-list" aria-busy={contentLoading}>
- {contentLoading && <div className="admin-content-loading"><span>Загружаем питомцев…</span></div>}
-              {!contentLoading && pets.length === 0 && !error && <p className="admin-empty">Добавленных питомцев пока нет</p>}
-              {!contentLoading && pets.map((pet) => (
-                <article className="admin-pet-card" key={pet.id}>
-                  <Image className="admin-pet-photo" src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={68} height={68} unoptimized />
-                  <span className="admin-pet-info">
-                    <strong>{pet.name}</strong>
-                    <small><Dog aria-hidden="true" />{pet.breed}</small>
-                    <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
-                  </span>
-                  <span className="admin-pet-actions">
-                    <button type="button" onClick={() => openPetEditor(pet)} aria-label={`Редактировать питомца ${pet.name}`} title="Редактировать">
-                      <Pencil />
-                    </button>
-                    <button type="button" onClick={() => { setError(""); setPetPendingDelete(pet); }} aria-label={`Удалить питомца ${pet.name}`} title="Удалить">
-                      <Trash2 />
-                    </button>
-                  </span>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {phase === "edit-pet" && petBeingEdited && (
-          <div className="admin-pet-edit-screen admin-section-screen">
-            <div className="admin-edit-heading">
-              <h1>Редактировать питомца</h1>
-              <p>Обновите информацию о питомце</p>
-            </div>
-            <form className="admin-pet-edit-form" onSubmit={saveAdminPet} aria-busy={submitting} noValidate>
-              <label className="admin-pet-photo-upload">
-                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAdminPhoto} aria-label="Выбрать новую фотографию питомца" />
-                {petPhotoPreview ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={petPhotoPreview} alt="Предпросмотр фотографии питомца" />
-                    <span>Нажмите, чтобы изменить фото</span>
-                  </>
-                ) : <Camera aria-hidden="true" />}
-              </label>
-              <label className="field text-field">
-                <span>Имя питомца</span>
-                <input value={petName} maxLength={40} onChange={(event) => { setPetName(event.target.value); setError(""); }} />
-              </label>
-              <label className="field text-field">
-                <span>Имя хозяина</span>
-                <input value={ownerName} maxLength={60} onChange={(event) => { setOwnerName(event.target.value); setError(""); }} />
-              </label>
-              <label className="field text-field">
-                <span>Порода</span>
-                <input value={breed} maxLength={20} onChange={(event) => { setBreed(event.target.value); setError(""); }} />
-              </label>
-              {error && <p className="error-message" role="alert">{error}</p>}
-              <button className="primary-button admin-pet-save" type="submit" disabled={!petFormIsValid || submitting}>
-                {submitting ? "Сохраняем…" : "Сохранить"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {pendingRequestAction && (
-          <div className="delete-confirm-overlay" role="presentation" onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !submitting) setPendingRequestAction(null);
-          }}>
-            <section className="delete-confirm admin-confirm" role="alertdialog" aria-modal="true" aria-labelledby="admin-confirm-title">
-              <h2 id="admin-confirm-title">{pendingRequestAction.type === "approve" ? "Добавить локацию?" : "Отклонить заявку?"}</h2>
-              <p>{pendingRequestAction.type === "approve"
-                ? `${pendingRequestAction.request.city}, ${pendingRequestAction.request.district}, ${pendingRequestAction.request.complex} появится в общем списке`
-                : "Заявка будет удалена без добавления локации"}</p>
-              {error && <p className="delete-confirm-error" role="alert">{error}</p>}
-              <div className="delete-confirm-actions">
-                <button className={pendingRequestAction.type === "approve" ? "admin-confirm-approve" : "delete-confirm-button"} type="button" disabled={submitting} onClick={confirmRequestAction}>
-                  {submitting ? "Подождите…" : pendingRequestAction.type === "approve" ? "Добавить" : "Отклонить"}
-                </button>
-                <button className="keep-walk-button" type="button" disabled={submitting} onClick={() => setPendingRequestAction(null)}>Отмена</button>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {petPendingDelete && (
-          <div className="delete-confirm-overlay" role="presentation" onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !submitting) setPetPendingDelete(null);
-          }}>
-            <section className="delete-confirm admin-confirm" role="alertdialog" aria-modal="true" aria-labelledby="admin-pet-delete-title">
-              <h2 id="admin-pet-delete-title">Удалить питомца?</h2>
-              <p>Питомец «{petPendingDelete.name}» и связанные с ним прогулки будут удалены без возможности восстановления</p>
-              {error && <p className="delete-confirm-error" role="alert">{error}</p>}
-              <div className="delete-confirm-actions">
-                <button className="delete-confirm-button" type="button" disabled={submitting} onClick={confirmPetDelete}>
-                  {submitting ? "Удаляем…" : "Удалить"}
-                </button>
-                <button className="keep-walk-button" type="button" disabled={submitting} onClick={() => setPetPendingDelete(null)}>Оставить</button>
-              </div>
-            </section>
-          </div>
-        )}
-      </section>
-    </main>
-  );
+  return <DogmeetFrame><main><section className="admin-shell">
+    {phase === "checking" && <DogmeetState state="loading" />}
+    {phase === "login" && <>
+      <DogmeetHeader admin onBack={() => window.location.assign("/")} /><h1>Вход администратора</h1>
+      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><ShieldCheck className="state-icon" /><h2>Для тех, кто<br />заботится о дворе</h2><p>Войдите, чтобы разбирать заявки жителей и управлять питомцами.</p>
+      <form onSubmit={signIn} noValidate>
+        <label className="field"><span>Логин</span><input autoComplete="username" maxLength={128} value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label className="field"><span>Пароль</span><input type="password" autoComplete="current-password" maxLength={256} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        {error && <p className="field-error" role="alert">{error}</p>}
+        <button className="button" type="submit" disabled={!username.trim() || !password}>Войти<ArrowRight /></button>
+      </form></>}
+    </>}
+    {phase === "dashboard" && <>
+      <DogmeetHeader admin onBack={() => window.location.assign("/")} /><h1>Управление</h1>
+      <div className="admin-summary"><ShieldCheck /><h2>Всё начинается<br />с хорошего района.</h2><p>{requests.length} заявки ждут вашего решения.</p></div>
+      <nav aria-label="Разделы панели администратора">
+        <button className="menu-row" type="button" onClick={openRequests}><MapPin /><span><strong>Заявки жителей</strong><small>Добавление новых локаций</small></span><span className="count">{requests.length}</span></button>
+        <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawPrint /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
+        <button className="menu-row" type="button" onClick={() => setPhase("notifications")}><Bell /><span><strong>Уведомления</strong><small>{notificationStatus === "on" ? "Включены" : "Отключены"}</small></span><ChevronRight /></button>
+        <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
+        <button className="menu-row" type="button" onClick={() => setSignOutPending(true)}><LogOut /><span><strong>Выйти</strong></span><ChevronRight /></button>
+      </nav>
+    </>}
+    {phase === "notifications" && <>
+      {sectionHeading("Уведомления", "")}<Bell className="state-icon" /><h2>Не пропускайте<br />новые заявки</h2><p>Получайте уведомление, когда житель предлагает добавить новую локацию.</p>
+      {notificationStatus === "denied" || notificationStatus === "unsupported" ? <div className="note">{notificationStatus === "denied" ? "Браузер запретил уведомления. Разрешите их в настройках сайта, затем повторите." : "Этот браузер не поддерживает уведомления. Проверяйте заявки в панели управления."}</div> : <button className="toggle-row" type="button" role="switch" aria-checked={notificationStatus === "on"} disabled={notificationStatus === "busy" || notificationStatus === "checking"} onClick={toggleNotifications}><span><strong>Новые заявки</strong><small>{notificationStatus === "on" ? "Уведомления включены" : "Уведомления отключены"}</small></span><i className={notificationStatus === "on" ? "on" : ""} /></button>}
+      <button className="button" type="button" disabled={notificationStatus === "busy" || notificationStatus === "checking"} onClick={toggleNotifications}>{notificationStatus === "denied" || notificationStatus === "unsupported" ? "Проверить ещё раз" : notificationStatus === "on" ? "Отключить уведомления" : "Включить уведомления"}</button>
+      {notificationHint && <p className="small-note" role="status">{notificationHint}</p>}
+    </>}
+    {phase === "requests" && <>
+      {sectionHeading("Заявки жителей", "Жители предлагают новые места для совместных прогулок.")}
+      {contentLoading ? <DogmeetState state="loading" /> : error && !pendingRequestAction ? <DogmeetState state="error" message={error} onAction={loadRequests} /> : requests.length === 0 ? <DogmeetState state="empty" title="Все заявки разобраны" message="Новые предложения жителей появятся здесь." action="К управлению" onAction={() => setPhase("dashboard")} /> : requests.map((item) => <article className="request-row" key={item.id}>
+        <div className="section-line"><span className="tag">Новая заявка</span><small>{formatRequestDate(item.createdAt)}</small></div><h2>{item.complex}</h2><p>{item.city} · {item.district}</p>
+        <div className="two-actions"><button className="button" type="button" onClick={() => setPendingRequestAction({request: item, type: "approve"})}><Check />Добавить</button><button className="button secondary" type="button" onClick={() => setPendingRequestAction({request: item, type: "reject"})}>Отклонить</button></div>
+      </article>)}
+    </>}
+    {phase === "pets" && <>
+      {sectionHeading("Все питомцы", "")}
+      <label className="search-field"><Search /><input aria-label="Найти питомца" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти по имени" /></label>
+      {contentLoading ? <DogmeetState state="loading" /> : error && !petPendingDelete ? <DogmeetState state="error" message={error} onAction={loadPets} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="К управлению" onAction={() => setPhase("dashboard")} /> : <div className="pet-rows">{pets.filter((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))).map((pet) => <button className="pet-row" type="button" key={pet.id} onClick={() => openPetEditor(pet)}><Image className="pet-face" src={pet.photoUrl} alt={`Собака ${pet.name}`} width={72} height={72} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small></span><ChevronRight /></button>)}</div>}
+      {pets.length > 0 && !pets.some((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))) && <p role="status">Никого не нашли. Попробуйте другое имя.</p>}
+    </>}
+    {phase === "edit-pet" && petBeingEdited && <>
+      {photoOpen ? <><DogmeetHeader admin onBack={() => setPhotoOpen(false)} /><h1>Фотография</h1><Image className="photo-preview" src={petPhotoPreview} alt="Предпросмотр фотографии" width={346} height={346} unoptimized /><label className="upload"><Camera /><strong>Выбрать файл</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAdminPhoto} /></label><p>JPG, PNG или WebP до 10 МБ. Выберите снимок, на котором хорошо видно питомца.</p>{error && <p className="field-error" role="alert">{error}</p>}<button type="button" className="button" onClick={() => setPhotoOpen(false)}>Использовать фото<Check /></button></> : <>
+      {sectionHeading("Правка питомца", "Актуальные данные помогут узнать вас на прогулке.")}
+      {submitting && !petPendingDelete ? <DogmeetState state="loading" title="Сохраняем…" /> : <><form onSubmit={saveAdminPet} noValidate>
+        <button className="photo-editor" type="button" onClick={() => setPhotoOpen(true)}><Image src={petPhotoPreview} alt="Фотография" width={86} height={86} unoptimized /><span><Camera />Изменить фотографию</span></button>
+        <label className="field"><span>Имя питомца</span><input value={petName} maxLength={40} placeholder="Например, Боня" aria-invalid={Boolean(error && !containsLetter.test(petName.trim()))} onChange={(event) => { setPetName(event.target.value); setError(""); }} /></label>
+        <label className="field"><span>Имя хозяина</span><input value={ownerName} maxLength={60} placeholder="Например, Анна" aria-invalid={Boolean(error && !containsLetter.test(ownerName.trim()))} onChange={(event) => { setOwnerName(event.target.value); setError(""); }} /></label>
+        <label className="field"><span>Порода</span><input value={breed} maxLength={20} placeholder="Например, корги" aria-invalid={Boolean(error && !containsLetter.test(breed.trim()))} onChange={(event) => { setBreed(event.target.value); setError(""); }} /></label>
+        {error && !petPendingDelete && <p className="field-error" role="alert">{error}</p>}
+        <button className="button" type="submit" disabled={!petFormIsValid || submitting}>Сохранить изменения<span className="action-icon" data-done={petFormIsValid} aria-hidden="true"><Plus /><Check /></span></button>
+      </form><button className="button quiet danger-text" type="button" onClick={() => { setError(""); setPetPendingDelete(petBeingEdited); }}><Trash2 />Удалить питомца</button></>}
+      </>}
+    </>}
+    {pendingRequestAction && <DogmeetDialog title={pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку"} busy={submitting} role="alertdialog" onDismiss={() => setPendingRequestAction(null)}>
+      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><MapPin className="state-icon" /><h2>{pendingRequestAction.type === "approve" ? <>Ещё один район<br />для встреч</> : "Отклонить заявку?"}</h2><div className="receipt"><strong>{pendingRequestAction.request.complex}</strong><span>{pendingRequestAction.request.city} · {pendingRequestAction.request.district}</span></div><p>{pendingRequestAction.type === "approve" ? "Локация появится в списке. Жители смогут выбрать её для прогулок." : "Заявка будет удалена без добавления локации."}</p>{error && <p className="field-error" role="alert">{error}</p>}<button className={pendingRequestAction.type === "approve" ? "button" : "button danger"} type="button" onClick={confirmRequestAction}>{pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку"}</button><button className="button quiet" type="button" onClick={() => setPendingRequestAction(null)}>Отмена</button></>}
+    </DogmeetDialog>}
+    {petPendingDelete && <DogmeetDialog title="Удаление администратором" busy={submitting} role="alertdialog" onDismiss={() => setPetPendingDelete(null)}>
+      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><Image className="pet-face large" src={petPendingDelete.photoUrl} alt={petPendingDelete.name} width={92} height={92} unoptimized /><h2>Удалить {petPendingDelete.name}?</h2><p>Питомец и все его прогулки будут удалены. Это действие нельзя отменить.</p>{error && <p className="field-error" role="alert">{error}</p>}<button className="button danger" type="button" onClick={confirmPetDelete}>Удалить питомца</button><button className="button quiet" type="button" onClick={() => setPetPendingDelete(null)}>Оставить</button></>}
+    </DogmeetDialog>}
+    {signOutPending && <DogmeetDialog title="Выход" busy={submitting} role="alertdialog" onDismiss={() => setSignOutPending(false)}><LogOut className="state-icon" /><h2>Закончить работу?</h2><p>Для возвращения в управление потребуется снова ввести логин и пароль.</p><button className="button" type="button" disabled={submitting} onClick={signOut}>{submitting ? "Выходим…" : "Выйти"}</button><button className="button quiet" type="button" disabled={submitting} onClick={() => setSignOutPending(false)}>Остаться</button></DogmeetDialog>}
+    {result?.sheet && <DogmeetDialog title={result.heading} onDismiss={() => setResult(null)}><DogmeetState state="success" title={result.title} message={result.message} onAction={() => setResult(null)} /></DogmeetDialog>}
+  </section></main></DogmeetFrame>;
 }

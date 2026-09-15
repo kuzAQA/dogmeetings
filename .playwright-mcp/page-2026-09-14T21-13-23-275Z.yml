@@ -1,0 +1,133 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - link "Dogmeet / обзор макетов" [ref=e5] [cursor=pointer]:
+      - /url: /gallery.html
+    - paragraph [ref=e8]: Изолированный прототипВсе данные вымышлены
+    - generic [ref=e9]:
+      - text: Экран
+      - combobox "Экран" [ref=e10]:
+        - option "Знакомство"
+        - option "Открыть в браузере"
+        - option "Мой район"
+        - option "Новая локация"
+        - option "Расписание двора" [selected]
+        - option "Время прогулки"
+        - option "Встреча на прогулке"
+        - option "Сообщить о прогулке"
+        - option "Изменить прогулку"
+        - option "С кем гуляем"
+        - option "Место встречи"
+        - option "Время встречи"
+        - option "Сначала питомец"
+        - option "Мои планы"
+        - option "Управление прогулкой"
+        - option "Удалить прогулку"
+        - option "Мои питомцы"
+        - option "Паспорт питомца"
+        - option "Добавить питомца"
+        - option "Изменить питомца"
+        - option "Фотография"
+        - option "Удалить питомца"
+        - option "Поделиться питомцем"
+        - option "Обновить ссылку"
+        - option "Приглашение"
+        - option "Питомец уже добавлен"
+        - option "Мой район и настройки"
+        - option "Связь с разработчиком"
+        - option "Вход администратора"
+        - option "Управление"
+        - option "Заявки жителей"
+        - option "Добавить локацию"
+        - option "Отклонить заявку"
+        - option "Все питомцы"
+        - option "Правка питомца"
+        - option "Удаление администратором"
+        - option "Уведомления"
+        - option "Выход"
+    - generic [ref=e11]:
+      - text: Состояние
+      - combobox "Состояние" [ref=e12]:
+        - option "Обычное" [selected]
+        - option "Пусто"
+        - option "Загрузка"
+        - option "Ошибка"
+    - button "Сбросить моковые данные" [ref=e13] [cursor=pointer]
+    - link "Открыть админку" [ref=e14] [cursor=pointer]:
+      - /url: /#admin-login
+    - generic [ref=e15]: 390 px · мобильный webПереключатели находятся вне продукта.
+  - generic [ref=e16]:
+    - generic [ref=e18]: 9:41
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - button "Дзен-Кварталы Изменить" [ref=e25] [cursor=pointer]:
+          - generic [ref=e29]: Дзен-Кварталы
+          - generic [ref=e30]: Изменить
+        - button "Мой район и настройки" [ref=e31] [cursor=pointer]
+      - generic [ref=e36]:
+        - heading [active] [level=1] [ref=e37]:
+          - text: Кто сегодня
+          - emphasis [ref=e38]: на прогулку?
+        - generic [ref=e39]:
+          - strong [ref=e40]: "14"
+          - text: сентябряпонедельник
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - img "Ричи" [ref=e43]
+          - img "Луна" [ref=e44]
+          - img "Боня" [ref=e45]
+        - paragraph [ref=e46]:
+          - text: Знакомьтесь во дворе.
+          - strong [ref=e47]: У каждого есть время для прогулки.
+      - generic [ref=e48]:
+        - heading "Сегодня рядом" [level=2] [ref=e49]
+        - button "Весь день" [ref=e50] [cursor=pointer]
+      - generic [ref=e52]:
+        - article [ref=e53]:
+          - generic [ref=e54]:
+            - strong [ref=e55]: 08:00
+            - generic [ref=e56]: Каждый день
+          - button "Собака Боня Боня Анна · Мальтипу Сквер у фонтана Наша утренняя прогулка" [ref=e58] [cursor=pointer]:
+            - img "Собака Боня" [ref=e59]
+            - generic [ref=e60]:
+              - strong [ref=e61]: Боня
+              - generic [ref=e62]: Анна · Мальтипу
+            - generic [ref=e63]: Сквер у фонтана
+            - generic [ref=e67]: Наша утренняя прогулка
+        - article [ref=e68]:
+          - generic [ref=e69]:
+            - strong [ref=e70]: 08:30
+            - generic [ref=e71]: Сегодня
+          - button "Собака Ричи Ричи Михаил · Голден-ретривер Площадка у 3-го корпуса Возьмём мячик. Приходите!" [ref=e73] [cursor=pointer]:
+            - img "Собака Ричи" [ref=e74]
+            - generic [ref=e75]:
+              - strong [ref=e76]: Ричи
+              - generic [ref=e77]: Михаил · Голден-ретривер
+            - generic [ref=e78]: Площадка у 3-го корпуса
+            - generic [ref=e82]: Возьмём мячик. Приходите!
+        - article [ref=e83]:
+          - generic [ref=e84]:
+            - strong [ref=e85]: 13:00
+            - generic [ref=e86]: Сегодня
+          - button "Собака Луна Луна Мария · Хаски Аллея вдоль пруда Спокойно гуляем вдоль воды" [ref=e88] [cursor=pointer]:
+            - img "Собака Луна" [ref=e89]
+            - generic [ref=e90]:
+              - strong [ref=e91]: Луна
+              - generic [ref=e92]: Мария · Хаски
+            - generic [ref=e93]: Аллея вдоль пруда
+            - generic [ref=e97]: Спокойно гуляем вдоль воды
+        - article [ref=e98]:
+          - generic [ref=e99]:
+            - strong [ref=e100]: 18:30
+            - generic [ref=e101]: Сегодня
+          - button "Собака Боня Боня Анна · Мальтипу Площадка у 3-го корпуса Будем рады новой компании" [ref=e103] [cursor=pointer]:
+            - img "Собака Боня" [ref=e104]
+            - generic [ref=e105]:
+              - strong [ref=e106]: Боня
+              - generic [ref=e107]: Анна · Мальтипу
+            - generic [ref=e108]: Площадка у 3-го корпуса
+            - generic [ref=e112]: Будем рады новой компании
+      - button "Я иду гулять" [ref=e113] [cursor=pointer]
+    - navigation "Основная навигация" [ref=e115]:
+      - button "Рядом" [ref=e116] [cursor=pointer]
+      - button "Мои планы" [ref=e121] [cursor=pointer]
+      - button "Питомцы" [ref=e125] [cursor=pointer]

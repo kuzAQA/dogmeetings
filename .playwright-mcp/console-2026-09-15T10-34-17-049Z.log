@@ -1,0 +1,6 @@
+[    2292ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/web-dot-dev/embed/WbvQOJO?height=450&theme-id=light&default-tab=result&editable=true:173
+[    2292ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/web-dot-dev/embed/WbvQOJO?height=450&theme-id=light&default-tab=result&editable=true:173
+[    2292ms] [WARNING] Origin trial controlled feature not enabled: 'rewriter'. @ https://codepen.io/web-dot-dev/embed/WbvQOJO?height=450&theme-id=light&default-tab=result&editable=true:173
+[    2292ms] [WARNING] Origin trial controlled feature not enabled: 'writer'. @ https://codepen.io/web-dot-dev/embed/WbvQOJO?height=450&theme-id=light&default-tab=result&editable=true:173
+[    2925ms] [LOG] Web Vitals CLS 46 {event: CLS, eventCategory: Web Vitals, eventLabel: v6-1789468459288-6669681338062, eventModel: Object} @ :0
+[    2931ms] [LOG] Web Vitals LCP 1084 {event: LCP, eventCategory: Web Vitals, eventLabel: v6-1789468459287-4415642143285, eventModel: Object} @ :0

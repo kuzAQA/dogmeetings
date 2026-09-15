@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safe Refactor"
+  short_description: "Safely simplify and optimize this codebase"
+  default_prompt: "Use $safe-refactor to make a minimal, behavior-preserving refactor."

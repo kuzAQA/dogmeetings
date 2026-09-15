@@ -1,30 +1,27 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ChevronRight, Clock3, Dog, EllipsisVertical, MessageCircle } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Compass, Copy, ExternalLink, MapPin, MessageCircle, Moon, PawPrint, Pencil, Share2, SlidersHorizontal, Sun, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { type FormEvent, type RefObject, useEffect, useRef } from "react";
-import { formatResidentialComplex, type ApiWalk, type Period, type Walk } from "../../../../lib/walks";
-import { MAX_BREED_LENGTH, MAX_WALK_META_LENGTH, type Location, type Pet } from "../model";
-import type { DockPanelSection, DockSection } from "../use-home-navigation";
+import { DogmeetState } from "../../../components/ui/DogmeetState";
+import { type FormEvent, type RefObject, useMemo, useState } from "react";
+import type { ApiWalk, Period, Walk } from "../../../../lib/walks";
+import { DogmeetDialog, DogmeetHeader } from "../../../components/ui/DogmeetFrame";
+import type { Location, Pet, SharedPlace } from "../model";
+import type { DockSection } from "../use-home-navigation";
 import type { WalkFormState } from "../use-walk-form";
-import { WalkPlace } from "../../../components/ui/WalkPlace";
 import { WalkAnnouncementForm } from "./WalkAnnouncementForm";
 
-const periodOptions: Period[] = ["Все", "Утро", "День", "Вечер"];
-const filterIndicatorLeft: Record<Period, string> = {
-  "Все": "0",
-  "Утро": "calc(25% + 2px)",
-  "День": "calc(50% + 4px)",
-  "Вечер": "calc(75% + 6px)"
-};
+const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
-type WalksWorkspaceProps = {
+type Props = {
   dockSection: DockSection;
   location: Location;
   period: Period;
   visibleWalks: Walk[];
   savedWalks: Walk[];
   walksLoaded: boolean;
+  walksError: string;
+  onRetryWalks: () => void;
   ownedWalksById: Map<string, ApiWalk>;
   petsById: Map<string, Pet>;
   openWalkActionsId: string | null;
@@ -36,158 +33,116 @@ type WalksWorkspaceProps = {
   onSharePet: (pet: Pet) => void;
   guidedWalkFlow: boolean;
   savedPets: Pet[];
+  sharedPlaces: SharedPlace[];
+  onAddPet: () => void;
   placesLoaded: boolean;
   walkForm: WalkFormState;
   walkSaving: boolean;
   editingWalk: boolean;
   onWalkSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onStartWalk: () => void;
+  placesError: string;
+  onRetryPlaces: () => void;
   profileHeadingRef: RefObject<HTMLHeadingElement | null>;
   onOpenLocationEditor: () => void;
   onOpenMyWalks: () => void;
   onOpenMyPets: () => void;
+  onOpenBrowserGuide: () => void;
+  onOpenProfile: () => void;
+  onBack: () => void;
+  detailOpen: boolean;
+  contactOpen: boolean;
+  onOpenDetail: () => void;
+  onOpenContact: () => void;
+  selectedWalk: Walk | null;
+  onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({
-  dockSection,
-  location,
-  period,
-  visibleWalks,
-  savedWalks,
-  walksLoaded,
-  ownedWalksById,
-  petsById,
-  openWalkActionsId,
-  onPeriodChange,
-  onToggleWalkActions,
-  onCloseWalkActions,
-  onEditWalk,
-  onDeleteWalk,
-  onSharePet,
-  guidedWalkFlow,
-  savedPets,
-  placesLoaded,
-  walkForm,
-  walkSaving,
-  editingWalk,
-  onWalkSubmit,
-  profileHeadingRef,
-  onOpenLocationEditor,
-  onOpenMyWalks,
-  onOpenMyPets
-}: WalksWorkspaceProps) {
-  const walkListRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const list = walkListRef.current;
-    if (list) list.dataset.scrolled = list.scrollTop > 0 ? "true" : "false";
-  }, []);
-  const activeDockSection: DockPanelSection = dockSection === "walk" || dockSection === "profile" ? dockSection : "nearby";
-  const paneState = (section: DockPanelSection) => section === activeDockSection ? "static" : "hidden";
-  const nearbyPane = paneState("nearby");
-  const walkPane = paneState("walk");
-  const profilePane = paneState("profile");
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, petsById, onPeriodChange, onEditWalk, onDeleteWalk, onSharePet, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyWalks, onOpenMyPets, onOpenBrowserGuide, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [tempPeriod, setTempPeriod] = useState(period);
+  const [contactCopied, setContactCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
+  const [actionsWalk, setActionsWalk] = useState<Walk | null>(null);
+  const active = dockSection === "profile" ? "profile" : dockSection === "walk" ? "walk" : "nearby";
+  const today = useMemo(() => new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).formatToParts(new Date()), []);
+  const day = today.find((part) => part.type === "day")?.value ?? "";
+  const month = today.find((part) => part.type === "month")?.value ?? "";
+  const weekday = today.find((part) => part.type === "weekday")?.value ?? "";
+
+  if (contactOpen) return <div className="screen contact-screen"><DogmeetHeader onBack={onBack} /><h1>Связь с разработчиком</h1>{contactCopied ? <DogmeetState state="success" title="Контакт скопирован" message="Ссылка на Telegram разработчика готова к вставке." onAction={onBack} /> : <><h2>Есть идея<br />или вопрос?</h2><p>Разработчик Dogmeet — в Telegram. Напишите, что можно сделать удобнее.</p><div className="receipt"><strong>@kuznetsoviv</strong><span>t.me/kuznetsoviv</span></div><button className="button" type="button" onClick={async () => { try { await navigator.clipboard.writeText("https://t.me/kuznetsoviv"); setContactCopied(true); } catch { setCopyError("Не удалось скопировать. Выделите контакт и скопируйте вручную."); } }}><Copy />Скопировать контакт</button>{copyError && <p className="field-error" role="alert">{copyError}</p>}</>}</div>;
+
+  if (active === "walk") {
+    return (
+      <div className="screen form-screen announce-screen">
+        <DogmeetHeader onBack={onBack} />
+        <WalkAnnouncementForm guidedWalkFlow={guidedWalkFlow} savedPets={savedPets} sharedPlaces={sharedPlaces} locationName={location.complex} onAddPet={onAddPet} placesLoaded={placesLoaded} placesError={placesError} onRetryPlaces={onRetryPlaces} walkForm={walkForm} walkSaving={walkSaving} editing={editingWalk} onSubmit={onWalkSubmit} />
+      </div>
+    );
+  }
+
+  if (active === "profile") {
+    return (
+      <div className="screen profile-screen">
+        <DogmeetHeader onBack={onBack} />
+        <h1 id="menu-title" ref={profileHeadingRef} tabIndex={-1}>Мой район<br />и настройки</h1>
+        <div className="profile-banner">
+          <MapPin aria-hidden="true" />
+          <h2>{location.complex}</h2>
+          <p>{location.city} · {location.district}</p>
+          <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию<ChevronRight aria-hidden="true" /></button>
+        </div>
+        <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onOpenBrowserGuide}><Compass aria-hidden="true" /><span><strong>Открыть в браузере</strong><small>Подсказка для iPhone и Android</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
+        <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
+      </div>
+    );
+  }
+
+  if (selectedWalk && detailOpen) {
+    return (
+      <div className="screen walk-detail-screen">
+        <DogmeetHeader onBack={onBack} />
+        <h1>Встреча на прогулке</h1>
+        <Image className="portrait" src={selectedWalk.image} alt={selectedWalk.pet} width={390} height={300} unoptimized={selectedWalk.image.startsWith("/api/")} />
+        <div className="pet-title"><h2>{selectedWalk.pet}</h2><span>{selectedWalk.breed}</span></div>
+        <p>Хозяин: {selectedWalk.owner}</p>
+        <div className="big-time"><Clock3 /><strong>{selectedWalk.time}</strong><span>{selectedWalk.scheduleType === "always" ? "Ежедневно" : selectedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span></div>
+        <div className="place-detail"><MapPin /><div><h3>{selectedWalk.point}</h3><p>{location.complex}<br />{location.city}, {location.district}</p></div></div>
+        <blockquote>«{selectedWalk.comment || "Приходите гулять вместе"}»</blockquote>
+        <div className="note">Узнаете друг друга по питомцу. Встречайтесь в указанном месте.</div>
+        <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}<ArrowRight /></button>
+      </div>
+    );
+  }
+
+  if (!walksLoaded) return <DogmeetState state="loading" />;
+  if (walksError) return <DogmeetState state="error" message={walksError} onAction={onRetryWalks} />;
+  if (!visibleWalks.length) return <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk}><button className="button quiet" type="button" onClick={() => onPeriodChange("Все")}>Показать весь день</button></DogmeetState>;
+
   return (
     <div className="screen walks-screen">
-      <div className="walks-screen-track">
-        <section className="walks-pane walks-pane--nearby" data-dock-pane={nearbyPane} aria-hidden={nearbyPane === "hidden"} inert={nearbyPane === "hidden" ? true : undefined}>
-          <header className="walks-header">
-            <div className="walks-heading-copy">
-              <h1>Прогулки рядом</h1>
-              <p>Сегодня · {location.complex}</p>
-            </div>
-          </header>
-          <div className="filters" aria-label="Фильтр по времени">
-            <span className="filter-indicator" aria-hidden="true" style={{ left: filterIndicatorLeft[period] }} />
-            {periodOptions.map((item) => (
-              <button key={item} type="button" className={`filter-button ${period === item ? "active" : ""}`} aria-pressed={period === item} onClick={() => onPeriodChange(item)}><span>{item}</span></button>
-            ))}
-          </div>
-          <div ref={walkListRef} className="walk-list" data-scrolled="false" onScroll={(event) => { event.currentTarget.dataset.scrolled = event.currentTarget.scrollTop > 0 ? "true" : "false"; }}>
-            <div className="walk-list-content" aria-live="polite">
-              {!walksLoaded ? (
-                <p className="visually-hidden" role="status">Загружаем прогулки</p>
-              ) : visibleWalks.length === 0 ? (
-                <p className="empty-walks">{savedWalks.length === 0 ? "Пока никто не сообщил о прогулке" : "В это время прогулок пока нет"}</p>
-              ) : visibleWalks.map((walk) => {
-                const ownedWalk = ownedWalksById.get(walk.id);
-                const shareablePet = petsById.get(walk.petId);
-                const hasCardActions = Boolean(ownedWalk || shareablePet?.canShare);
-                return (
-                  <article className={`walk-card ${hasCardActions ? "walk-card--editable" : ""}`} key={walk.id}>
-                    {hasCardActions && (
-                      <div
-                        className="walk-card-actions-menu"
-                        role="toolbar"
-                        aria-label={`Действия с прогулкой питомца ${walk.pet}`}
-                        onBlur={(event) => {
-                          if (!event.currentTarget.contains(event.relatedTarget instanceof Node ? event.relatedTarget : null)) onCloseWalkActions();
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Escape") {
-                            onCloseWalkActions();
-                            event.currentTarget.querySelector<HTMLButtonElement>(".walk-card-actions-trigger")?.focus();
-                          }
-                        }}
-                      >
-                        <button className="walk-card-actions-trigger" type="button" aria-label={`Действия с прогулкой питомца ${walk.pet}`} aria-haspopup="menu" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>
-                          <EllipsisVertical aria-hidden="true" />
-                        </button>
-                        {openWalkActionsId === walk.id && (
-                          <span className="walk-card-actions-popover" role="menu" aria-label={`Действия с прогулкой питомца ${walk.pet}`}>
-                            <button type="button" role="menuitem" disabled={!ownedWalk} onClick={() => { if (ownedWalk) onEditWalk(ownedWalk); }}>Изменить</button>
-                            <button type="button" role="menuitem" disabled={!ownedWalk} onClick={() => { if (ownedWalk) onDeleteWalk(ownedWalk); }}>Удалить</button>
-                            <button type="button" role="menuitem" disabled={!shareablePet?.canShare} onClick={() => { if (shareablePet?.canShare) onSharePet(shareablePet); }}>Поделиться</button>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="walk-pet-visual">
-                      <Image className="dog-avatar" src={walk.image} alt={`Собака ${walk.pet}`} width={112} height={112} sizes="112px" unoptimized={walk.image.startsWith("/api/")} />
-                    </div>
-                    <div className="walk-info">
-                      <h2>{walk.pet}</h2>
-                      <p className="pet-meta owner"><span className="walk-card-icon walk-card-icon--user" aria-hidden="true" /><span>{walk.owner}</span></p>
-                      <p><Clock3 className="time-icon" aria-hidden="true" /><span>{walk.time}</span></p>
-                      <p className="pet-meta breed" aria-label={`Порода: ${walk.breed}`}><Dog aria-hidden="true" /><span>{Array.from(walk.breed).slice(0, MAX_BREED_LENGTH).join("").trimEnd()}</span></p>
-                    </div>
-                    <WalkPlace place={walk.point} />
-                    {walk.comment && <p className="walk-comment"><MessageCircle aria-hidden="true" /><span>{Array.from(walk.comment).slice(0, MAX_WALK_META_LENGTH).join("").trimEnd()}</span></p>}
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-        <section className="walks-pane walks-pane--walk" data-dock-pane={walkPane} aria-hidden={walkPane === "hidden"} inert={walkPane === "hidden" ? true : undefined}>
-          <div className="menu-overlay" role="presentation">
-            <aside className="drawer drawer--walk-form" role="dialog" aria-labelledby="dock-walk-title" aria-modal="true">
-              <div className="drawer-body drawer-walk-form">
-                <WalkAnnouncementForm inDock guidedWalkFlow={guidedWalkFlow} savedPets={savedPets} placesLoaded={placesLoaded} walkForm={walkForm} walkSaving={walkSaving} editing={editingWalk} onSubmit={onWalkSubmit} />
-              </div>
-            </aside>
-          </div>
-        </section>
-        <section className="walks-pane walks-pane--profile" data-dock-pane={profilePane} aria-hidden={profilePane === "hidden"} inert={profilePane === "hidden" ? true : undefined}>
-          <div className="menu-overlay" role="presentation">
-            <aside className="drawer" role="dialog" aria-labelledby="menu-title" aria-modal="true">
-              <div className="drawer-header"><h1 className="drawer-menu-content" id="menu-title" ref={profileHeadingRef} tabIndex={-1}>Профиль</h1></div>
-              <div className="drawer-body drawer-menu-content">
-                <p className="drawer-label">Сохранённая локация</p>
-                <button className="location-card" type="button" onClick={onOpenLocationEditor}>
-                  <span className="location-card-summary">
-                    <span className="location-card-pin" aria-hidden="true" />
-                    <strong className="location-card-address"><span>{location.city} · {location.district}</span><span>{formatResidentialComplex(location.complex)}</span></strong>
-                    <ChevronDown className="location-card-chevron" aria-hidden="true" />
-                  </span>
-                  <span className="change-location"><span className="change-location-pin" aria-hidden="true" />Изменить локацию</span>
-                </button>
-                <button className="drawer-link" type="button" onClick={onOpenMyWalks}><span className="drawer-link-icon"><CalendarDays aria-hidden="true" /></span><span>Мои прогулки</span><ChevronRight /></button>
-                <button className="drawer-link" type="button" onClick={onOpenMyPets}><span className="drawer-link-icon"><span className="drawer-pets-icon" aria-hidden="true" /></span><span>Мои питомцы</span><ChevronRight /></button>
-                <div className="drawer-footer"><a className="developer-link" href="https://t.me/kuznetsoviv" target="_blank" rel="noopener noreferrer">ТГ разработчика</a></div>
-              </div>
-            </aside>
-          </div>
-        </section>
+      <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} />
+      <div className="day-heading"><h1>Кто сегодня<br /><em>на прогулку?</em></h1><span className="date-stamp"><strong>{day}</strong>{month}<br />{weekday}</span></div>
+      <div className="daily-summary">
+        <span className="stacked-faces">{savedWalks.slice(0, 3).map((walk) => <Image key={walk.id} src={walk.image} alt="" width={32} height={32} unoptimized={walk.image.startsWith("/api/")} />)}</span>
+        <p>Знакомьтесь во дворе.<br /><strong>{savedWalks.length ? `У каждого есть время для прогулки.` : "Начните расписание двора."}</strong></p>
       </div>
+      <div className="section-line"><h2>Сегодня рядом</h2><button className="filter-trigger" type="button" onClick={() => { setTempPeriod(period); setFiltersOpen(true); }}><SlidersHorizontal aria-hidden="true" />{period === "Все" ? "Весь день" : period}</button></div>
+      {!walksLoaded ? <DogmeetState state="loading" /> : walksError ? <DogmeetState state="error" message={walksError} onAction={onRetryWalks} /> : visibleWalks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk}><button className="button quiet" type="button" onClick={() => onPeriodChange("Все")}>Показать весь день</button></DogmeetState> : (
+        <div className="timeline">{visibleWalks.map((walk) => {
+          const owned = ownedWalksById.get(walk.id);
+          return <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.time}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary" role="button" tabIndex={0} onClick={() => { onSelectWalk(walk); onOpenDetail(); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectWalk(walk); onOpenDetail(); } }}><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}{owned && <button className="text-link" type="button" onClick={(event) => { event.stopPropagation(); setActionsWalk(walk); }}>Управлять<ChevronRight aria-hidden="true" /></button>}</div></div>;
+        })}</div>
+      )}
+      {filtersOpen && <DogmeetDialog title="Время прогулки" onDismiss={() => setFiltersOpen(false)}><p>В какое время вам удобнее встретиться?</p><div className="option-list">{periods.map((item, index) => <button key={item} type="button" aria-pressed={tempPeriod === item} onClick={() => setTempPeriod(item)}><span><strong>{item === "Все" ? "Весь день" : item}</strong><small>{["Все прогулки сегодня", "До 12:00", "12:00–17:59", "После 18:00"][index]}</small></span>{tempPeriod === item ? <Check /> : item === "Вечер" ? <Moon /> : <Sun />}</button>)}</div><button className="button" type="button" onClick={() => { onPeriodChange(tempPeriod); setFiltersOpen(false); }}>Показать прогулки<ArrowRight /></button></DogmeetDialog>}
+      {actionsWalk && (() => {
+        const owned = ownedWalksById.get(actionsWalk.id);
+        const pet = petsById.get(actionsWalk.petId);
+        return <DogmeetDialog title="Управление прогулкой" onDismiss={() => setActionsWalk(null)}><div className="receipt"><strong>{actionsWalk.time} · {actionsWalk.scheduleType === "always" ? "Ежедневно" : actionsWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</strong><span>{actionsWalk.point}</span><small>{actionsWalk.pet}</small></div>{owned && <button className="menu-row" type="button" onClick={() => { setActionsWalk(null); onEditWalk(owned); }}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>}{pet?.canShare && <button className="menu-row" type="button" onClick={() => { setActionsWalk(null); onSharePet(pet); }}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}{owned && <button className="menu-row danger-text" type="button" onClick={() => { setActionsWalk(null); onDeleteWalk(owned); }}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button>}<button className="button quiet" type="button" onClick={() => setActionsWalk(null)}>Закрыть</button></DogmeetDialog>;
+      })()}
     </div>
   );
 }

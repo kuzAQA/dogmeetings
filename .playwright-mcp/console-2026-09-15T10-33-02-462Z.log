@@ -1,0 +1,4 @@
+[     346ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     348ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     350ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     494ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping 8adb09a2-4263-4b9b-af87-80502a8a043b successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1

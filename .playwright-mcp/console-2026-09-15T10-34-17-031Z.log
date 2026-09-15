@@ -1,0 +1,4 @@
+[      76ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     147ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping 1a3188c9-f975-420e-a071-ba3e7ef0ffda successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1
+[     199ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     199ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3

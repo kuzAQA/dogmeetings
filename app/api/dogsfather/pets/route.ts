@@ -4,10 +4,10 @@ import { withDb } from "../../../../db";
 import { pets } from "../../../../db/schema";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { privateJson } from "../../../../lib/session";
-import { allowedPhotoTypes, containsLetter, MAX_BREED_LENGTH, MAX_PHOTO_SIZE, normalizeName, uuidPattern } from "../../../../server/domain/pet";
+import { allowedPhotoTypes, containsLetter, MAX_BREED_LENGTH, MAX_PHOTO_SIZE, normalizeName, petPhotoUrl, uuidPattern } from "../../../../server/domain/pet";
 import { readJsonRecord } from "../../../../server/transport/request-json";
 
-type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "createdAt" | "updatedAt">;
+type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "photoType" | "createdAt" | "updatedAt">;
 
 function publicPet(pet: PetSummary) {
   return {
@@ -15,7 +15,7 @@ function publicPet(pet: PetSummary) {
     name: pet.name,
     breed: pet.breed,
     ownerName: pet.ownerName,
-    photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}&v=${pet.updatedAt.getTime()}`,
+    photoUrl: petPhotoUrl(pet.id, pet.updatedAt, pet.photoType),
     createdAt: pet.createdAt.toISOString(),
     updatedAt: pet.updatedAt.toISOString()
   };
@@ -35,6 +35,7 @@ export async function GET(request: Request) {
         name: pets.name,
         breed: pets.breed,
         ownerName: pets.ownerName,
+        photoType: pets.photoType,
         createdAt: pets.createdAt,
         updatedAt: pets.updatedAt
       })
@@ -93,6 +94,7 @@ export async function PATCH(request: Request) {
         name: pets.name,
         breed: pets.breed,
         ownerName: pets.ownerName,
+        photoType: pets.photoType,
         createdAt: pets.createdAt,
         updatedAt: pets.updatedAt
       }));

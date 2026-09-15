@@ -1,186 +1,75 @@
 "use client";
 
-import { ChevronDown, Compass, Dog, EllipsisVertical, Share2, UserRound, X } from "lucide-react";
+import { CircleAlert, Plus } from "lucide-react";
 import Image from "next/image";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "../../components/ui/BrowserGuide";
+import { DogmeetState } from "../../components/ui/DogmeetState";
+import { DogmeetDialog, DogmeetFrame, DogmeetHeader } from "../../components/ui/DogmeetFrame";
 import { ApiRequestError } from "../../features/api/client";
 import { addSharedPet, ensureClientSession, loadSharedPet, type SharedPet } from "../../features/share/api";
 
-type ShareStage = "guide" | "checking" | "preview" | "already-added" | "error";
-type GuidePlatform = "ios" | "android";
+type ShareStage = "guide" | "checking" | "preview" | "already-added" | "success" | "error";
 
 export default function SharedPetPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [pet, setPet] = useState<SharedPet | null>(null);
   const [stage, setStage] = useState<ShareStage>("guide");
-  const [guidePlatform, setGuidePlatform] = useState<GuidePlatform>("ios");
+  const [guidePlatform, setGuidePlatform] = useState<BrowserGuidePlatform>("ios");
   const [adding, setAdding] = useState(false);
+  const [addedPetId, setAddedPetId] = useState("");
   const [error, setError] = useState("");
   const [linkInactive, setLinkInactive] = useState(false);
   const guidePlatformSelected = useRef(false);
 
-  useEffect(() => {
-    if (guidePlatformSelected.current) return;
-    const isIPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    setGuidePlatform(/Android/i.test(navigator.userAgent) && !isIPadOs ? "android" : "ios");
-  }, []);
+  useEffect(() => { if (!guidePlatformSelected.current) setGuidePlatform(detectBrowserGuidePlatform(navigator.userAgent, navigator.platform, navigator.maxTouchPoints)); }, []);
+  function selectGuidePlatform(platform: BrowserGuidePlatform) { guidePlatformSelected.current = true; setGuidePlatform(platform); }
 
-  function selectGuidePlatform(platform: GuidePlatform) {
-    guidePlatformSelected.current = true;
-    setGuidePlatform(platform);
-  }
-
-  async function continueFromBrowserGuide() {
-    setStage("checking");
-    setError("");
-    setLinkInactive(false);
+  const continueFromBrowserGuide = useCallback(async () => {
+    setStage("checking"); setError(""); setLinkInactive(false);
     try {
       await ensureClientSession();
       const data = await loadSharedPet(token);
       if (data.inactive) setLinkInactive(true);
       if (!data.pet) throw new Error(data.error || "Ссылка недействительна.");
-      setPet(data.pet);
-      setStage(data.alreadyAdded ? "already-added" : "preview");
+      setPet(data.pet); setStage(data.alreadyAdded ? "already-added" : "preview");
     } catch (requestError) {
       if (requestError instanceof ApiRequestError && requestError.status === 410) setLinkInactive(true);
-      setError(requestError instanceof Error ? requestError.message : "Не удалось открыть питомца.");
-      setStage("error");
+      setError(requestError instanceof Error ? requestError.message : "Не удалось открыть питомца."); setStage("error");
     }
-  }
+  }, [token]);
+
+  useEffect(() => { const timer = window.setTimeout(() => { if (!isInAppBrowser(navigator.userAgent)) void continueFromBrowserGuide(); }, 0); return () => window.clearTimeout(timer); }, [continueFromBrowserGuide]);
 
   async function acceptPet() {
     if (!pet || adding) return;
-    setAdding(true);
-    setError("");
+    setAdding(true); setError("");
     try {
       await ensureClientSession();
       const data = await addSharedPet(token);
       if (data.inactive) setLinkInactive(true);
       if (!data.petId) throw new Error(data.error || "Не удалось добавить питомца.");
-      if (data.alreadyAdded) {
-        setStage("already-added");
-        setAdding(false);
-        return;
-      }
-      window.location.replace(`/?sharedPet=${encodeURIComponent(data.petId)}`);
+      if (data.alreadyAdded) { setStage("already-added"); setAdding(false); return; }
+      setAddedPetId(data.petId); setStage("success"); setAdding(false);
     } catch (requestError) {
       if (requestError instanceof ApiRequestError && requestError.status === 410) setLinkInactive(true);
-      setError(requestError instanceof Error ? requestError.message : "Не удалось добавить питомца.");
-      setAdding(false);
+      setError(requestError instanceof Error ? requestError.message : "Не удалось добавить питомца."); setAdding(false);
     }
   }
 
   return (
-    <main className="page-shell">
-      <section className="app-shell shared-pet-page" aria-label="Добавление питомца по ссылке">
-        {stage === "guide" && (
-          <div className="screen browser-guide-screen shared-pet-browser-guide">
-            <div className="screen-heading browser-guide-heading">
-              <h1>Откройте сайт в браузере</h1>
-              <p>Если ссылка открылась внутри Telegram или другого мессенджера, перейдите в обычный браузер</p>
-            </div>
-            <div className="browser-guide-content">
-              <div className="browser-guide-platforms" role="group" aria-label="Выберите устройство">
-                <span className="filter-indicator browser-guide-platform-indicator" aria-hidden="true" style={{ left: guidePlatform === "ios" ? "var(--space-1)" : "50%" }} />
-                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "ios" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "ios"} onClick={() => selectGuidePlatform("ios")}><span>iPhone</span></button>
-                <button className={`filter-button browser-guide-platform-button ${guidePlatform === "android" ? "is-active" : ""}`} type="button" aria-pressed={guidePlatform === "android"} onClick={() => selectGuidePlatform("android")}><span>Android</span></button>
-              </div>
-              {guidePlatform === "ios" ? (
-                <section className="browser-tip-card browser-tip-card--ios">
-                  <div className="browser-tip-copy">
-                    <span className="browser-tip-number" aria-hidden="true">1</span>
-                    <div><h2>Откройте в Safari</h2><p>Нажмите значок компаса внизу предварительного окна</p></div>
-                  </div>
-                  <div className="browser-preview browser-preview--ios" aria-hidden="true">
-                    <span className="browser-preview-label">Нажмите сюда</span>
-                    <span className="browser-preview-arrow browser-preview-arrow--down" />
-                    <span className="browser-preview-action"><Compass /></span>
-                  </div>
-                </section>
-              ) : (
-                <section className="browser-tip-card browser-tip-card--android">
-                  <div className="browser-preview browser-preview--android" aria-hidden="true">
-                    <div className="android-inapp-toolbar">
-                      <span className="android-status-time">11:29</span>
-                      <span className="android-status-icons">● ◒ ▮</span>
-                      <span className="android-toolbar-actions"><X /><ChevronDown /></span>
-                      <span className="android-toolbar-identity"><strong>Гулять вместе</strong><small>dogmeet.ru</small></span>
-                      <Share2 className="android-toolbar-share" />
-                      <span className="browser-preview-action"><EllipsisVertical /></span>
-                    </div>
-                    <span className="browser-preview-label">Нажмите сюда</span>
-                    <span className="browser-preview-arrow browser-preview-arrow--android" />
-                  </div>
-                  <div className="browser-tip-copy">
-                    <span className="browser-tip-number" aria-hidden="true">1</span>
-                    <div><h2>Откройте в браузере</h2><p>Нажмите три точки справа сверху, затем выберите «Открыть в браузере»</p></div>
-                  </div>
-                </section>
-              )}
-            </div>
-            <p className="browser-guide-note">Если сайт уже открыт в Safari или Chrome,<br />просто продолжите</p>
-            <button className="primary-button browser-guide-continue" type="button" onClick={continueFromBrowserGuide}>Продолжить</button>
-          </div>
-        )}
-
-        {stage === "checking" && (
-          <div className="share-page-status" role="status">
-            <p>Загружаем</p>
-          </div>
-        )}
-
-        {stage === "preview" && pet && (
-          <>
-          <div className="shared-pet-content">
-            <div className="screen-heading shared-pet-heading">
-              <h1>С вами поделились питомцем!</h1>
-              <p>Хотите добавить его к себе?</p>
-            </div>
-            <article className="shared-pet-preview">
-              <Image src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={112} height={112} unoptimized />
-              <span className="shared-pet-preview-info">
-                <strong>{pet.name}</strong>
-                <small><Dog aria-hidden="true" />{pet.breed}</small>
-                <small><UserRound aria-hidden="true" />{pet.ownerName}</small>
-              </span>
-            </article>
-            {error && <p className="form-error shared-pet-error" role="alert">{error}</p>}
-            <div className="shared-pet-actions">
-              <button className="primary-button" type="button" disabled={adding} onClick={acceptPet}>
-                {adding ? "Добавляем…" : "Добавить"}
-              </button>
-              <button className="decline-share-button" type="button" disabled={adding} onClick={() => window.location.replace("/")}>
-                Отказаться
-              </button>
-            </div>
-          </div>
-          </>
-        )}
-
-        {stage === "error" && (
-          <div className="share-page-status share-page-status--error">
-            <h1>{linkInactive ? "Ссылка неактивна" : "Ссылка недействительна"}</h1>
-            <p>{linkInactive ? "По этой ссылке питомец уже добавлен" : (error || "Владелец мог получить новую ссылку.")}</p>
-            <button className="primary-button" type="button" onClick={() => window.location.replace("/")}>На главную</button>
-          </div>
-        )}
-
-        {stage === "already-added" && pet && (
-          <div className="information-overlay">
-            <section className="information-dialog shared-pet-already-added-dialog" role="alertdialog" aria-modal="true" aria-describedby="shared-pet-already-added-description">
-              <Image className="shared-pet-already-added-photo" src={pet.photoUrl} alt={`Питомец ${pet.name}`} width={80} height={80} unoptimized />
-              <p id="shared-pet-already-added-description">{pet.name} уже добавлен в ваш список питомцев</p>
-              <button className="primary-button" type="button" onClick={() => window.location.replace("/")}>Хорошо</button>
-            </section>
-          </div>
-        )}
-
-        {adding && (
-          <div className="saving-overlay" role="status" aria-live="polite">
-              <p>Добавляем питомца</p>
-          </div>
-        )}
-      </section>
-    </main>
+    <DogmeetFrame>
+      <main>
+        <section className="shared-pet-page" aria-label="Добавление питомца по ссылке">
+          {stage === "guide" && <BrowserGuide platform={guidePlatform} onPlatformChange={selectGuidePlatform} onContinue={continueFromBrowserGuide} onBack={() => window.location.replace("/")} />}
+          {stage === "checking" && <DogmeetState state="loading" />}
+          {stage === "success" && <DogmeetState state="success" title="Теперь вы гуляете вместе" message="Питомец доступен в вашем списке." onAction={() => window.location.replace(`/?sharedPet=${encodeURIComponent(addedPetId)}`)} />}
+          {stage === "preview" && adding && <DogmeetState state="loading" title="Сохраняем…" />}
+          {stage === "preview" && !adding && pet && <div className="screen accept-screen"><DogmeetHeader onBack={() => window.location.replace("/")} /><h1>Приглашение</h1><p className="lead">{pet.ownerName} делится<br />с вами питомцем.</p><Image className="portrait" src={pet.photoUrl} alt={pet.name} width={390} height={300} unoptimized={pet.photoUrl.startsWith("/api/")} /><div className="pet-title"><h2>{pet.name}</h2><span>{pet.breed}</span></div><p>Вы сможете менять данные питомца {pet.name} и сообщать о прогулках вместе с владельцем.</p>{error && <p className="field-error" role="alert">{error}</p>}<button className="button" type="button" disabled={adding} onClick={acceptPet}>{adding ? "Добавляем…" : "Добавить к моим питомцам"}<Plus /></button><button className="button quiet" type="button" disabled={adding} onClick={() => window.location.replace("/")}>Отказаться</button></div>}
+          {stage === "error" && <div className="screen"><DogmeetHeader onBack={() => window.location.replace("/")} /><div className="state-block"><CircleAlert className="state-icon" /><h2>{linkInactive ? "Ссылка уже использована" : "Ссылка недействительна"}</h2><p>{linkInactive ? "По этой ссылке питомец уже добавлен. Для другого человека нужна новая ссылка." : error || "Владелец мог получить новую ссылку. Попросите его поделиться ещё раз."}</p><button className="button" type="button" onClick={() => window.location.replace("/")}>К прогулкам</button></div></div>}
+        {stage === "already-added" && pet && <DogmeetDialog title="Питомец уже добавлен" role="alertdialog" onDismiss={() => window.location.replace("/")}><Image className="pet-face large" src={pet.photoUrl} alt={pet.name} width={92} height={92} unoptimized /><h2 id="already-added-title">Вы уже знакомы</h2><p>{pet.name} уже есть в вашем списке. Добавлять питомца снова не нужно.</p><button className="button" type="button" onClick={() => window.location.replace("/")}>К моим питомцам</button></DogmeetDialog>}
+        </section>
+      </main>
+    </DogmeetFrame>
   );
 }

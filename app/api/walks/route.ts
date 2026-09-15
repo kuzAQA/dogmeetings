@@ -13,6 +13,7 @@ import {
   type WalkRow
 } from "../../../server/infrastructure/walk-repository";
 import { moscowDate } from "../../../server/domain/walk";
+import { petPhotoUrl } from "../../../server/domain/pet";
 import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
 function publicWalk(walk: WalkRow) {
@@ -32,7 +33,7 @@ function publicWalk(walk: WalkRow) {
     walkTime: walk.walkTime.slice(0, 5),
     scheduleType: walk.scheduleType,
     updatedAt: walk.updatedAt.toISOString(),
-    image: `/api/pet-photo?id=${encodeURIComponent(walk.petId)}&v=${walk.petUpdatedAt.getTime()}`
+    image: petPhotoUrl(walk.petId, walk.petUpdatedAt, walk.petPhotoType)
   };
 }
 
@@ -155,7 +156,8 @@ export async function POST(request: Request) {
         petName: result.pet.name,
         petBreed: result.pet.breed,
         ownerName: result.pet.ownerName,
-        petUpdatedAt: result.pet.updatedAt
+        petUpdatedAt: result.pet.updatedAt,
+        petPhotoType: result.pet.photoType
       })
     }, { status: 201 });
   } catch (error) {
@@ -247,7 +249,8 @@ export async function PATCH(request: Request) {
         petName: result.pet.name,
         petBreed: result.pet.breed,
         ownerName: result.pet.ownerName,
-        petUpdatedAt: result.pet.updatedAt
+        petUpdatedAt: result.pet.updatedAt,
+        petPhotoType: result.pet.photoType
       })
     });
   } catch (error) {

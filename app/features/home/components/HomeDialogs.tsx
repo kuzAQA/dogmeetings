@@ -1,151 +1,32 @@
 "use client";
 
-import { CheckCircle2, Copy, Forward, Hourglass, RefreshCw } from "lucide-react";
-import type { RefObject } from "react";
+import { CheckCircle2, Copy, Hourglass, PawPrint, RefreshCw } from "lucide-react";
+import { type RefObject, useState } from "react";
+import Image from "next/image";
 import type { ApiWalk } from "../../../../lib/walks";
+import { DogmeetDialog } from "../../../components/ui/DogmeetFrame";
 import type { Pet } from "../model";
 
-type HomeDialogsProps = {
-  showPetRequired: boolean;
-  informationButtonRef: RefObject<HTMLButtonElement | null>;
-  onContinueToRequiredPet: () => void;
-  showSharedPetAlreadyAdded: boolean;
-  onDismissSharedPetAlreadyAdded: () => void;
-  locationRequestSent: boolean;
-  locationRequestButtonRef: RefObject<HTMLButtonElement | null>;
-  onDismissLocationRequestSent: () => void;
-  petToShare: Pet | null;
-  petShareLink: string;
-  petShareLoading: boolean;
-  petShareRefreshing: boolean;
-  petShareError: string;
-  petShareCopied: boolean;
-  shareDoneButtonRef: RefObject<HTMLButtonElement | null>;
-  onCopyPetShareLink: () => void;
-  onRotatePetShareLink: (pet: Pet) => void;
-  onClosePetShare: () => void;
-  walkPendingDelete: ApiWalk | null;
-  walkDeleting: boolean;
-  walkDeleteError: string;
-  petPendingDelete: Pet | null;
-  petDeleting: boolean;
-  petDeleteError: string;
-  deleteCancelRef: RefObject<HTMLButtonElement | null>;
-  onDeleteWalk: () => void;
-  onCancelDeleteWalk: () => void;
-  onDeletePet: () => void;
-  onCancelDeletePet: () => void;
+type Props = {
+  showPetRequired: boolean; informationButtonRef: RefObject<HTMLButtonElement | null>; onContinueToRequiredPet: () => void;
+  onDismissPetRequired: () => void;
+  showSharedPetAlreadyAdded: boolean; onDismissSharedPetAlreadyAdded: () => void;
+  locationRequestSent: boolean; locationRequestButtonRef: RefObject<HTMLButtonElement | null>; onDismissLocationRequestSent: () => void;
+  petToShare: Pet | null; petShareLink: string; petShareLoading: boolean; petShareRefreshing: boolean; petShareError: string; petShareCopied: boolean; shareDoneButtonRef: RefObject<HTMLButtonElement | null>; onCopyPetShareLink: () => void; onRotatePetShareLink: (pet: Pet) => void; onClosePetShare: () => void;
+  walkPendingDelete: ApiWalk | null; walkDeleting: boolean; walkDeleteError: string;
+  petPendingDelete: Pet | null; petDeleting: boolean; petDeleteError: string; deleteCancelRef: RefObject<HTMLButtonElement | null>;
+  onDeleteWalk: () => void; onCancelDeleteWalk: () => void; onDeletePet: () => void; onCancelDeletePet: () => void;
 };
 
-export function HomeDialogs({
-  showPetRequired,
-  informationButtonRef,
-  onContinueToRequiredPet,
-  showSharedPetAlreadyAdded,
-  onDismissSharedPetAlreadyAdded,
-  locationRequestSent,
-  locationRequestButtonRef,
-  onDismissLocationRequestSent,
-  petToShare,
-  petShareLink,
-  petShareLoading,
-  petShareRefreshing,
-  petShareError,
-  petShareCopied,
-  shareDoneButtonRef,
-  onCopyPetShareLink,
-  onRotatePetShareLink,
-  onClosePetShare,
-  walkPendingDelete,
-  walkDeleting,
-  walkDeleteError,
-  petPendingDelete,
-  petDeleting,
-  petDeleteError,
-  deleteCancelRef,
-  onDeleteWalk,
-  onCancelDeleteWalk,
-  onDeletePet,
-  onCancelDeletePet
-}: HomeDialogsProps) {
-  return (
-    <>
-      {showPetRequired && (
-        <div className="information-overlay">
-          <section className="information-dialog" role="dialog" aria-modal="true" aria-describedby="pet-required-description">
-            <p id="pet-required-description">Добавьте информацию о своём питомце, чтобы сообщить о прогулке</p>
-            <button ref={informationButtonRef} className="primary-button" type="button" onClick={onContinueToRequiredPet}>Хорошо</button>
-          </section>
-        </div>
-      )}
-      {showSharedPetAlreadyAdded && (
-        <div className="information-overlay">
-          <section className="information-dialog shared-pet-already-added-dialog" role="alertdialog" aria-modal="true" aria-describedby="shared-pet-already-added-description">
-            <p id="shared-pet-already-added-description">Этот питомец уже добавлен</p>
-            <button className="primary-button" type="button" onClick={onDismissSharedPetAlreadyAdded}>Хорошо</button>
-          </section>
-        </div>
-      )}
-      {locationRequestSent && (
-        <div className="information-overlay">
-          <section className="information-dialog location-request-dialog" role="dialog" aria-modal="true" aria-describedby="location-request-description">
-            <Hourglass className="location-request-dialog-icon" aria-hidden="true" />
-            <p id="location-request-description">Пока вы ждёте добавления своей локации, можете выбрать другое место для прогулки</p>
-            <button ref={locationRequestButtonRef} className="primary-button" type="button" onClick={onDismissLocationRequestSent}>Хорошо</button>
-          </section>
-        </div>
-      )}
-      {petToShare && (
-        <div className="information-overlay pet-share-overlay" role="presentation">
-          <section className="information-dialog pet-share-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-share-title">
-            <Forward className="pet-share-dialog-icon" aria-hidden="true" />
-            <h2 id="pet-share-title">Поделиться питомцем</h2>
-            <p>Отправьте эту ссылку человеку, с которым хотите вместе управлять питомцем</p>
-            {petShareLoading ? (
-              <div className="pet-share-loading" role="status"><span>Получаем ссылку…</span></div>
-            ) : (
-              <>
-                <div className="pet-share-link-row">
-                  <input aria-label="Ссылка на питомца" readOnly value={petShareLink} onFocus={(event) => event.currentTarget.select()} />
-                  <button className={`pet-share-copy-button ${petShareCopied ? "pet-share-copy-button--copied" : ""}`} type="button" disabled={!petShareLink} aria-label="Копировать ссылку" onClick={onCopyPetShareLink}>
-                    {petShareCopied ? <CheckCircle2 aria-hidden="true" /> : <Copy aria-hidden="true" />}
-                  </button>
-                </div>
-                <div className="pet-share-status" aria-live="polite">{petShareCopied && <span>Скопировано</span>}</div>
-                <button className="pet-share-renew-button" type="button" disabled={!petShareLink || petShareRefreshing} onClick={() => onRotatePetShareLink(petToShare)}><RefreshCw aria-hidden="true" />Получить новую ссылку</button>
-              </>
-            )}
-            {petShareError && <p className="form-error pet-share-error" role="alert">{petShareError}</p>}
-            <button ref={shareDoneButtonRef} className="primary-button" type="button" disabled={petShareLoading || petShareRefreshing} onClick={onClosePetShare}>Готово</button>
-          </section>
-        </div>
-      )}
-      {walkPendingDelete && (
-        <div className="delete-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !walkDeleting) onCancelDeleteWalk(); }}>
-          <section className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-walk-title" aria-describedby="delete-walk-description">
-            <h2 id="delete-walk-title">Удалить прогулку?</h2>
-            <p id="delete-walk-description">Удалив прогулку, не забудьте добавить новую, чтобы ваши друзья вас не потеряли</p>
-            {walkDeleteError && <p className="delete-confirm-error" role="alert">{walkDeleteError}</p>}
-            <div className="delete-confirm-actions">
-              <button className="delete-confirm-button" type="button" disabled={walkDeleting} onClick={onDeleteWalk}>{walkDeleting ? "Удаляем…" : "Удалить"}</button>
-              <button ref={deleteCancelRef} className="keep-walk-button" type="button" disabled={walkDeleting} onClick={onCancelDeleteWalk}>Оставить</button>
-            </div>
-          </section>
-        </div>
-      )}
-      {petPendingDelete && (
-        <div className="delete-confirm-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !petDeleting) onCancelDeletePet(); }}>
-          <section className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-pet-title" aria-describedby="delete-pet-description">
-            <h2 id="delete-pet-title">{petPendingDelete.isOwner ? "Удалить питомца?" : "Удалить добавленного питомца?"}</h2>
-            <p id="delete-pet-description">{petPendingDelete.isOwner ? "Вместе с питомцем будут удалены добавленные для него прогулки" : "Питомец будет удалён только из вашего списка. У владельца он останется"}</p>
-            {petDeleteError && <p className="delete-confirm-error" role="alert">{petDeleteError}</p>}
-            <div className="delete-confirm-actions">
-              <button className="delete-confirm-button" type="button" disabled={petDeleting} onClick={onDeletePet}>{petDeleting ? "Удаляем…" : "Удалить"}</button>
-              <button ref={deleteCancelRef} className="keep-walk-button" type="button" disabled={petDeleting} onClick={onCancelDeletePet}>Оставить</button>
-            </div>
-          </section>
-        </div>
-      )}
-    </>
-  );
+export function HomeDialogs(props: Props) {
+  const [rotating, setRotating] = useState(false);
+  const { showPetRequired, informationButtonRef, onContinueToRequiredPet, showSharedPetAlreadyAdded, onDismissSharedPetAlreadyAdded, locationRequestSent, locationRequestButtonRef, onDismissLocationRequestSent, petToShare, petShareLink, petShareLoading, petShareRefreshing, petShareError, petShareCopied, shareDoneButtonRef, onCopyPetShareLink, onRotatePetShareLink, onClosePetShare, walkPendingDelete, walkDeleting, walkDeleteError, petPendingDelete, petDeleting, petDeleteError, deleteCancelRef, onDeleteWalk, onCancelDeleteWalk, onDeletePet, onCancelDeletePet } = props;
+  return <>
+    {showPetRequired && <DogmeetDialog title="Сначала питомец" onDismiss={props.onDismissPetRequired}><PawPrint className="state-icon" /><h2>Познакомимся<br />с питомцем?</h2><p>Добавьте питомца, чтобы соседи знали, с кем вы выйдете гулять.</p><button ref={informationButtonRef} className="button" type="button" onClick={onContinueToRequiredPet}>Добавить питомца</button><button className="button quiet" type="button" onClick={props.onDismissPetRequired}>Пока посмотреть прогулки</button></DogmeetDialog>}
+    {showSharedPetAlreadyAdded && <DogmeetDialog title="Питомец уже добавлен" role="alertdialog" onDismiss={onDismissSharedPetAlreadyAdded}><CheckCircle2 className="state-icon" /><h2 id="already-title">Вы уже знакомы</h2><p>Этот питомец уже есть в вашем списке. Добавлять его снова не нужно.</p><button className="button" type="button" onClick={onDismissSharedPetAlreadyAdded}>К моим питомцам</button></DogmeetDialog>}
+    {locationRequestSent && <DogmeetDialog className="sheet--location-sent" title="Новая локация" onDismiss={onDismissLocationRequestSent}><Hourglass className="state-icon" /><h2 id="location-sent-title">Заявка отправлена</h2><p>Пока мы рассматриваем заявку, можно выбрать соседний жилой комплекс.</p><button ref={locationRequestButtonRef} className="button" type="button" onClick={onDismissLocationRequestSent}>Хорошо</button></DogmeetDialog>}
+    {petToShare && <DogmeetDialog className={rotating ? "" : "sheet--share"} title={rotating ? "Обновить ссылку" : undefined} aria-label="Поделиться питомцем" busy={petShareRefreshing} onDismiss={() => { if (rotating) setRotating(false); else onClosePetShare(); }}>{rotating ? <><RefreshCw className="state-icon" /><h2>Заменить ссылку?</h2><p>Старая ссылка перестанет действовать. Доступ тех, кто уже добавил питомца, сохранится.</p>{petShareError && <p className="field-error" role="alert">{petShareError}</p>}<button type="button" className="button" disabled={petShareRefreshing} onClick={() => { onRotatePetShareLink(petToShare); setRotating(false); }}>Получить новую ссылку</button><button type="button" className="button quiet" onClick={() => setRotating(false)}>Сохранить прежнюю</button></> : <><h2 id="pet-share-title">Один питомец.<br />Общие планы.</h2><p>Передайте ссылку близкому человеку: он сможет управлять питомцем {petToShare.name} и сообщать о прогулках.</p>{petShareLoading ? <div className="resource-loading" role="status"><span /><span className="short" /></div> : <><label className="field"><span>Одноразовая ссылка</span><input readOnly value={petShareLink} onFocus={(event) => event.currentTarget.select()} /></label><button className="button" type="button" disabled={!petShareLink} onClick={onCopyPetShareLink}>{petShareCopied ? <CheckCircle2 /> : <Copy />} {petShareCopied ? "Скопировано" : "Скопировать ссылку"}</button><p className="small-note">Ссылка действует для одного добавления.</p><button className="button quiet" type="button" disabled={!petShareLink || petShareRefreshing} onClick={() => setRotating(true)}><RefreshCw />{petShareRefreshing ? "Обновляем…" : "Получить новую ссылку"}</button></>}{petShareError && <p className="field-error" role="alert">{petShareError}</p>}<button ref={shareDoneButtonRef} className="visually-hidden" type="button" onClick={onClosePetShare}>Закрыть</button></>}</DogmeetDialog>}
+    {walkPendingDelete && <DogmeetDialog title="Удалить прогулку?" role="alertdialog" busy={walkDeleting} onDismiss={onCancelDeleteWalk}><p>Прогулка в {walkPendingDelete.walkTime.slice(0, 5)}, {walkPendingDelete.point.toLowerCase()}, исчезнет из расписания.</p><p>Добавьте новую, когда снова соберётесь гулять.</p>{walkDeleteError && <p className="field-error" role="alert">{walkDeleteError}</p>}<button className="button danger" type="button" disabled={walkDeleting} onClick={onDeleteWalk}>{walkDeleting ? "Удаляем…" : "Удалить прогулку"}</button><button ref={deleteCancelRef} className="button quiet" type="button" disabled={walkDeleting} onClick={onCancelDeleteWalk}>Оставить</button></DogmeetDialog>}
+    {petPendingDelete && <DogmeetDialog title="Удалить питомца" role="alertdialog" busy={petDeleting} onDismiss={onCancelDeletePet}><Image className="pet-face large" src={petPendingDelete.photoUrl} alt={petPendingDelete.name} width={92} height={92} unoptimized /><h2 id="delete-pet-title">{petPendingDelete.isOwner ? `Удалить ${petPendingDelete.name}?` : "Убрать из списка?"}</h2><p>{petPendingDelete.isOwner ? "Питомец и все его прогулки будут удалены. Это действие нельзя отменить." : "Питомец исчезнет только из вашего списка. У владельца он останется."}</p>{petDeleteError && <p className="field-error" role="alert">{petDeleteError}</p>}<button className="button danger" type="button" disabled={petDeleting} onClick={onDeletePet}>{petDeleting ? "Удаляем…" : petPendingDelete.isOwner ? "Удалить питомца" : "Убрать из списка"}</button><button ref={deleteCancelRef} className="button quiet" type="button" disabled={petDeleting} onClick={onCancelDeletePet}>Оставить</button></DogmeetDialog>}
+  </>;
 }

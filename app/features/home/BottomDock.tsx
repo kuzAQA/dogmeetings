@@ -1,144 +1,42 @@
 "use client";
 
-import { Check, PawPrint, Plus, UserRound } from "lucide-react";
-import { useEffect } from "react";
-
-export type PrimaryDockSection = "nearby" | "profile";
-export type DockSection = PrimaryDockSection | "walk" | "pets";
+import { CalendarDays, Check, Compass, PawPrint, Plus } from "lucide-react";
 
 type BottomDockProps = {
-  section: DockSection;
-  menuOpen: boolean;
-  dockWalkOpen: boolean;
+  section: "nearby" | "plans" | "pets" | "walk";
   walkFormDirty: boolean;
   walkFormIsValid: boolean;
   petsLoaded: boolean;
   walkSaving: boolean;
   onNearbyClick: () => void;
-  onWalkClick: () => void;
+  onPlansClick: () => void;
   onPetsClick: () => void;
-  onProfileClick: () => void;
+  onAddPet: () => void;
+  onWalkClick: () => void;
 };
 
-export function BottomDock({
-  section,
-  menuOpen,
-  dockWalkOpen,
-  walkFormDirty,
-  walkFormIsValid,
-  petsLoaded,
-  walkSaving,
-  onNearbyClick,
-  onWalkClick,
-  onPetsClick,
-  onProfileClick
-}: BottomDockProps) {
-  useEffect(() => {
-    const root = document.querySelector<HTMLElement>(".app-shell");
-    const dock = document.querySelector<HTMLElement>(".walks-bottom-dock");
-    if (!root || !dock) return;
-
-    let frame = 0;
-    const updateOcclusion = () => {
-      frame = 0;
-      const dockRect = dock.getBoundingClientRect();
-      const dockCenter = dockRect.top + dockRect.height / 2;
-      const occlusionBoundary = dockCenter + 8;
-
-      root.querySelectorAll<HTMLElement>(".walk-card, .collection-card").forEach((card) => {
-        const cardRect = card.getBoundingClientRect();
-        const overlapsHorizontally = cardRect.left < dockRect.right && cardRect.right > dockRect.left;
-        const overlapsVertically = cardRect.top < dockRect.bottom && cardRect.bottom > dockRect.top;
-        const occlusionEnd = Math.max(0, Math.min(cardRect.height, occlusionBoundary - cardRect.top));
-
-        if (!overlapsHorizontally || !overlapsVertically || cardRect.bottom <= occlusionBoundary) {
-          card.removeAttribute("data-dock-overlap");
-          card.style.removeProperty("--dock-occlusion-end");
-          return;
-        }
-
-        card.dataset.dockOverlap = "true";
-        card.style.setProperty("--dock-occlusion-end", `${occlusionEnd}px`);
-      });
-    };
-    const scheduleOcclusionUpdate = () => {
-      if (!frame) frame = requestAnimationFrame(updateOcclusion);
-    };
-    const mutationObserver = new MutationObserver(scheduleOcclusionUpdate);
-
-    updateOcclusion();
-    document.addEventListener("scroll", updateOcclusion, { capture: true, passive: true });
-    window.addEventListener("resize", scheduleOcclusionUpdate);
-    mutationObserver.observe(root, { childList: true, subtree: true });
-
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      document.removeEventListener("scroll", updateOcclusion, true);
-      window.removeEventListener("resize", scheduleOcclusionUpdate);
-      mutationObserver.disconnect();
-    };
-  }, []);
-
-  const walkActionLabel = dockWalkOpen
-    ? walkFormDirty && walkFormIsValid
-      ? "Сохранить прогулку"
-      : walkFormDirty
-        ? "Заполните обязательные поля"
-        : "Форма прогулки не изменена"
-    : "Создать прогулку";
+export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded, walkSaving, onNearbyClick, onPlansClick, onPetsClick, onAddPet, onWalkClick }: BottomDockProps) {
+  const addingPet = section === "pets";
+  const actionHidden = section === "nearby";
+  const actionLabel = addingPet ? "Добавить питомца" : section === "walk" && walkFormDirty && walkFormIsValid ? "Сохранить прогулку" : "Создать прогулку";
 
   return (
-    <nav className="walks-bottom-dock" aria-label="Основная навигация">
-      <button
-        className={`dock-item dock-item--nearby ${section === "nearby" ? "is-active" : ""}`}
-        type="button"
-        aria-current={section === "nearby" ? "page" : undefined}
-        onClick={onNearbyClick}
-      >
-        <span className="dock-item-icon dock-item-icon--nearby" aria-hidden="true">
-          <span className="dock-icon-fill" />
-          <span className="dock-item-nearby-glyph" />
-        </span>
-        <span>Рядом</span>
+    <><div className="nav-shade" aria-hidden="true" /><nav className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
+      <div className="nav-tabs dock-tabs" data-active={section === "walk" ? "nearby" : section}>
+        <span className="nav-indicator" aria-hidden="true" />
+        {([
+          ["nearby", "Рядом", Compass, onNearbyClick],
+          ["plans", "Мои планы", CalendarDays, onPlansClick],
+          ["pets", "Питомцы", PawPrint, onPetsClick]
+        ] as const).map(([target, label, Icon, onClick]) => (
+          <button className={`dock-item dock-item--${target} ${section === target ? "is-active" : ""}`} type="button" key={target} aria-current={section === target ? "page" : undefined} onClick={onClick}>
+            <span className="nav-label" style={{ viewTransitionName: `dogmeet-label-${target}` }}><Icon aria-hidden="true" /><span>{String(label)}</span></span>
+          </button>
+        ))}
+      </div>
+      <button className={`dock-add dock-context-action dock-item--walk ${section === "walk" ? "is-active" : ""}`} type="button" disabled={actionHidden || !petsLoaded || walkSaving || (section === "walk" && walkFormDirty && !walkFormIsValid)} aria-hidden={actionHidden || undefined} tabIndex={actionHidden ? -1 : undefined} aria-label={actionLabel} onClick={addingPet ? onAddPet : onWalkClick}>
+        <span className="action-icon" data-done={section === "walk" && walkFormDirty && walkFormIsValid} aria-hidden="true"><Plus /><Check /></span>
       </button>
-      <button
-        className={`dock-item dock-item--walk ${section === "walk" ? "is-active" : ""} ${dockWalkOpen && walkFormDirty ? "is-form-dirty" : ""} ${dockWalkOpen && walkFormDirty && walkFormIsValid ? "is-save-ready" : ""}`}
-        type="button"
-        disabled={!petsLoaded || walkSaving || (dockWalkOpen && !walkFormIsValid)}
-        aria-current={section === "walk" ? "page" : undefined}
-        aria-label={walkActionLabel}
-        onClick={onWalkClick}
-      >
-        <span className="dock-item-icon">
-          <span className="dock-icon-fill" />
-          <Plus className="dock-walk-state-icon dock-walk-state-icon--plus" aria-hidden="true" />
-          <Check className="dock-walk-state-icon dock-walk-state-icon--check" aria-hidden="true" />
-        </span>
-        <span className="dock-walk-label" aria-hidden="true">
-          <span className="dock-walk-label-text dock-walk-label-text--default">Прогулка</span>
-          <span className="dock-walk-label-text dock-walk-label-text--save">Сохранить</span>
-        </span>
-      </button>
-      <button
-        className={`dock-item dock-item--pets ${section === "pets" ? "is-active" : ""}`}
-        type="button"
-        aria-current={section === "pets" ? "page" : undefined}
-        onClick={onPetsClick}
-      >
-        <span className="dock-item-icon"><span className="dock-icon-fill" /><PawPrint aria-hidden="true" /></span>
-        <span>Питомцы</span>
-      </button>
-      <button
-        className={`dock-item dock-item--profile ${section === "profile" ? "is-active" : ""}`}
-        type="button"
-        aria-label="Открыть профиль"
-        aria-expanded={menuOpen}
-        aria-current={section === "profile" ? "page" : undefined}
-        onClick={onProfileClick}
-      >
-        <span className="dock-item-icon"><span className="dock-icon-fill" /><UserRound aria-hidden="true" /></span>
-        <span>Профиль</span>
-      </button>
-    </nav>
+    </nav></>
   );
 }

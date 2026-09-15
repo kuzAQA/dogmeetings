@@ -1,211 +1,88 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import type { FormEvent } from "react";
-import { DropdownSelect } from "../../../components/ui/DropdownSelect";
-import { TimeDropdown } from "../../../components/ui/TimeDropdown";
-import { WalkSetupStepper } from "../../../components/ui/WalkSetupStepper";
-import type { Pet } from "../model";
-import { MAX_WALK_COMMENT_LENGTH, MAX_WALK_PLACE_LENGTH, normalizePlaceForComparison } from "../model";
+import { ArrowRight, Check, ChevronDown, ChevronRight, Clock3, MapPin, Plus, Search } from "lucide-react";
+import Image from "next/image";
+import { type FormEvent, useState } from "react";
+import { DogmeetDialog, DogmeetHeader } from "../../../components/ui/DogmeetFrame";
+import { DogmeetState } from "../../../components/ui/DogmeetState";
+import type { Pet, SharedPlace } from "../model";
+import { MAX_WALK_COMMENT_LENGTH, MAX_WALK_PLACE_LENGTH } from "../model";
 import type { WalkFormState } from "../use-walk-form";
 
-type WalkAnnouncementFormProps = {
+type Props = {
   inDock?: boolean;
   guidedWalkFlow: boolean;
   savedPets: Pet[];
+  sharedPlaces: SharedPlace[];
+  locationName: string;
+  onAddPet: () => void;
   placesLoaded: boolean;
+  placesError?: string;
+  onRetryPlaces?: () => void;
   walkForm: WalkFormState;
   walkSaving: boolean;
   editing: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onBack?: () => void;
 };
 
-const scheduleIndicatorLeft = {
-  today: "0",
-  tomorrow: "calc(33.333333% + 2.666667px)",
-  always: "calc(66.666667% + 5.333333px)"
-};
-
-export function WalkAnnouncementForm({
-  inDock = false,
-  guidedWalkFlow,
-  savedPets,
-  placesLoaded,
-  walkForm,
-  walkSaving,
-  editing,
-  onSubmit
-}: WalkAnnouncementFormProps) {
-  const {
-    dockFormRef,
-    touchedFields,
-    submitError,
-    placeInput,
-    placeSuggestionsVisible,
-    scheduleType,
-    selectedPetId,
-    walkTime,
-    walkTimePickerOpen,
-    walkComment,
-    matchingSharedPlaces,
-    placeIsValid,
-    timeIsValid,
-    formIsValid,
-    touchField,
-    setPlaceMenuOpen,
-    setWalkTimePickerOpen,
-    changeScheduleType,
-    selectPet,
-    updatePlaceInput,
-    chooseSharedPlace,
-    changeWalkTime,
-    changeWalkComment
-  } = walkForm;
-
+export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, locationName, onAddPet, placesLoaded, placesError = "", onRetryPlaces, walkForm, walkSaving, editing, onSubmit, onBack }: Props) {
+  const { dockFormRef, touchedFields, submitError, placeInput, scheduleType, selectedPetId, walkTime, walkComment, placeIsValid, timeIsValid, touchField, changeScheduleType, selectPet, updatePlaceInput, chooseSharedPlace, changeWalkTime, changeWalkComment } = walkForm;
+  const [picker, setPicker] = useState<"pet" | "place" | "time" | null>(null);
+  const [query, setQuery] = useState("");
+  const [customPlace, setCustomPlace] = useState("");
+  const selectedPet = savedPets.find((pet) => pet.id === selectedPetId);
+  const matchingPlaces = sharedPlaces.filter((place) => place.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru")));
   return (
     <>
-      {!inDock && guidedWalkFlow && (
-        <div className="guided-form-topbar">
-          <WalkSetupStepper step={2} />
+      {!inDock && onBack && <DogmeetHeader onBack={onBack} />}
+      <h1 id={inDock ? "dock-walk-title" : undefined}>{editing ? "Изменить прогулку" : "Сообщить о прогулке"}</h1>
+      <p hidden={walkSaving || Boolean(submitError)}>{editing ? "Поменялись планы? Обновите детали." : "Расскажите соседям, где вас найти."}</p>
+      {walkSaving && <DogmeetState state="loading" title="Сохраняем…" />}
+      {submitError && !walkSaving && <DogmeetState state="error" title="Не удалось сохранить" message={submitError} onAction={() => walkForm.setSubmitError("")} onBack={onBack} />}
+      <form ref={dockFormRef} className="announce-form" hidden={walkSaving || Boolean(submitError)} onSubmit={onSubmit} aria-busy={walkSaving} noValidate>
+        <input type="hidden" name="pet" value={selectedPetId} />
+        <input type="hidden" name="place" value={placeInput} />
+        <input type="hidden" name="walkTime" value={walkTime} />
+        <button type="button" className="selected-pet" aria-label="Питомец" onClick={() => setPicker("pet")}>
+          {selectedPet && <Image className="pet-face" src={selectedPet.photoUrl} alt={selectedPet.name} width={60} height={60} unoptimized={selectedPet.photoUrl.startsWith("/api/")} />}
+          <span><small>Иду гулять с</small><strong>{selectedPet?.name || "Выберите питомца"}</strong></span>
+          <ChevronDown aria-hidden="true" />
+        </button>
+        {touchedFields["walk-pet"] && !selectedPetId && <p className="field-error">Выберите питомца</p>}
+
+        <div className="field"><span>Когда</span></div><div className="segmented schedule-buttons" role="group" aria-label="Когда">{[["today", "Сегодня"], ["tomorrow", "Завтра"], ["always", "Ежедневно"]].map(([value, label]) => <button key={value} type="button" aria-pressed={scheduleType === value} onClick={() => changeScheduleType(value as "today" | "tomorrow" | "always", inDock)}>{label}</button>)}</div>
+
+        <div className="walk-settings">
+          <button type="button" className="menu-row" onClick={() => setPicker("time")}><Clock3 aria-hidden="true" /><span><strong>Время</strong><small>{walkTime || "Выберите время"}</small></span><ChevronRight aria-hidden="true" /></button>
+          <button type="button" className="menu-row" onClick={() => { setQuery(""); setCustomPlace(""); setPicker("place"); }}><MapPin aria-hidden="true" /><span><strong>Место встречи</strong><small>{placeInput || "Выберите место"}</small></span><ChevronRight aria-hidden="true" /></button>
         </div>
-      )}
-      <div className="screen-heading">
-        <h1 id={inDock ? "dock-walk-title" : undefined}>Сообщить о прогулке</h1>
-        <p>Укажите, с кем, где и когда вы будете гулять</p>
-      </div>
-      <form ref={inDock ? dockFormRef : undefined} className="announce-form" onSubmit={onSubmit} aria-busy={walkSaving} noValidate>
-        <div className="field">
-          <span>Ваш питомец</span>
-          <DropdownSelect
-            id="walk-pet"
-            name="pet"
-            ariaLabel="Ваш питомец"
-            value={selectedPetId}
-            options={savedPets.map((pet) => ({ value: pet.id, label: pet.name }))}
-            placeholder={savedPets.length === 0 ? "Сначала добавьте питомца" : "Выберите питомца"}
-            emptyText="У вас пока нет добавленных питомцев"
-            disabled={savedPets.length === 0}
-            invalid={Boolean(touchedFields["walk-pet"] && !selectedPetId)}
-            describedBy={touchedFields["walk-pet"] && !selectedPetId ? "walk-pet-hint" : undefined}
-            onBlur={() => touchField("walk-pet")}
-            onChange={(petId) => selectPet(petId, inDock)}
-          />
-          {touchedFields["walk-pet"] && !selectedPetId && <p className="validation-hint" id="walk-pet-hint">Выберите питомца</p>}
-        </div>
-        <div className="field text-field place-field">
-          <label htmlFor="walk-place">Место прогулки</label>
-          <div
-            className="place-combobox"
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget)) {
-                setPlaceMenuOpen(false);
-                touchField("walk-place");
-              }
-            }}
-          >
-            <input
-              id="walk-place"
-              name="place"
-              value={placeInput}
-              required
-              maxLength={MAX_WALK_PLACE_LENGTH}
-              autoComplete="off"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-controls="shared-place-options"
-              aria-expanded={placeSuggestionsVisible}
-              aria-invalid={Boolean(touchedFields["walk-place"] && !placeIsValid)}
-              aria-describedby={touchedFields["walk-place"] && !placeIsValid ? "walk-place-hint" : undefined}
-              placeholder="Выберите место или укажите своё"
-              onFocus={() => setPlaceMenuOpen(true)}
-              onChange={(event) => updatePlaceInput(event.target.value, inDock)}
-            />
-            <button
-              className="place-menu-toggle"
-              type="button"
-              aria-label={placeSuggestionsVisible ? "Закрыть список мест" : "Открыть список мест"}
-              aria-expanded={placeSuggestionsVisible}
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={() => {
-                if (placeSuggestionsVisible) {
-                  setPlaceMenuOpen(false);
-                } else if (!placeInput.trim() || matchingSharedPlaces.length > 0) {
-                  setPlaceMenuOpen(true);
-                }
-              }}
-            >
-              <ChevronDown aria-hidden="true" />
-            </button>
-            {placeSuggestionsVisible && (
-              <div className="place-options" id="shared-place-options" role="listbox" aria-label="Общие места прогулок">
-                {!placesLoaded ? (
-                  <p className="place-options-status">Загружаем места…</p>
-                ) : matchingSharedPlaces.length > 0 ? matchingSharedPlaces.map((place) => (
-                  <button
-                    className="place-option"
-                    key={place.id}
-                    type="button"
-                    role="option"
-                    aria-selected={normalizePlaceForComparison(place.name) === normalizePlaceForComparison(placeInput)}
-                    onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
-                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); chooseSharedPlace(place, inDock); }}
-                  >
-                    {place.name}
-                  </button>
-                )) : (
-                  <p className="place-options-status">Пока нет добавленных мест</p>
-                )}
-              </div>
-            )}
-          </div>
-          {touchedFields["walk-place"] && !placeIsValid && (
-            <p className="validation-hint" id="walk-place-hint">
-              {placeInput.trim().length > MAX_WALK_PLACE_LENGTH
-                ? `Название места должно содержать не более ${MAX_WALK_PLACE_LENGTH} символов`
-                : placeInput.trim() ? "Название места должно содержать хотя бы одну букву" : "Укажите место прогулки"}
-            </p>
-          )}
-        </div>
-        <fieldset className="schedule-field">
-          <legend>День прогулки</legend>
-          <div className="filters schedule-buttons">
-            <span className="filter-indicator schedule-indicator" aria-hidden="true" style={{ left: scheduleIndicatorLeft[scheduleType] }} />
-            {([ ["today", "Сегодня"], ["tomorrow", "Завтра"], ["always", "Всегда"] ] as const).map(([value, label]) => (
-              <button key={value} type="button" className={`filter-button schedule-button ${scheduleType === value ? "active" : ""}`} aria-pressed={scheduleType === value} onClick={() => changeScheduleType(value, inDock)}>
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <div className="field">
-          <span>Время прогулки</span>
-          <TimeDropdown
-            value={walkTime}
-            futureOnly={scheduleType === "today"}
-            invalid={Boolean(!walkTimePickerOpen && touchedFields["walk-time"] && !timeIsValid)}
-            describedBy={!walkTimePickerOpen && touchedFields["walk-time"] && !timeIsValid ? "walk-time-hint" : undefined}
-            onOpenChange={(open) => { setWalkTimePickerOpen(open); if (!open) touchField("walk-time"); }}
-            onChange={(time) => changeWalkTime(time, inDock)}
-          />
-          {!walkTimePickerOpen && touchedFields["walk-time"] && !timeIsValid && <p className="validation-hint" id="walk-time-hint">Выберите время прогулки</p>}
-        </div>
-        <div className="field comment-field">
-          <label htmlFor="walk-comment">Комментарий <span>(необязательно)</span></label>
-          <input id="walk-comment" name="comment" maxLength={MAX_WALK_COMMENT_LENGTH} value={walkComment} placeholder="Например, возьмём мячик" onChange={(event) => changeWalkComment(event.target.value, inDock)} />
-          <small>{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small>
-        </div>
-        {(submitError || savedPets.length === 0) && <p className="error-message" role="alert">{submitError || "Сначала добавьте питомца через меню."}</p>}
-        {!inDock && (
-          <button className="primary-button form-submit" type="submit" disabled={!formIsValid || walkSaving}>
-            {walkSaving ? "Сохраняем…" : editing ? "Сохранить" : "Сообщить о прогулке"}
-          </button>
-        )}
+        {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
+        {touchedFields["walk-place"] && !placeIsValid && <p className="field-error">Укажите место прогулки</p>}
+
+        <label className="field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
+        <div className="note"><MapPin aria-hidden="true" />Прогулка появится в районе {locationName}.</div>
+        {submitError && <p className="field-error" role="alert">{submitError}</p>}
+        <button className="button" type="submit" disabled={walkSaving}>{walkSaving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Сообщить о прогулке"}<ArrowRight aria-hidden="true" /></button>
       </form>
-      {walkSaving && (
-        <div className="saving-overlay" role="status" aria-live="polite">
-          <p>Информация о прогулке сохраняется</p>
-        </div>
-      )}
+      {picker === "pet" && <DogmeetDialog title="С кем гуляем" onDismiss={() => setPicker(null)}>
+        <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={() => { selectPet(pet.id, inDock); setPicker(null); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{pet.id === selectedPetId ? <Check /> : <ChevronRight />}</button>)}</div>
+        <button type="button" className="button quiet" onClick={() => { setPicker(null); onAddPet(); }}><Plus />Добавить питомца</button>
+      </DogmeetDialog>}
+      {picker === "time" && <DogmeetDialog title="Время прогулки" onDismiss={() => setPicker(null)}>
+        <p>{scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"}</p>
+        <div className="time-picker"><Clock3 /><span>Время прогулки</span><input type="time" name="walkTime" step={300} aria-label="Время прогулки" value={walkTime} aria-invalid={Boolean(touchedFields["walk-time"] && !timeIsValid)} onChange={(event) => changeWalkTime(event.target.value, inDock)} onBlur={() => touchField("walk-time")} /></div>
+        <button type="button" className="button" disabled={!timeIsValid} onClick={() => setPicker(null)}>Готово<Check /></button>
+      </DogmeetDialog>}
+      {picker === "place" && <DogmeetDialog className="sheet--place-picker" title="Место встречи" onDismiss={() => setPicker(null)}>
+        <label className="search-field"><Search /><input aria-label="Найти место" placeholder="Название места" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <div className="place-picker-list">{!placesLoaded ? <p role="status">Загружаем места…</p> : placesError ? <div role="alert"><p className="field-error">{placesError}</p><button className="button" type="button" onClick={onRetryPlaces}>Повторить</button></div> : <div className="option-list">{matchingPlaces.map((place) => <button key={place.id} type="button" onClick={() => { chooseSharedPlace(place, inDock); setPicker(null); }}><MapPin /><span>{place.name}</span>{place.name === placeInput ? <Check /> : <ChevronRight />}</button>)}</div>}
+        {placesLoaded && !placesError && !matchingPlaces.length && <p>Совпадений нет. Укажите своё место.</p>}</div>
+        <form className="place-picker-footer" onSubmit={(event) => { event.preventDefault(); updatePlaceInput(customPlace.trim(), inDock); setPicker(null); }}>
+          <label className="field"><span>Или своё место встречи</span><input name="place" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onChange={(event) => setCustomPlace(event.target.value)} /></label>
+          <button className="button" type="submit" disabled={!/[\p{L}]/u.test(customPlace.trim())}>Выбрать место<ArrowRight /></button>
+        </form>
+      </DogmeetDialog>}
     </>
   );
 }

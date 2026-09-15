@@ -1,0 +1,1 @@
+[    1528ms] [WARNING] react-i18next:: It seems you are still using the old wait option, you may migrate to the new useSuspense behaviour. @ https://web-assets.strava.com/assets/landing-pages/_next/static/chunks/main-ec09d3f841dfa897.js:8

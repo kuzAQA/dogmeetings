@@ -22,6 +22,7 @@ export type WalkRow = {
   walkTime: string;
   updatedAt: Date;
   petUpdatedAt: Date;
+  petPhotoType: string | null;
 };
 
 const walkSelection = {
@@ -40,7 +41,8 @@ const walkSelection = {
   walkDate: walks.walkDate,
   walkTime: walks.walkTime,
   updatedAt: walks.updatedAt,
-  petUpdatedAt: pets.updatedAt
+  petUpdatedAt: pets.updatedAt,
+  petPhotoType: pets.photoType
 };
 
 export async function findWalkPetForClient(
@@ -55,6 +57,7 @@ export async function findWalkPetForClient(
       name: pets.name,
       breed: pets.breed,
       ownerName: pets.ownerName,
+      photoType: pets.photoType,
       updatedAt: pets.updatedAt
     })
     .from(pets)

@@ -1,0 +1,16 @@
+[      46ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[      85ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[      87ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
+[     122ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping d1c78c23-90e1-44e3-8e45-1335d7d4e630 successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1
+[     320ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     321ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     328ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     329ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     339ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     342ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     366ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     371ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     374ms] [ERROR] Error while parsing the 'sandbox' attribute: 'allow-fullscreen' is an invalid sandbox flag. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:3
+[     389ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping 7c4c5db3-75f0-4974-8c50-4ddf112bfc26 successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1
+[     531ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping cbb5e455-9bf2-4072-b092-9bfc054dd570 successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1
+[     533ms] [INFO] (Glean.core.Upload.PingUploadManager) Ping 3ee77ecc-f56f-47c8-8027-c921993b702e successfully sent 200. @ https://developer.mozilla.org/static/client/4585.e30f706b333273cd.js:1

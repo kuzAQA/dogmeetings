@@ -1,14 +1,10 @@
 "use client";
 
 import {
-  ChevronDown,
-  Compass,
-  EllipsisVertical,
-  PawPrint,
-  Share2,
-  X
+  ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
+import { DogmeetState } from "./components/ui/DogmeetState";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createLocationRequest,
@@ -52,14 +48,17 @@ import { HomeDialogs } from "./features/home/components/HomeDialogs";
 import { LocationEditor, LocationRequestForm } from "./features/home/components/LocationFlow";
 import { PetForm } from "./features/home/components/PetForm";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
-import { apiWalkToCard, type ApiWalk, type Period } from "../lib/walks";
+import { apiWalkToCard, type ApiWalk, type Period, type Walk } from "../lib/walks";
+import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
+import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader } from "./components/ui/DogmeetFrame";
 
-type BrowserGuidePlatform = "ios" | "android";
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
 type FormScreen = "pet" | "announce";
 
 export default function Home() {
+  const [selectedWalk, setSelectedWalk] = useState<Walk | null>(null);
+  const [result, setResult] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
   const [browserGuidePlatform, setBrowserGuidePlatform] = useState<BrowserGuidePlatform>("ios");
   const [location, setLocation] = useState<Location>(defaultLocation);
   const [locationDraft, setLocationDraft] = useState<Location>(defaultLocation);
@@ -83,6 +82,7 @@ export default function Home() {
   const [ownerNameInput, setOwnerNameInput] = useState("");
   const [breedInput, setBreedInput] = useState("");
   const [petBeingEdited, setPetBeingEdited] = useState<Pet | null>(null);
+  const [petScreenMode, setPetScreenMode] = useState<"view" | "edit">("edit");
   const [petReturnTarget, setPetReturnTarget] = useState<PetReturnTarget>("my-pets");
   const [guidedWalkFlow, setGuidedWalkFlow] = useState(false);
   const [showPetRequiredPopup, setShowPetRequiredPopup] = useState(false);
@@ -143,18 +143,25 @@ export default function Home() {
     savedPets,
     setSavedPets,
     petsLoaded,
+    petsError,
     sharedPlaces,
     setSharedPlaces,
     placesLoaded,
+    placesError,
     setPlacesLoaded,
     savedWalks,
     setSavedWalks,
     walksLoaded,
+    walksError,
     setWalksLoaded,
     myWalks,
     setMyWalks,
     myWalksLoaded,
-    reloadPets
+    myWalksError,
+    reloadPets,
+    retryWalks,
+    retryPlaces,
+    retryMyWalks
   } = useHomeResources(sessionReady, location);
   const walkForm = useWalkForm(savedPets, sharedPlaces, placesLoaded);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
@@ -168,9 +175,11 @@ export default function Home() {
   }
 
   function openBrowserGuide() {
-    const userAgent = navigator.userAgent;
-    const isIPadOs = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    setBrowserGuidePlatform(/Android/i.test(userAgent) && !isIPadOs ? "android" : "ios");
+    if (!isInAppBrowser(navigator.userAgent)) {
+      pushNavigation(hasLocation ? "walks" : "location");
+      return;
+    }
+    setBrowserGuidePlatform(detectBrowserGuidePlatform(navigator.userAgent, navigator.platform, navigator.maxTouchPoints));
     pushNavigation("browser-guide");
   }
 
@@ -247,6 +256,10 @@ export default function Home() {
       if (photoUrl) URL.revokeObjectURL(photoUrl);
     };
   }, [photoUrl]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [screen]);
 
   const visibleWalks = useMemo(() => filterWalksByPeriod(savedWalks, period), [period, savedWalks]);
   const ownedWalksById = useMemo(() => walksById(myWalks), [myWalks]);
@@ -354,11 +367,13 @@ export default function Home() {
       setLocationDraft(savedLocation);
       setHasLocation(true);
       setTouchedFields({});
+      setResult({ title: "Район выбран", message: "Теперь вы видите прогулки соседей.", onContinue: () => {
       if (locationOpenedFromMenu) {
         window.history.go(-2);
         return;
       }
       pushNavigation("walks");
+      } });
     } catch (error) {
       setLocationSubmitError(error instanceof Error ? error.message : "Не удалось сохранить локацию.");
     } finally {
@@ -431,6 +446,7 @@ export default function Home() {
     setOwnerNameInput("");
     setBreedInput("");
     setPetBeingEdited(null);
+    setPetScreenMode("edit");
     setPetReturnTarget("my-pets");
     setGuidedWalkFlow(false);
     openFormScreen("pet");
@@ -445,8 +461,20 @@ export default function Home() {
     setOwnerNameInput(pet.ownerName);
     setBreedInput(pet.breed);
     setPetBeingEdited(pet);
+    setPetScreenMode("edit");
     setPetReturnTarget("my-pets");
     setGuidedWalkFlow(false);
+    openFormScreen("pet");
+  }
+
+  function openPet(pet: Pet) {
+    setPhotoUrl(pet.photoUrl);
+    setPetNameInput(pet.name);
+    setOwnerNameInput(pet.ownerName);
+    setBreedInput(pet.breed);
+    setPetBeingEdited(pet);
+    setPetReturnTarget("my-pets");
+    setPetScreenMode("view");
     openFormScreen("pet");
   }
 
@@ -561,6 +589,10 @@ export default function Home() {
 
   function continueToRequiredPet() {
     setShowPetRequiredPopup(false);
+    setPetScreenMode("edit");
+    setPhotoUrl(null);
+    setPhotoError("");
+    setPetSubmitError("");
     setTouchedFields({});
     setPetNameInput("");
     setOwnerNameInput("");
@@ -571,13 +603,9 @@ export default function Home() {
     openFormScreen("pet");
   }
 
-  function refreshPets() {
-    void reloadPets().catch(() => undefined);
-  }
-
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets", source: AppNavigationState["petsSource"] = null) {
+    if (screen === nextScreen && (nextScreen !== "my-pets" || petsSource === source)) return;
     pushNavigation(nextScreen, { petsSource: nextScreen === "my-pets" ? source : null });
-    if (nextScreen === "my-pets") refreshPets();
   }
 
   function returnToMenu() {
@@ -602,6 +630,7 @@ export default function Home() {
   }
 
   function selectDockSection(nextSection: DockPanelSection) {
+    if (nextSection === "nearby" && screen === "walks" && dockSection === "nearby") return;
     if (nextSection === "nearby" && screen === "my-pets" && petsSource === "dock") {
       returnToMenu();
       return;
@@ -621,24 +650,6 @@ export default function Home() {
       dockWalkOpen: false,
       dockReturnSection: nextSection
     });
-  }
-
-  function handleDockWalkAction() {
-    if (!dockWalkOpen) {
-      if (screen === "my-pets" && petsSource === "dock") {
-        if (savedPets.length === 0) {
-          setShowPetRequiredPopup(true);
-          return;
-        }
-        prepareNewWalkAnnouncement();
-        pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: "nearby" });
-        return;
-      }
-      selectDockSection("walk");
-      return;
-    }
-    if (!walkForm.walkFormDirty || !walkForm.formIsValid || walkSaving) return;
-    walkForm.dockFormRef.current?.requestSubmit();
   }
 
   async function savePet(event: FormEvent<HTMLFormElement>) {
@@ -691,6 +702,7 @@ export default function Home() {
         image: savedPet.photoUrl
       } : walk));
       setPetSaving(false);
+      setResult({ title: editedPet ? "Паспорт обновлён" : "Рады знакомству!", message: editedPet ? "Изменения сохранены в списке питомцев." : "Питомец добавлен. Теперь можно сообщить о прогулке.", action: returnTarget === "announce" ? "Продолжить прогулку" : "Готово", onContinue: () => {
       if (returnTarget === "announce") {
         setPetReturnTarget("my-pets");
         walkForm.selectPet(savedPet.id);
@@ -698,6 +710,7 @@ export default function Home() {
       } else {
         beginFormClose("my-pets");
       }
+      } });
     } catch (error) {
       setPetSubmitError(error instanceof Error ? error.message : "Не удалось сохранить питомца.");
       setPetSaving(false);
@@ -708,7 +721,6 @@ export default function Home() {
     event.preventDefault();
     const form = event.currentTarget;
     const editedWalk = walkBeingEdited;
-    const editReturnTarget = walkEditReturnTarget;
     const formData = new FormData(form);
     const submission = walkForm.readSubmission(formData);
     if (!submission) return;
@@ -746,11 +758,9 @@ export default function Home() {
       setMyWalks((current) => [savedWalk, ...current.filter((walk) => walk.id !== savedWalk.id)]);
       setWalkSaving(false);
       setGuidedWalkFlow(false);
-      if (dockWalkOpen && !editedWalk) {
-        closeDockWalkAnnouncement();
-      } else {
-        beginFormClose(editedWalk ? editReturnTarget : "walks");
-      }
+      setResult({ title: editedWalk ? "Планы обновлены" : "Вы идёте гулять!", message: editedWalk ? "Новое время и место видны в расписании." : "Прогулка появилась в расписании. Соседи знают, где вас найти.", action: "Посмотреть мои планы", receipt: { title: `${savedWalk.walkTime.slice(0, 5)} · ${savedWalk.scheduleType === "always" ? "Ежедневно" : savedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}`, place: savedWalk.point, pet: `${savedWalk.pet} · ${savedWalk.complex}` }, onContinue: () => {
+      replaceNavigation("my-walks");
+      } });
     } catch (error) {
       walkForm.setSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
       setWalkSaving(false);
@@ -769,6 +779,7 @@ export default function Home() {
       setMyWalks((current) => current.filter((walk) => walk.id !== deletedId));
       setSavedWalks((current) => current.filter((walk) => walk.id !== deletedId));
       setWalkPendingDelete(null);
+      setResult({ title: "Прогулка удалена", sheet: "Удалить прогулку?", message: "Она больше не отображается в расписании.", action: "Посмотреть мои планы", onContinue: () => openCollectionScreen("my-walks") });
     } catch (error) {
       setWalkDeleteError(error instanceof Error ? error.message : "Не удалось удалить прогулку.");
     } finally {
@@ -791,6 +802,7 @@ export default function Home() {
         setSavedWalks((current) => current.filter((walk) => walk.petId !== deletedId));
       }
       setPetPendingDelete(null);
+      setResult({ title: detached ? "Питомец убран из списка" : "Питомец удалён", sheet: "Удалить питомца", message: "Список питомцев обновлён.", onContinue: () => openCollectionScreen("my-pets", "dock") });
     } catch (error) {
       setPetDeleteError(error instanceof Error ? error.message : "Не удалось удалить питомца.");
     } finally {
@@ -798,51 +810,50 @@ export default function Home() {
     }
   }
 
+  if (result && !result.sheet) return <DogmeetFrame><main><DogmeetHeader /><h1>{screen === "pet" ? petBeingEdited ? "Изменить питомца" : "Добавить питомца" : screen === "location" ? "Мой район" : walkBeingEdited ? "Изменить прогулку" : "Сообщить о прогулке"}</h1><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => { setResult(null); result.onContinue(); }}>{result.receipt && <div className="receipt"><strong>{result.receipt.title}</strong><span>{result.receipt.place}</span><small>{result.receipt.pet}</small></div>}</DogmeetState></main></DogmeetFrame>;
+
   if (screen === null) {
     return (
-      <main className="page-shell">
-        <section className="app-shell restoring-shell" aria-label="Сервис совместных прогулок" aria-busy="true">
+      <DogmeetFrame>
+        <main><section className="restoring-shell" aria-label="Сервис совместных прогулок" aria-busy="true">
           {sessionError ? (
             <div className="session-error" role="alert">
               <p>{sessionError}</p>
-              <button className="primary-button" type="button" onClick={retrySession}>
+              <button className="button" type="button" onClick={retrySession}>
                 Повторить
               </button>
             </div>
           ) : (
             <span className="visually-hidden" role="status">Восстанавливаем безопасную сессию</span>
           )}
-        </section>
-      </main>
+        </section></main>
+      </DogmeetFrame>
     );
   }
 
   return (
-    <main className="page-shell">
+    <DogmeetFrame className={(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>
+      <main className={(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen ? "with-nav" : ""}>
       <section className={`app-shell screen-${screen}`} aria-label="Сервис совместных прогулок">
-        {(screen === "walks" || (screen === "my-pets" && petsSource === "dock")) && (
+        {(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen && (
           <BottomDock
-            section={dockSection}
-            menuOpen={menuOpen}
-            dockWalkOpen={dockWalkOpen}
+            section={screen === "my-walks" ? "plans" : screen === "my-pets" ? "pets" : "nearby"}
             walkFormDirty={walkForm.walkFormDirty}
             walkFormIsValid={walkForm.formIsValid}
             petsLoaded={petsLoaded}
             walkSaving={walkSaving}
             onNearbyClick={() => selectDockSection("nearby")}
-            onWalkClick={handleDockWalkAction}
+            onPlansClick={() => openCollectionScreen("my-walks")}
+            onWalkClick={startWalkAnnouncement}
+            onAddPet={addPet}
             onPetsClick={() => { if (dockSection !== "pets") openCollectionScreen("my-pets", "dock"); }}
-            onProfileClick={() => selectDockSection("profile")}
           />
         )}
         {screen === "welcome" && (
-          <div className="screen welcome-screen">
-            <div className="welcome-copy">
-              <div className="paw-mark" aria-hidden="true"><PawPrint /></div>
-              <h1>Гулять вместе веселее</h1>
-              <p>Находите хозяев собак поблизости, договаривайтесь о прогулках и знакомьте питомцев.</p>
-            </div>
-            <div className="hero-wrap">
+          <div className="screen welcome welcome-screen">
+            <DogmeetBrand tagline="Встретимся во дворе" />
+            <h1>Хорошая прогулка<br />начинается<br /><em>с компании.</em></h1>
+            <div className="welcome-photo hero-wrap">
               <Image
                 src="/walk-hero.webp"
                 alt="Хозяйка гуляет с собакой в парке"
@@ -850,96 +861,21 @@ export default function Home() {
                 priority
                 sizes="(max-width: 520px) 100vw, 430px"
               />
+              <span className="photo-caption"><span>Знакомые места.</span><strong>Новые друзья.</strong></span>
             </div>
-            <button className="primary-button" type="button" onClick={openBrowserGuide}>
-              Найти компанию
-            </button>
+            <p>Узнайте, кто гуляет рядом, и расскажите соседям о своих планах.</p>
+            <button className="button" type="button" onClick={openBrowserGuide}>Найти компанию<ArrowRight aria-hidden="true" /></button>
+            <small className="center-note">Без регистрации. Начнём с вашего района.</small>
           </div>
         )}
 
         {screen === "browser-guide" && (
-          <div className="screen browser-guide-screen">
-
-            <div className="screen-heading browser-guide-heading">
-              <h1>Откройте сайт в браузере</h1>
-              <p>Если ссылка открылась внутри Telegram или другого мессенджера, перейдите в обычный браузер</p>
-            </div>
-
-            <div className="browser-guide-content">
-              <div className="browser-guide-platforms" role="group" aria-label="Выберите устройство">
-                <span
-                  className="filter-indicator browser-guide-platform-indicator"
-                  aria-hidden="true"
-                  style={{ left: browserGuidePlatform === "ios" ? "var(--space-1)" : "50%" }}
-                />
-                <button
-                  className={`filter-button browser-guide-platform-button ${browserGuidePlatform === "ios" ? "is-active" : ""}`}
-                  type="button"
-                  aria-pressed={browserGuidePlatform === "ios"}
-                  onClick={() => setBrowserGuidePlatform("ios")}
-                >
-                  <span>iPhone</span>
-                </button>
-                <button
-                  className={`filter-button browser-guide-platform-button ${browserGuidePlatform === "android" ? "is-active" : ""}`}
-                  type="button"
-                  aria-pressed={browserGuidePlatform === "android"}
-                  onClick={() => setBrowserGuidePlatform("android")}
-                >
-                  <span>Android</span>
-                </button>
-              </div>
-
-              {browserGuidePlatform === "ios" ? (
-                <section className="browser-tip-card browser-tip-card--ios" aria-labelledby="ios-browser-tip-title">
-                  <div className="browser-tip-copy">
-                    <span className="browser-tip-number" aria-hidden="true">1</span>
-                    <div>
-                      <h2 id="ios-browser-tip-title">Откройте в Safari</h2>
-                      <p>Нажмите значок компаса внизу предварительного окна</p>
-                    </div>
-                  </div>
-                  <div className="browser-preview browser-preview--ios" aria-hidden="true">
-                    <span className="browser-preview-label">Нажмите сюда</span>
-                    <span className="browser-preview-arrow browser-preview-arrow--down" />
-                    <span className="browser-preview-action"><Compass /></span>
-                  </div>
-                </section>
-              ) : (
-                <section className="browser-tip-card browser-tip-card--android" aria-labelledby="android-browser-tip-title">
-                  <div className="browser-preview browser-preview--android" aria-hidden="true">
-                    <div className="android-inapp-toolbar">
-                      <span className="android-status-time">11:29</span>
-                      <span className="android-status-icons">● ◒ ▮</span>
-                      <span className="android-toolbar-actions"><X /><ChevronDown /></span>
-                      <span className="android-toolbar-identity"><strong>Гулять вместе</strong><small>dogmeet.ru</small></span>
-                      <Share2 className="android-toolbar-share" />
-                      <span className="browser-preview-action"><EllipsisVertical /></span>
-                    </div>
-                    <span className="browser-preview-label">Нажмите сюда</span>
-                    <span className="browser-preview-arrow browser-preview-arrow--android" />
-                  </div>
-                  <div className="browser-tip-copy">
-                    <span className="browser-tip-number" aria-hidden="true">1</span>
-                    <div>
-                      <h2 id="android-browser-tip-title">Откройте в браузере</h2>
-                      <p>Нажмите три точки справа сверху, затем выберите «Открыть в браузере»</p>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-            </div>
-
-            <p className="browser-guide-note">
-              Если сайт уже открыт в Safari или Chrome,<br />
-              просто продолжите
-            </p>
-
-            <button className="primary-button browser-guide-continue" type="button" onClick={continueFromBrowserGuide}>
-              Продолжить
-            </button>
-          </div>
+          <BrowserGuide
+            platform={browserGuidePlatform}
+            onPlatformChange={setBrowserGuidePlatform}
+            onContinue={continueFromBrowserGuide}
+            onBack={returnThroughHistory}
+          />
         )}
 
         {screen === "location" && (
@@ -961,6 +897,7 @@ export default function Home() {
             onDistrictChange={chooseLocationDistrict}
             onComplexChange={(complex) => setLocationDraft({ ...locationDraft, complex })}
             onRequestLocation={openLocationRequest}
+            onBack={returnThroughHistory}
           />
         )}
 
@@ -980,17 +917,26 @@ export default function Home() {
               setLocationRequestDraft((current) => ({ ...current, [field]: value }));
               setLocationRequestError("");
             }}
+            onBack={returnThroughHistory}
           />
         )}
 
-        {screen === "walks" && (
+        {(screen === "walks" || screen === "walk-detail" || screen === "contact") && (
           <WalksWorkspace
+            selectedWalk={selectedWalk}
+            onSelectWalk={setSelectedWalk}
             dockSection={dockSection}
+            detailOpen={screen === "walk-detail"}
+            contactOpen={screen === "contact"}
+            onOpenDetail={() => pushNavigation("walk-detail")}
+            onOpenContact={() => pushNavigation("contact")}
             location={location}
             period={period}
             visibleWalks={visibleWalks}
             savedWalks={savedWalks}
             walksLoaded={walksLoaded}
+            walksError={walksError}
+            onRetryWalks={() => { void retryWalks(); }}
             ownedWalksById={ownedWalksById}
             petsById={savedPetsById}
             openWalkActionsId={openWalkActionsId}
@@ -1002,23 +948,35 @@ export default function Home() {
             onSharePet={(pet) => { setOpenWalkActionsId(null); requestPetShareLink(pet); }}
             guidedWalkFlow={guidedWalkFlow}
             savedPets={savedPets}
+            sharedPlaces={sharedPlaces}
+            onAddPet={continueToRequiredPet}
             placesLoaded={placesLoaded}
+            placesError={placesError}
+            onRetryPlaces={() => { void retryPlaces(); }}
             walkForm={walkForm}
             walkSaving={walkSaving}
             editingWalk={Boolean(walkBeingEdited)}
             onWalkSubmit={saveWalk}
+            onStartWalk={startWalkAnnouncement}
             profileHeadingRef={profileHeadingRef}
             onOpenLocationEditor={openLocationEditor}
             onOpenMyWalks={() => openCollectionScreen("my-walks")}
             onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
+            onOpenBrowserGuide={openBrowserGuide}
+            onOpenProfile={() => selectDockSection("profile")}
+            onBack={screen === "walk-detail" || screen === "contact" ? returnThroughHistory : dockWalkOpen ? closeDockWalkAnnouncement : () => selectDockSection("nearby")}
           />
         )}
 
 
         {screen === "my-walks" && (
           <WalkCollection
+            petsById={savedPetsById}
+            onSharePet={requestPetShareLink}
             walks={myWalks}
             loaded={myWalksLoaded}
+            error={myWalksError}
+            onRetry={() => { void retryMyWalks(); }}
             petsLoaded={petsLoaded}
             openWalkActionsId={openWalkActionsId}
             onStartWalk={startWalkAnnouncement}
@@ -1026,6 +984,10 @@ export default function Home() {
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "my-walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
+            onBack={returnToMenu}
+            location={location.complex}
+            onLocation={openLocationEditor}
+            onProfile={openMenu}
           />
         )}
 
@@ -1033,12 +995,20 @@ export default function Home() {
           <PetCollection
             pets={savedPets}
             fromDock={petsSource === "dock"}
+            loaded={petsLoaded}
+            error={petsError}
             highlightedPetId={highlightedPetId}
             onDismissHighlight={dismissSharedPetHighlight}
             onShare={requestPetShareLink}
             onEdit={editPet}
+            onOpen={openPet}
             onDelete={(pet) => { setPetDeleteError(""); setPetPendingDelete(pet); }}
             onAdd={addPet}
+            onRetry={() => { void reloadPets(); }}
+            onBack={returnToMenu}
+            location={location.complex}
+            onLocation={openLocationEditor}
+            onProfile={openMenu}
           />
         )}
 
@@ -1047,6 +1017,7 @@ export default function Home() {
             guidedWalkFlow={guidedWalkFlow}
             requiresWalkStepper={petReturnTarget === "announce"}
             petBeingEdited={petBeingEdited}
+            mode={petScreenMode}
             photoUrl={photoUrl}
             photoError={photoError}
             submitError={petSubmitError}
@@ -1064,6 +1035,10 @@ export default function Home() {
             onNameChange={(value) => { setPetNameInput(value); setPetSubmitError(""); }}
             onOwnerNameChange={(value) => { setOwnerNameInput(value); setPetSubmitError(""); }}
             onBreedChange={(value) => { setBreedInput(value); setPetSubmitError(""); }}
+            onEdit={() => setPetScreenMode("edit")}
+            onShare={() => { if (petBeingEdited) void requestPetShareLink(petBeingEdited); }}
+            onDelete={() => { if (petBeingEdited) { setPetDeleteError(""); setPetPendingDelete(petBeingEdited); } }}
+            onBack={() => beginFormClose(petReturnTarget === "announce" ? "announce" : "my-pets")}
           />
         )}
 
@@ -1072,17 +1047,25 @@ export default function Home() {
             <WalkAnnouncementForm
               guidedWalkFlow={guidedWalkFlow}
               savedPets={savedPets}
+              sharedPlaces={sharedPlaces}
+              locationName={location.complex}
+              onAddPet={continueToRequiredPet}
               placesLoaded={placesLoaded}
+              placesError={placesError}
+              onRetryPlaces={() => { void retryPlaces(); }}
               walkForm={walkForm}
               walkSaving={walkSaving}
               editing={Boolean(walkBeingEdited)}
               onSubmit={saveWalk}
+              onBack={() => beginFormClose(walkBeingEdited ? walkEditReturnTarget : "walks")}
             />
           </div>
         )}
 
+        {result?.sheet && <DogmeetDialog title={result.sheet} onDismiss={() => { setResult(null); result.onContinue(); }}><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => { setResult(null); result.onContinue(); }} /></DogmeetDialog>}
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
+          onDismissPetRequired={() => setShowPetRequiredPopup(false)}
           informationButtonRef={informationButtonRef}
           onContinueToRequiredPet={continueToRequiredPet}
           showSharedPetAlreadyAdded={showSharedPetAlreadyAddedPopup}
@@ -1113,6 +1096,7 @@ export default function Home() {
           onCancelDeletePet={() => setPetPendingDelete(null)}
         />
       </section>
-    </main>
+      </main>
+    </DogmeetFrame>
   );
 }

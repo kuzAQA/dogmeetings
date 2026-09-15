@@ -1,0 +1,665 @@
+- generic [active] [ref=e1]:
+  - link "Перейти к основному контенту" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner:
+      - generic:
+        - generic [ref=e6]:
+          - text: menu
+          - link [ref=e8] [cursor=pointer]:
+            - /url: /
+            - img "Chrome for Developers" [ref=e10]
+          - generic [ref=e11]:
+            - navigation "Верхние вкладки" [ref=e14]:
+              - generic [ref=e15]:
+                - link "Документация" [ref=e16] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs?hl=ru
+                - 'button "Раскрывающееся меню для: Документация" [ref=e17] [cursor=pointer]': arrow_drop_down
+              - link "Истории успеха" [ref=e19] [cursor=pointer]:
+                - /url: https://developer.chrome.com/case-studies?hl=ru
+              - link "Блог" [ref=e21] [cursor=pointer]:
+                - /url: https://developer.chrome.com/blog?hl=ru
+              - link "Новое в Chrome" [ref=e23] [cursor=pointer]:
+                - /url: https://developer.chrome.com/new?hl=ru
+              - text: arrow_drop_down
+            - generic [ref=e27]:
+              - combobox "Результаты поиска" [ref=e28]
+              - generic [ref=e33]: /
+          - generic [ref=e34]:
+            - 'button "Внешний вид: Светлая тема" [ref=e35] [cursor=pointer]': light_mode
+            - text: light_mode dark_mode brightness_medium
+          - generic "Выберите язык." [ref=e36]:
+            - button "Language" [ref=e37] [cursor=pointer]
+          - link "Войти" [ref=e41] [cursor=pointer]:
+            - /url: https://developer.chrome.com/_d/signin?continue=https%3A%2F%2Fdeveloper.chrome.com%2Fblog%2Fview-transitions-in-2025%3Fhl%3Dru&prompt=select_account
+        - list [ref=e47]:
+          - listitem [ref=e48]:
+            - link "Blog" [ref=e49] [cursor=pointer]:
+              - /url: https://developer.chrome.com/blog?hl=ru
+    - text: filter_list close close arrow_forward chevron_left
+    - generic [ref=e50]:
+      - main [ref=e51]:
+        - navigation "Содержание" [ref=e54]:
+          - list [ref=e55]:
+            - listitem [ref=e56]:
+              - heading "Содержание" [level=2] [ref=e57]
+            - listitem [ref=e59]:
+              - link "Улучшенная поддержка браузеров и фреймворков." [ref=e60] [cursor=pointer]:
+                - /url: "#better_browser_and_framework_support"
+              - list [ref=e62]:
+                - listitem [ref=e63]:
+                  - link "Переходы между окнами просмотра одного документа скоро станут доступной функцией в базовой версии." [ref=e64] [cursor=pointer]:
+                    - /url: "#same-document_view_transitions_are_about_to_become_baseline_newly_available"
+                - listitem [ref=e66]:
+                  - link "Поддержка API View Transition теперь реализована в ядре React." [ref=e67] [cursor=pointer]:
+                    - /url: "#support_for_the_view_transition_api_is_now_in_react_core"
+            - listitem [ref=e69]:
+              - link "Недавно выпущенные функции" [ref=e70] [cursor=pointer]:
+                - /url: "#recently_shipped_features"
+              - list [ref=e72]:
+                - listitem [ref=e73]:
+                  - 'link "Автоматическое присвоение имен элементам с помощью view-transition-name: match-element" [ref=e74] [cursor=pointer]':
+                    - /url: "#auto-name_elements_with_view-transition-name_match-element"
+                - listitem [ref=e76]:
+                  - link "В инструментах разработчика теперь отображаются правила, нацеленные на псевдообъекты, использующие view-transition-class" [ref=e77] [cursor=pointer]:
+                    - /url: "#devtools_now_shows_rules_targeting_pseudos_that_use_a_view-transition-class"
+                - listitem [ref=e79]:
+                  - link "Вложенные группы переходов между представлениями доступны начиная с Chrome 140." [ref=e80] [cursor=pointer]:
+                    - /url: "#nested_view_transition_groups_are_available_from_chrome_140"
+                - listitem [ref=e82]:
+                  - link "Теперь псевдоэлементы наследуют больше свойств анимации." [ref=e83] [cursor=pointer]:
+                    - /url: "#pseudo-elements_now_inherit_more_animation_properties"
+                - listitem [ref=e85]:
+                  - link "Выполнение функции обратного вызова finished промиса больше не ожидает кадра." [ref=e86] [cursor=pointer]:
+                    - /url: "#the_execution_of_the_finished_promise_callback_no_longer_waits_for_a_frame"
+            - listitem [ref=e88]:
+              - link "Предстоящие функции" [ref=e89] [cursor=pointer]:
+                - /url: "#upcoming_features"
+              - list [ref=e91]:
+                - listitem [ref=e92]:
+                  - link "Переходы между областями видимости готовы к тестированию в Chrome 140." [ref=e93] [cursor=pointer]:
+                    - /url: "#scoped_view_transitions_are_ready_for_testing_in_chrome_140"
+                - listitem [ref=e95]:
+                  - link "Положение элемента ::view-transition изменится с fixed на absolute в Chrome 142." [ref=e96] [cursor=pointer]:
+                    - /url: "#the_position_of_view-transition_will_change_from_fixed_to_absolute_in_chrome_142"
+                - listitem [ref=e98]:
+                  - link "document.activeViewTransition появится в Chrome 142." [ref=e99] [cursor=pointer]:
+                    - /url: "#documentactiveviewtransition_is_coming_to_chrome_142"
+                - listitem [ref=e101]:
+                  - link "Предотвратите автоматическое завершение перехода между представлениями с помощью ViewTransition.waitUntil" [ref=e102] [cursor=pointer]:
+                    - /url: "#prevent_a_view_transition_from_automatically_finishing_with_viewtransitionwaituntil"
+            - listitem [ref=e104]:
+              - link "Что дальше?" [ref=e105] [cursor=pointer]:
+                - /url: "#whats_next"
+        - generic [ref=e107]:
+          - article [ref=e108]:
+            - generic [ref=e110]:
+              - generic [ref=e112]:
+                - text: Эта страница переведена с помощью
+                - link "Cloud Translation API" [ref=e113] [cursor=pointer]:
+                  - /url: //cloud.google.com/translate/?hl=ru
+                - text: .
+              - button "Switch to English" [ref=e115] [cursor=pointer]
+            - navigation [ref=e116]:
+              - list "Строка навигации" [ref=e117]:
+                - listitem [ref=e118]:
+                  - link "Chrome for Developers" [ref=e119] [cursor=pointer]:
+                    - /url: https://developer.chrome.com/?hl=ru
+                - listitem [ref=e120]:
+                  - generic [aria-hidden] [ref=e121]: chevron_right
+                  - link "Blog" [ref=e122] [cursor=pointer]:
+                    - /url: https://developer.chrome.com/blog?hl=ru
+              - form "Эта информация оказалась полезной?" [ref=e124]:
+                - generic [ref=e126]:
+                  - button "Полезно" [ref=e127] [cursor=pointer]
+                  - button "Бесполезно" [ref=e128] [cursor=pointer]
+            - heading [level=1] [ref=e129]:
+              - text: Что нового в переходах между видами (обновление 2025 г.)
+              - generic [ref=e130]:
+                - listbox "Bookmark collections drop down" [ref=e133] [cursor=pointer]:
+                  - button "Открыть раскрывающийся список" [ref=e134]:
+                    - generic:
+                      - generic [ref=e135]: bookmark_border
+                      - text: bookmark
+                    - text: arrow_drop_down
+                - group "Инструменты LLM" [ref=e137]:
+                  - button "Скопировать страницу в формате Markdown" [ref=e139] [cursor=pointer]:
+                    - generic [aria-hidden] [ref=e140]: content_copy
+                  - button "Дополнительные параметры инструментов LLM" [ref=e143] [cursor=pointer]: arrow_drop_down
+            - text: expand_more more_horiz
+            - generic [ref=e144]:
+              - paragraph
+              - generic [ref=e146]:
+                - img "Брамус" [ref=e147]
+                - generic [ref=e148]:
+                  - text: Bramus
+                  - generic [ref=e149]:
+                    - link "Bramus on X" [ref=e150] [cursor=pointer]:
+                      - /url: https://twitter.com/bramus
+                      - img "X" [ref=e151]
+                    - link "Bramus on GitHub" [ref=e153] [cursor=pointer]:
+                      - /url: https://github.com/bramus
+                      - img "GitHub" [ref=e154]
+                    - link "Bramus on Mastodon" [ref=e156] [cursor=pointer]:
+                      - /url: https://front-end.social/@bramus
+                      - img "Mastodon" [ref=e157]
+                    - link "Bramus on Bluesky" [ref=e159] [cursor=pointer]:
+                      - /url: https://bsky.app/profile/bram.us
+                      - img "Bluesky" [ref=e160]
+                    - link "Bramus's homepage" [ref=e162] [cursor=pointer]:
+                      - /url: https://www.bram.us/
+                      - img "Homepage" [ref=e163]
+              - paragraph [ref=e167]: "Опубликовано: 08 октября 2025 г."
+              - paragraph
+              - paragraph [ref=e168]:
+                - text: С момента внедрения
+                - link "функции перехода между окнами одного документа" [ref=e169] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/web-platform/view-transitions/same-document?hl=ru
+                - text: в 2023 году многое изменилось.
+              - paragraph [ref=e170]:
+                - text: В 2024 году мы добавили
+                - link "поддержку переходов между представлениями для разных документов" [ref=e171] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/web-platform/view-transitions/cross-document?hl=ru
+                - text: ", внесли улучшения, такие как"
+                - link [ref=e172] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/web-platform/view-transitions/same-document?hl=ru#view-transition-class
+                  - code [ref=e173]: view-transition-class
+                - text: и
+                - link "типы переходов между представлениями" [ref=e174] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/web-platform/view-transitions/same-document?hl=ru#view-transition-types
+                - text: ", а также приветствовали добавление поддержки переходов между представлениями в Safari."
+              - paragraph [ref=e175]: В этом посте представлен обзор изменений в механизмах перехода между окнами в 2025 году.
+              - heading [level=2] [ref=e176]:
+                - heading "Улучшенная поддержка браузеров и фреймворков." [level=2] [ref=e177]
+                - 'button "Скопировать ссылку на этот раздел: Улучшенная поддержка браузеров и фреймворков." [ref=e178] [cursor=pointer]': link
+              - heading "Переходы между окнами просмотра одного документа скоро станут доступной функцией в базовой версии." [level=3] [ref=e179]
+              - paragraph
+              - generic [ref=e180]:
+                - paragraph [ref=e181]: Browser Support
+                - list [ref=e182]:
+                  - listitem [ref=e183]:
+                    - 'img "Chrome: 111." [ref=e184]'
+                    - text: "111"
+                  - listitem [ref=e185]:
+                    - 'img "Край: 111." [ref=e186]'
+                    - text: "111"
+                  - listitem [ref=e187]:
+                    - 'img "Firefox: 144." [ref=e188]'
+                    - text: "144"
+                  - listitem [ref=e189]:
+                    - 'img "Сафари: 18." [ref=e190]'
+                    - text: "18"
+                - paragraph [ref=e191]:
+                  - link "Source" [ref=e192] [cursor=pointer]:
+                    - /url: https://developer.mozilla.org/docs/Web/API/Document/startViewTransition
+              - paragraph
+              - paragraph [ref=e193]:
+                - text: Одним из приоритетных направлений
+                - link "конференции Interop 2025" [ref=e194] [cursor=pointer]:
+                  - /url: https://web.dev/blog/interop-2025?hl=ru
+                - text: является API переходов между представлениями, в частности, переходы между представлениями в пределах одного документа с помощью
+                - code [ref=e195]: document.startViewTransition(updateCallback)
+                - text: ","
+                - code [ref=e196]: view-transition-class
+                - text: ", автоматическое именование с помощью"
+                - code [ref=e197]: "view-transition-name: match-element"
+                - text: и CSS-селектор
+                - code [ref=e198]: :active-view-transition
+                - text: .
+              - paragraph [ref=e199]: Firefox планирует включить эти функции в предстоящий релиз Firefox 144, который станет стабильным 14 октября 2025 года. Это сделает данные функции базовыми и новыми.
+              - complementary [ref=e200]:
+                - strong [ref=e201]: "Примечание:"
+                - generic [ref=e202]:
+                  - text: Первоначальная реализация переходов между окнами в одном документе в Firefox не включает
+                  - link "типы переходов между окнами" [ref=e203] [cursor=pointer]:
+                    - /url: https://developer.chrome.com/docs/web-platform/view-transitions/same-document?hl=ru#view-transition-types
+                  - text: . Если вы используете типы переходов между окнами, рекомендуется
+                  - link [ref=e204] [cursor=pointer]:
+                    - /url: https://developer.chrome.com/docs/web-platform/view-transitions/same-document?hl=ru#not-a-polyfill
+                    - text: использовать наш
+                    - code [ref=e205]: transitionHelper
+                  - text: для постепенного улучшения вашего сайта с помощью переходов между окнами и их типов.
+              - heading "Поддержка API View Transition теперь реализована в ядре React." [level=3] [ref=e206]
+              - paragraph [ref=e207]:
+                - text: В течение всего года команда React работала над добавлением анимаций перехода между представлениями в ядро React.
+                - link [ref=e208] [cursor=pointer]:
+                  - /url: https://react.dev/blog/2025/04/23/react-labs-view-transitions-activity-and-more
+                  - text: В апреле они анонсировали поддержку
+                  - code [ref=e209]: react@experimental
+                - text: ", а на этой неделе на React Conf перенесли её поддержку в"
+                - link [ref=e210] [cursor=pointer]:
+                  - /url: https://react.dev/community/versioning-policy#canary-channel
+                  - code [ref=e211]: react@canary
+                - text: ", что означает, что дизайн близок к финальному варианту."
+              - code [ref=e214]: "function Child() { return ( <ViewTransition> <div>Hi</div> </ViewTransition> ); } function Parent() { const [show, setShow] = useState(); if (show) { return <Child />; } return null; }"
+              - paragraph [ref=e215]:
+                - text: Вы можете ознакомиться с
+                - link [ref=e216] [cursor=pointer]:
+                  - /url: https://react.dev/reference/react/ViewTransition
+                  - text: документацией React по
+                  - code [ref=e217]: <ViewTransition>
+                - text: для получения подробной информации или
+                - link "посмотреть этот доклад Авроры Шарфф," [ref=e218] [cursor=pointer]:
+                  - /url: https://youtu.be/I3AsmAWWGEs?t=976
+                - text: который станет хорошим введением в эту тему.
+              - heading "Недавно выпущенные функции" [level=2] [ref=e219]
+              - heading [level=3] [ref=e220]:
+                - text: Автоматическое присвоение имен элементам с помощью
+                - code [ref=e221]: "view-transition-name: match-element"
+              - paragraph
+              - generic [ref=e222]:
+                - paragraph [ref=e223]: Browser Support
+                - list [ref=e224]:
+                  - listitem [ref=e225]:
+                    - 'img "Chrome: 137." [ref=e226]'
+                    - text: "137"
+                  - listitem [ref=e227]:
+                    - 'img "Edge: 137." [ref=e228]'
+                    - text: "137"
+                  - listitem [ref=e229]:
+                    - 'img "Firefox: 144." [ref=e230]'
+                    - text: "144"
+                  - listitem [ref=e231]:
+                    - 'img "Сафари: 18.4." [ref=e232]'
+                    - text: "18.4"
+              - paragraph
+              - paragraph [ref=e233]:
+                - text: Чтобы пометить элемент для создания снимка в рамках перехода между представлениями, необходимо задать ему
+                - code [ref=e234]: view-transition-name
+                - text: . Это ключевой момент для переходов между представлениями, поскольку он открывает такие возможности, как переход между двумя разными элементами. Каждый элемент имеет одинаковое значение
+                - code [ref=e235]: view-transition-name
+                - text: с обеих сторон перехода, и переходы между представлениями автоматически обрабатывают все необходимые параметры.
+              - paragraph [ref=e236]: Однако присвоение уникальных имен элементам может стать сложной задачей при перемещении большого количества элементов, которые на самом деле не меняются. Если у вас есть 100 перемещаемых элементов в списке, вам нужно придумать 100 уникальных имен.
+              - paragraph [ref=e237]:
+                - text: Благодаря
+                - code [ref=e238]: match-element
+                - text: вам не нужно всего этого делать. При использовании этого параметра в качестве значения для
+                - code [ref=e239]: view-transition-name
+                - text: браузер сгенерирует внутреннее
+                - code [ref=e240]: view-transition-name
+                - text: для каждого найденного элемента на основе его идентификатора.
+              - paragraph [ref=e241]:
+                - text: В
+                - link "приведенном ниже примере" [ref=e242] [cursor=pointer]:
+                  - /url: https://view-transitions.chrome.dev/cards/spa-auto/
+                - text: используется именно такой подход. Каждой карточке в ряду автоматически генерируется
+                - code [ref=e243]: view-transition-name
+                - text: .
+              - iframe [ref=e244]:
+                - generic [ref=f1e1]:
+                  - button "Add" [ref=f1e2] [cursor=pointer]
+                  - list [ref=f1e4]:
+                    - listitem [ref=f1e5]:
+                      - button "Delete" [ref=f1e6] [cursor=pointer]
+                    - listitem [ref=f1e8]:
+                      - button "Delete" [ref=f1e9] [cursor=pointer]
+                    - listitem [ref=f1e11]:
+                      - button "Delete" [ref=f1e12] [cursor=pointer]
+                    - listitem [ref=f1e14]:
+                      - button "Delete" [ref=f1e15] [cursor=pointer]
+              - code [ref=e247]: ".card { view-transition-name: match-element; view-transition-class: card; } #targeted-card { view-transition-name: targeted-card; view-transition-class: none; }"
+              - paragraph [ref=e248]:
+                - text: Карточке, которая появляется или исчезает, присваивается явное имя. Это имя используется в CSS для прикрепления определенных анимаций к этому снимку. Снимки всех остальных карточек оформляются с помощью связанного с ними
+                - code [ref=e249]: view-transition-class
+                - text: .
+              - code [ref=e252]: "/* Style all pseudos with the class .card */ ::view-transition-group(*.card) { animation-timing-function: var(--bounce-easing); animation-duration: 0.5s; } /* Style only the targeted-card's pseudos */ ::view-transition-old(targeted-card):only-child { animation: animate-out ease-out 0.5s forwards; } ::view-transition-new(targeted-card):only-child { animation: animate-in ease-in 0.25s forwards; }"
+              - complementary [ref=e253]:
+                - strong [ref=e254]: "Важно:"
+                - generic [ref=e255]:
+                  - text: элементы в разных документах имеют разные идентификаторы, поэтому
+                  - code [ref=e256]: match-element
+                  - text: можно использовать только в переходах между представлениями в рамках одного документа.
+              - complementary [ref=e257]:
+                - strong [ref=e258]: "Совет:"
+                - generic [ref=e259]:
+                  - text: Если в вашем DOM уже присутствуют уникальные имена, например, через атрибут
+                  - code [ref=e260]: id
+                  - text: ", вы можете использовать эти имена в качестве"
+                  - code [ref=e261]: view-transition-name
+                  - text: ", используя"
+                  - link [ref=e262] [cursor=pointer]:
+                    - /url: https://developer.chrome.com/blog/advanced-attr?hl=ru
+                    - text: функцию
+                    - code [ref=e263]: attr()
+                  - text: .
+              - heading [level=3] [ref=e264]:
+                - text: В инструментах разработчика теперь отображаются правила, нацеленные на псевдообъекты, использующие
+                - code [ref=e265]: view-transition-class
+              - paragraph [ref=e266]: Для отладки переходов между представлениями можно использовать панель «Анимация» в инструментах разработчика, чтобы приостановить все анимации. Это даст вам время проверить псевдоэлементы, не беспокоясь о том, что переход между представлениями достигнет своего завершения. Вы даже можете вручную прокручивать временные шкалы анимации, чтобы увидеть, как происходят переходы.
+              - figure "Отладка переходов между окнами с помощью инструментов разработчика Chrome." [ref=e267]
+              - paragraph [ref=e270]:
+                - text: Ранее при проверке одного из псевдоэлементов
+                - code [ref=e271]: ::view-transition-*
+                - text: инструменты разработчика Chrome не отображали правила, предназначенные для псевдоэлементов, использующих заданный ими
+                - code [ref=e272]: view-transition-class
+                - text: . Это изменилось в Chrome 139, где эта функциональность была добавлена.
+              - figure [ref=e273]:
+                - generic [ref=e274]:
+                  - text: "Рисунок: Скриншот инструментов разработчика Chrome, проверяющих псевдоэлемент"
+                  - code [ref=e275]: view-transition-group
+                  - text: в
+                  - link "демонстрационном примере с карточками" [ref=e276] [cursor=pointer]:
+                    - /url: https://view-transitions.chrome.dev/cards/spa-auto/
+                  - text: . На вкладке «Стили» отображаются правила, влияющие на этот псевдоэлемент, включая правило, использующее селектор
+                  - code [ref=e277]: view-transition-group(*.card)
+                  - text: .
+              - heading "Вложенные группы переходов между представлениями доступны начиная с Chrome 140." [level=3] [ref=e278]
+              - paragraph
+              - generic [ref=e279]:
+                - paragraph [ref=e280]: Browser Support
+                - list [ref=e281]:
+                  - listitem [ref=e282]:
+                    - 'img "Chrome: 140." [ref=e283]'
+                    - text: "140"
+                  - listitem [ref=e284]:
+                    - 'img "Edge: 140." [ref=e285]'
+                    - text: "140"
+                  - listitem [ref=e286]:
+                    - 'img "Firefox: не поддерживается." [ref=e287]'
+                    - text: x
+                  - listitem [ref=e288]:
+                    - 'img "Safari: не поддерживается." [ref=e289]'
+                    - text: x
+              - paragraph
+              - paragraph [ref=e290]:
+                - text: При выполнении перехода между представлениями (view transition) элементы, запечатленные в снимке, отображаются в виде дерева псевдоэлементов. По умолчанию сгенерированное дерево является «плоским». Это означает, что исходная иерархия в DOM теряется, и все захваченные группы переходов между представлениями являются соседними элементами под одним псевдоэлементом
+                - code [ref=e291]: ::view-transition
+                - text: .
+              - paragraph [ref=e292]: Такой подход с плоским деревом достаточен для многих случаев, но становится проблематичным при использовании визуальных эффектов, таких как обрезка или 3D-преобразования. Для этого требуется определенная иерархия в дереве.
+              - figure "Запись демонстрации без и с включенными группами переходов между вложенными представлениями. При использовании групп переходов между вложенными представлениями текстовое содержимое может оставаться обрезанным карточкой, а также вращаться в 3D вместе с карточкой." [ref=e293]
+              - paragraph [ref=e296]:
+                - text: Благодаря функции
+                - link "\"Вложенные группы переходов представления\"" [ref=e297] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/css-ui/view-transitions/nested-view-transition-groups?hl=ru
+                - text: теперь можно вкладывать псевдоэлементы
+                - code [ref=e298]: ::view-transition-group
+                - text: друг в друга. При вложенности групп переходов представления можно восстановить такие эффекты, как обрезка во время перехода.
+              - paragraph [ref=e299]:
+                - link "Узнайте, как использовать группы переходов между представлениями." [ref=e300] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/docs/css-ui/view-transitions/nested-view-transition-groups?hl=ru
+              - heading "Теперь псевдоэлементы наследуют больше свойств анимации." [level=3] [ref=e301]
+              - paragraph [ref=e302]:
+                - text: Когда вы задаете одно из свойств
+                - code [ref=e303]: animation-*
+                - text: в псевдообъекте
+                - code [ref=e304]: ::view-transition-group(…)
+                - text: ", содержащиеся в нем"
+                - code [ref=e305]: ::view-transition-image-pair(…)
+                - text: ","
+                - code [ref=e306]: ::view-transition-old(…)
+                - text: и
+                - code [ref=e307]: ::view-transition-new(…)
+                - text: также наследуют это свойство. Это удобно, поскольку автоматически синхронизирует плавный переход между
+                - code [ref=e308]: ::view-transition-new(…)
+                - text: и
+                - code [ref=e309]: ::view-transition-old(…)
+                - text: с
+                - code [ref=e310]: ::view-transition-group(…)
+                - text: .
+              - code [ref=e313]: "::view-transition-group(.card) { animation-duration: 0.5s; }"
+              - paragraph [ref=e314]:
+                - text: Первоначально это наследование ограничивалось параметрами
+                - code [ref=e315]: animation-duration
+                - text: и
+                - code [ref=e316]: animation-fill-mode
+                - text: (а позже и
+                - code [ref=e317]: animation-delay
+                - text: ), но теперь оно расширено и включает в себя наследование большего количества параметров анимации.
+              - paragraph [ref=e318]:
+                - text: Теперь браузеры, поддерживающие переходы между представлениями, должны иметь в
+                - link "своей таблице стилей user-gent" [ref=e319] [cursor=pointer]:
+                  - /url: https://developer.mozilla.org/docs/Web/CSS/CSS_cascade/Cascade#user-agent_stylesheets
+                - text: следующее.
+              - code [ref=e322]: ":root::view-transition-image-pair(*), :root::view-transition-old(*), :root::view-transition-new(*) { animation-duration: inherit; animation-fill-mode: inherit; animation-delay: inherit; animation-timing-function: inherit; animation-iteration-count: inherit; animation-direction: inherit; animation-play-state: inherit; }"
+              - complementary [ref=e323]:
+                - strong [ref=e324]: "Примечание:"
+                - text: Вам не нужно добавлять этот код самостоятельно, поскольку таблица стилей user-agent — это таблица стилей, которая поставляется вместе с браузером и задает документам их базовое оформление.
+              - paragraph [ref=e325]:
+                - link "Псевдоэлементы, наследующие больше свойств," [ref=e326] [cursor=pointer]:
+                  - /url: https://chromestatus.com/feature/5154752085884928
+                - text: появились в Chrome 140.
+              - heading [level=3] [ref=e327]:
+                - text: Выполнение функции обратного вызова
+                - code [ref=e328]: finished
+                - text: промиса больше не ожидает кадра.
+              - paragraph [ref=e329]:
+                - text: При использовании промиса
+                - code [ref=e330]: finished
+                - text: для выполнения функции обратного вызова Chrome раньше ждал создания кадра, прежде чем выполнять эту логику. Это могло вызвать мерцание в конце анимации, когда скрипт перемещал некоторые стили, пытаясь сохранить визуально похожее состояние.
+              - code [ref=e333]: "document.startViewTransition(() => { if (from) { dfrom.classList.remove(\"shadow\"); dto.appendChild(target); } else { dto.classList.remove(\"shadow\"); dfrom.appendChild(target); } }).finished.then(() => { if (from) { dto.classList.add(\"shadow\"); } else { dfrom.classList.add(\"shadow\"); } from = 1 - from; });"
+              - figure "Запись работы предыдущего кода, сделанная в Chrome 139, которая не включает исправление синхронизации. Можно заметить сбой, когда тень блока добавляется после завершения перехода." [ref=e334]
+              - paragraph [ref=e337]:
+                - text: Это изменение во времени исправляет ситуацию, перемещая
+                - link "этапы очистки перехода между представлениями" [ref=e338] [cursor=pointer]:
+                  - /url: https://www.w3.org/TR/css-view-transitions-1/#handle-transition-frame-algorithm
+                - text: на асинхронное выполнение после завершения жизненного цикла. Это гарантирует, что визуальный кадр, созданный после
+                - code [ref=e339]: finished
+                - text: разрешения промиса, по-прежнему будет сохранять структуру перехода между представлениями, тем самым избегая мерцания.
+              - paragraph [ref=e340]:
+                - text: Это
+                - link "изменение времени выполнения" [ref=e341] [cursor=pointer]:
+                  - /url: https://chromestatus.com/feature/5143135809961984
+                - text: было включено в Chrome 140.
+              - heading "Предстоящие функции" [level=2] [ref=e342]
+              - paragraph [ref=e343]: Год ещё не закончился, так что ещё есть время для выпуска новых функций.
+              - heading "Переходы между областями видимости готовы к тестированию в Chrome 140." [level=3] [ref=e344]
+              - paragraph
+              - generic [ref=e345]:
+                - paragraph [ref=e346]: Browser Support
+                - list [ref=e347]:
+                  - listitem [ref=e348]:
+                    - 'img "Chrome: 147." [ref=e349]'
+                    - text: "147"
+                  - listitem [ref=e350]:
+                    - 'img "Край: 147." [ref=e351]'
+                    - text: "147"
+                  - listitem [ref=e352]:
+                    - 'img "Firefox: не поддерживается." [ref=e353]'
+                    - text: x
+                  - listitem [ref=e354]:
+                    - 'img "Safari: не поддерживается." [ref=e355]'
+                    - text: x
+                - paragraph [ref=e356]:
+                  - link "Source" [ref=e357] [cursor=pointer]:
+                    - /url: https://developer.mozilla.org/docs/Web/API/Element/startViewTransition
+              - paragraph
+              - paragraph [ref=e358]:
+                - link "Scoped view transitions" [ref=e359] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/blog/scoped-view-transitions-feedback?hl=ru
+                - text: — это предлагаемое расширение API View Transition, которое позволяет запускать переход представления в поддереве DOM, вызывая
+                - code [ref=e360]: element.startViewTransition()
+                - text: (вместо
+                - code [ref=e361]: document.startViewTransition()
+                - text: ) для любого
+                - code [ref=e362]: HTMLElement
+                - text: .
+              - paragraph [ref=e363]: Ограниченные переходы позволяют одновременно запускать несколько переходов между представлениями (при условии, что у них разные корневые элементы перехода). События указателя блокируются только для этого поддерева (которое можно повторно включить), а не для всего документа. Кроме того, они позволяют элементам, находящимся за пределами корневого элемента перехода, отображаться поверх ограниченного перехода между представлениями.
+              - paragraph [ref=e364]: В приведенной ниже демонстрации вы можете перемещать точку внутри ее контейнера, нажав одну из кнопок. Это можно сделать с помощью переходов между представлениями, ограниченных областью действия документа, или переходов между представлениями, ограниченных областью действия элемента, что позволяет увидеть, как они ведут себя по-разному.
+              - iframe [ref=e365]: См. <a href="https://codepen.io/web-dot-dev/pen/ogjOjyd">переход между режимами просмотра «Область видимости документа» и «Область видимости элемента»</a> .
+              - paragraph [ref=e366]:
+                - text: Функция готова к тестированию в Chrome 140 с включенным флагом "Экспериментальные функции веб-платформы" в
+                - code [ref=e367]: chrome://flags
+                - text: . Мы активно ищем отзывы разработчиков.
+              - heading [level=3] [ref=e368]:
+                - text: Положение элемента
+                - code [ref=e369]: ::view-transition
+                - text: изменится с
+                - code [ref=e370]: fixed
+                - text: на
+                - code [ref=e371]: absolute
+                - text: в Chrome 142.
+              - paragraph [ref=e372]:
+                - text: Псевдоэлемент
+                - code [ref=e373]: ::view-transition
+                - text: в настоящее время позиционируется с помощью
+                - code [ref=e374]: "position: fixed"
+                - text: . После решения рабочей группы CSS это будет изменено на
+                - code [ref=e375]: "position: absolute"
+                - text: .
+              - paragraph [ref=e376]:
+                - link [ref=e377] [cursor=pointer]:
+                  - /url: https://chromestatus.com/feature/6155213736116224
+                  - text: Изменение значения
+                  - code [ref=e378]: position
+                  - text: с
+                  - code [ref=e379]: fixed
+                  - text: на
+                  - code [ref=e380]: absolute
+                - text: (которое появится в Chrome 142) визуально незаметно, поскольку содержащий блок псевдообъекта
+                - code [ref=e381]: ::view-transition
+                - text: в любом случае является блоком, содержащим снимок. Единственный наблюдаемый эффект — это изменение значения
+                - code [ref=e382]: position
+                - text: при вызове
+                - code [ref=e383]: getComputedStyle
+                - text: .
+              - heading [level=3] [ref=e384]:
+                - code [ref=e385]: document.activeViewTransition
+                - text: появится в Chrome 142.
+              - paragraph
+              - generic [ref=e386]:
+                - paragraph [ref=e387]: Browser Support
+                - list [ref=e388]:
+                  - listitem [ref=e389]:
+                    - 'img "Chrome: 142." [ref=e390]'
+                    - text: "142"
+                  - listitem [ref=e391]:
+                    - 'img "Край: 142." [ref=e392]'
+                    - text: "142"
+                  - listitem [ref=e393]:
+                    - 'img "Firefox: 147." [ref=e394]'
+                    - text: "147"
+                  - listitem [ref=e395]:
+                    - 'img "Safari: 26.2." [ref=e396]'
+                    - text: "26.2"
+                - paragraph [ref=e397]:
+                  - link "Source" [ref=e398] [cursor=pointer]:
+                    - /url: https://developer.mozilla.org/docs/Web/API/Document/activeViewTransition
+              - paragraph
+              - paragraph [ref=e399]:
+                - text: При запуске перехода между представлениями создается экземпляр
+                - code [ref=e400]: ViewTransition
+                - text: . Этот объект содержит несколько промисов и функциональность для отслеживания хода перехода, а также позволяет выполнять такие действия, как пропуск перехода или изменение его типов.
+              - paragraph [ref=e401]:
+                - text: Вместо того чтобы заставлять вас вручную отслеживать этот экземпляр, Chrome теперь предоставляет свойство
+                - code [ref=e402]: document.activeViewTransition
+                - text: ", которое представляет этот объект. Если переход не выполняется, его значение равно"
+                - code [ref=e403]: "null"
+                - text: .
+              - paragraph [ref=e404]:
+                - text: При переходах между представлениями в рамках одного документа значение устанавливается при вызове
+                - code [ref=e405]: document.startViewTransition
+                - text: . При переходах между представлениями в разных документах доступ к экземпляру
+                - code [ref=e406]: ViewTransition
+                - text: можно получить в событиях
+                - code [ref=e407]: pageswap
+                - text: и
+                - code [ref=e408]: pagereveal
+                - text: .
+              - paragraph [ref=e409]:
+                - link [ref=e410] [cursor=pointer]:
+                  - /url: https://chromestatus.com/feature/5067126381215744
+                  - text: Поддержка
+                  - code [ref=e411]: document.activeViewTransition
+                - text: скоро появится в Chrome 142.
+              - heading [level=3] [ref=e412]:
+                - text: Предотвратите автоматическое завершение перехода между представлениями с помощью
+                - code [ref=e413]: ViewTransition.waitUntil
+              - paragraph
+              - paragraph [ref=e414]:
+                - text: Анимация перехода автоматически достигает своего
+                - code [ref=e415]: finished
+                - text: состояния, когда завершаются все анимации. Чтобы предотвратить это автоматическое завершение, вскоре можно использовать
+                - code [ref=e416]: ViewTranistion.waitUntil
+                - text: . При передаче промиса
+                - code [ref=e417]: ViewTransition
+                - text: достигнет своего
+                - code [ref=e418]: finished
+                - text: состояния только тогда, когда этот переданный промис также будет разрешен.
+              - code [ref=e421]: "const t = document.startViewTransition(…); t.waitUntil(async () => { await fetch(…); });"
+              - paragraph [ref=e422]:
+                - text: Это изменение появится позже в этом году и позволит, например, ожидать
+                - code [ref=e423]: fetch
+                - text: или разблокировать более простую реализацию
+                - link "перехода между представлениями при прокрутке" [ref=e424] [cursor=pointer]:
+                  - /url: http://brm.us/scroll-driven-view-transition
+                - text: .
+              - heading "Что дальше?" [level=2] [ref=e425]
+              - paragraph [ref=e426]: Как видите, мы не сидели сложа руки с момента первого выпуска View Transitions в 2023 году. Мы с нетерпением ждём возможности выпустить View Transitions с ограниченным охватом в будущем и, как всегда, открыты для обратной связи.
+              - paragraph [ref=e427]:
+                - text: Если у вас есть вопросы о переходах между представлениями, свяжитесь с нами в социальных сетях. Запросы на добавление функций переходов между представлениями можно
+                - link "отправлять в рабочую группу CSS" [ref=e428] [cursor=pointer]:
+                  - /url: https://github.com/w3c/csswg-drafts/issues/new
+                - text: . Если вы обнаружите ошибку, сообщите нам об этом
+                - link "через систему отслеживания ошибок Chromium" [ref=e429] [cursor=pointer]:
+                  - /url: https://crbug.com/new
+                - text: .
+            - form "Эта информация оказалась полезной?" [ref=e431]:
+              - generic [ref=e433]:
+                - button "Полезно" [ref=e434] [cursor=pointer]
+                - button "Бесполезно" [ref=e435] [cursor=pointer]
+          - generic [ref=e436]:
+            - paragraph [ref=e437]:
+              - text: Если не указано иное, контент на этой странице предоставляется по
+              - link "лицензии Creative Commons \"С указанием авторства 4.0\"" [ref=e438] [cursor=pointer]:
+                - /url: https://creativecommons.org/licenses/by/4.0/
+              - text: ", а примеры кода – по"
+              - link "лицензии Apache 2.0" [ref=e439] [cursor=pointer]:
+                - /url: https://www.apache.org/licenses/LICENSE-2.0
+              - text: . Подробнее об этом написано в
+              - link "правилах сайта" [ref=e440] [cursor=pointer]:
+                - /url: https://developers.google.com/site-policies?hl=ru
+              - text: . Java – это зарегистрированный товарный знак корпорации Oracle и ее аффилированных лиц.
+            - paragraph [ref=e441]: "Последнее обновление: 2025-10-08 UTC."
+      - navigation "Ссылки в нижнем колонтитуле" [ref=e444]:
+        - list [ref=e445]:
+          - listitem [ref=e446]:
+            - heading "Способствовать" [level=3] [ref=e447]
+            - list [ref=e448]:
+              - listitem [ref=e449]:
+                - link "Сообщить об ошибке" [ref=e450] [cursor=pointer]:
+                  - /url: https://issuetracker.google.com/issues/new?component=1400036&%3Btemplate=1897236&hl=ru
+              - listitem [ref=e451]:
+                - link "Посмотреть открытые вопросы" [ref=e452] [cursor=pointer]:
+                  - /url: https://issuetracker.google.com/issues?q=status%3Aopen+componentid%3A1400036&%3Bs=created_time%3Adesc&hl=ru
+          - listitem [ref=e453]:
+            - heading "Связанный контент" [level=3] [ref=e454]
+            - list [ref=e455]:
+              - listitem [ref=e456]:
+                - link "Обновления Хрома" [ref=e457] [cursor=pointer]:
+                  - /url: https://blog.chromium.org/
+              - listitem [ref=e458]:
+                - link "Истории успеха" [ref=e459] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/case-studies?hl=ru
+              - listitem [ref=e460]:
+                - link "Отправить в архив" [ref=e461] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/deprecated?hl=ru
+              - listitem [ref=e462]:
+                - link "Подкасты и шоу" [ref=e463] [cursor=pointer]:
+                  - /url: https://web.dev/shows?hl=ru
+          - listitem [ref=e464]:
+            - heading "Следовать" [level=3] [ref=e465]
+            - list [ref=e466]:
+              - listitem [ref=e467]:
+                - link "@ChromiumDev на X" [ref=e468] [cursor=pointer]:
+                  - /url: https://twitter.com/ChromiumDev
+              - listitem [ref=e469]:
+                - link "YouTube" [ref=e470] [cursor=pointer]:
+                  - /url: https://www.youtube.com/user/ChromeDevelopers?hl=ru
+              - listitem [ref=e471]:
+                - link "Chrome для разработчиков на LinkedIn" [ref=e472] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/showcase/chrome-for-developers
+              - listitem [ref=e473]:
+                - link "Код для фида RSS" [ref=e474] [cursor=pointer]:
+                  - /url: https://developer.chrome.com/static/blog/feed.xml?hl=ru
+      - navigation "Ссылки на утилиты" [ref=e477]:
+        - list [ref=e478]:
+          - listitem [ref=e479]:
+            - link "Условия использования" [ref=e480] [cursor=pointer]:
+              - /url: //policies.google.com/terms?hl=ru
+          - listitem [ref=e481]:
+            - text: "|"
+            - link "Конфиденциальность" [ref=e482] [cursor=pointer]:
+              - /url: //policies.google.com/privacy?hl=ru
+          - text: "|"
+        - generic "Выберите язык." [ref=e483]:
+          - button "Language" [ref=e484] [cursor=pointer]

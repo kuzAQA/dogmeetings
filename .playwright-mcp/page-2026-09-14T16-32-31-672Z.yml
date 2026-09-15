@@ -1,0 +1,1536 @@
+- generic [active] [ref=f24e1]:
+  - banner [ref=f24e2]:
+    - heading "Расписание двора" [level=1] [ref=f24e3]
+    - paragraph [ref=f24e4]: Новая мобильная концепция Dogmeet. Все снимки получены из работающего прототипа при ширине 390 px; длинные страницы сняты целиком. Данные вымышлены.
+    - navigation [ref=f24e5]:
+      - link "Начать сценарий" [ref=f24e6] [cursor=pointer]:
+        - /url: /#welcome
+      - link "Открыть прототип" [ref=f24e7] [cursor=pointer]:
+        - /url: /#nearby
+      - link "Таблица покрытия" [ref=f24e8] [cursor=pointer]:
+        - /url: /COVERAGE.md
+      - link "Концепция и референсы" [ref=f24e9] [cursor=pointer]:
+        - /url: /RESEARCH.md
+      - link "Проверки" [ref=f24e10] [cursor=pointer]:
+        - /url: /QA.md
+    - navigation [ref=f24e11]:
+      - generic [ref=f24e12]:
+        - text: Найти экран
+        - textbox "Найти экран" [ref=f24e13]:
+          - /placeholder: Например, питомец
+      - generic [ref=f24e14]:
+        - text: Состояние
+        - combobox "Состояние" [ref=f24e15]:
+          - option "Все состояния" [selected]
+          - option "Обычное"
+          - option "Пусто"
+          - option "Загрузка"
+          - option "Ошибка"
+          - option "Валидация"
+          - option "Успех"
+          - option "Android"
+          - option "Общий питомец"
+          - option "Ссылка недействительна"
+          - option "Ссылка использована"
+          - option "Доступ запрещён"
+          - option "Не поддерживается"
+    - paragraph [ref=f24e16]: 38 экранов и панелей · 136 вариантов · показано 136
+  - group [ref=f24e17]:
+    - generic "Связь существующих задач с новыми экранами" [ref=f24e18] [cursor=pointer]
+  - main [ref=f24e19]:
+    - article [ref=f24e20]:
+      - link [ref=f24e21] [cursor=pointer]:
+        - /url: /#welcome
+        - img "Знакомство — Обычное" [ref=f24e22]
+      - heading "Знакомство" [level=2] [ref=f24e23]
+      - paragraph [ref=f24e24]: Обычное
+      - generic [ref=f24e25]:
+        - link "Открыть макет" [ref=f24e26] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#welcome
+        - link "PNG целиком" [ref=f24e27] [cursor=pointer]:
+          - /url: /png/welcome--base.png
+    - article [ref=f24e28]:
+      - link [ref=f24e29] [cursor=pointer]:
+        - /url: /#guide
+        - img "Открыть в браузере — Обычное" [ref=f24e30]
+      - heading "Открыть в браузере" [level=2] [ref=f24e31]
+      - paragraph [ref=f24e32]: Обычное
+      - generic [ref=f24e33]:
+        - link "Открыть макет" [ref=f24e34] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#guide
+        - link "PNG целиком" [ref=f24e35] [cursor=pointer]:
+          - /url: /png/guide--base.png
+    - article [ref=f24e36]:
+      - link [ref=f24e37] [cursor=pointer]:
+        - /url: /#guide?state=android
+        - img "Открыть в браузере — Android" [ref=f24e38]
+      - heading "Открыть в браузере" [level=2] [ref=f24e39]
+      - paragraph [ref=f24e40]: Android
+      - generic [ref=f24e41]:
+        - link "Открыть макет" [ref=f24e42] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#guide?state=android
+        - link "PNG целиком" [ref=f24e43] [cursor=pointer]:
+          - /url: /png/guide--android.png
+    - article [ref=f24e44]:
+      - link [ref=f24e45] [cursor=pointer]:
+        - /url: /#location
+        - img "Мой район — Обычное" [ref=f24e46]
+      - heading "Мой район" [level=2] [ref=f24e47]
+      - paragraph [ref=f24e48]: Обычное
+      - generic [ref=f24e49]:
+        - link "Открыть макет" [ref=f24e50] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location
+        - link "PNG целиком" [ref=f24e51] [cursor=pointer]:
+          - /url: /png/location--base.png
+    - article [ref=f24e52]:
+      - link [ref=f24e53] [cursor=pointer]:
+        - /url: /#location?state=validation
+        - img "Мой район — Валидация" [ref=f24e54]
+      - heading "Мой район" [level=2] [ref=f24e55]
+      - paragraph [ref=f24e56]: Валидация
+      - generic [ref=f24e57]:
+        - link "Открыть макет" [ref=f24e58] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location?state=validation
+        - link "PNG целиком" [ref=f24e59] [cursor=pointer]:
+          - /url: /png/location--validation.png
+    - article [ref=f24e60]:
+      - link [ref=f24e61] [cursor=pointer]:
+        - /url: /#location?state=loading
+        - img "Мой район — Загрузка" [ref=f24e62]
+      - heading "Мой район" [level=2] [ref=f24e63]
+      - paragraph [ref=f24e64]: Загрузка
+      - generic [ref=f24e65]:
+        - link "Открыть макет" [ref=f24e66] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location?state=loading
+        - link "PNG целиком" [ref=f24e67] [cursor=pointer]:
+          - /url: /png/location--loading.png
+    - article [ref=f24e68]:
+      - link [ref=f24e69] [cursor=pointer]:
+        - /url: /#location?state=error
+        - img "Мой район — Ошибка" [ref=f24e70]
+      - heading "Мой район" [level=2] [ref=f24e71]
+      - paragraph [ref=f24e72]: Ошибка
+      - generic [ref=f24e73]:
+        - link "Открыть макет" [ref=f24e74] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location?state=error
+        - link "PNG целиком" [ref=f24e75] [cursor=pointer]:
+          - /url: /png/location--error.png
+    - article [ref=f24e76]:
+      - link [ref=f24e77] [cursor=pointer]:
+        - /url: /#location?state=success
+        - img "Мой район — Успех" [ref=f24e78]
+      - heading "Мой район" [level=2] [ref=f24e79]
+      - paragraph [ref=f24e80]: Успех
+      - generic [ref=f24e81]:
+        - link "Открыть макет" [ref=f24e82] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location?state=success
+        - link "PNG целиком" [ref=f24e83] [cursor=pointer]:
+          - /url: /png/location--success.png
+    - article [ref=f24e84]:
+      - link [ref=f24e85] [cursor=pointer]:
+        - /url: /#location?state=empty
+        - img "Мой район — Пусто" [ref=f24e86]
+      - heading "Мой район" [level=2] [ref=f24e87]
+      - paragraph [ref=f24e88]: Пусто
+      - generic [ref=f24e89]:
+        - link "Открыть макет" [ref=f24e90] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#location?state=empty
+        - link "PNG целиком" [ref=f24e91] [cursor=pointer]:
+          - /url: /png/location--empty.png
+    - article [ref=f24e92]:
+      - link [ref=f24e93] [cursor=pointer]:
+        - /url: /#request
+        - img "Новая локация — Обычное" [ref=f24e94]
+      - heading "Новая локация" [level=2] [ref=f24e95]
+      - paragraph [ref=f24e96]: Обычное
+      - generic [ref=f24e97]:
+        - link "Открыть макет" [ref=f24e98] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#request
+        - link "PNG целиком" [ref=f24e99] [cursor=pointer]:
+          - /url: /png/request--base.png
+    - article [ref=f24e100]:
+      - link [ref=f24e101] [cursor=pointer]:
+        - /url: /#request?state=validation
+        - img "Новая локация — Валидация" [ref=f24e102]
+      - heading "Новая локация" [level=2] [ref=f24e103]
+      - paragraph [ref=f24e104]: Валидация
+      - generic [ref=f24e105]:
+        - link "Открыть макет" [ref=f24e106] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#request?state=validation
+        - link "PNG целиком" [ref=f24e107] [cursor=pointer]:
+          - /url: /png/request--validation.png
+    - article [ref=f24e108]:
+      - link [ref=f24e109] [cursor=pointer]:
+        - /url: /#request?state=loading
+        - img "Новая локация — Загрузка" [ref=f24e110]
+      - heading "Новая локация" [level=2] [ref=f24e111]
+      - paragraph [ref=f24e112]: Загрузка
+      - generic [ref=f24e113]:
+        - link "Открыть макет" [ref=f24e114] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#request?state=loading
+        - link "PNG целиком" [ref=f24e115] [cursor=pointer]:
+          - /url: /png/request--loading.png
+    - article [ref=f24e116]:
+      - link [ref=f24e117] [cursor=pointer]:
+        - /url: /#request?state=error
+        - img "Новая локация — Ошибка" [ref=f24e118]
+      - heading "Новая локация" [level=2] [ref=f24e119]
+      - paragraph [ref=f24e120]: Ошибка
+      - generic [ref=f24e121]:
+        - link "Открыть макет" [ref=f24e122] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#request?state=error
+        - link "PNG целиком" [ref=f24e123] [cursor=pointer]:
+          - /url: /png/request--error.png
+    - article [ref=f24e124]:
+      - link [ref=f24e125] [cursor=pointer]:
+        - /url: /#request?state=success
+        - img "Новая локация — Успех" [ref=f24e126]
+      - heading "Новая локация" [level=2] [ref=f24e127]
+      - paragraph [ref=f24e128]: Успех
+      - generic [ref=f24e129]:
+        - link "Открыть макет" [ref=f24e130] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#request?state=success
+        - link "PNG целиком" [ref=f24e131] [cursor=pointer]:
+          - /url: /png/request--success.png
+    - article [ref=f24e132]:
+      - link [ref=f24e133] [cursor=pointer]:
+        - /url: /#nearby
+        - img "Расписание двора — Обычное" [ref=f24e134]
+      - heading "Расписание двора" [level=2] [ref=f24e135]
+      - paragraph [ref=f24e136]: Обычное
+      - generic [ref=f24e137]:
+        - link "Открыть макет" [ref=f24e138] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#nearby
+        - link "PNG целиком" [ref=f24e139] [cursor=pointer]:
+          - /url: /png/nearby--base.png
+    - article [ref=f24e140]:
+      - link [ref=f24e141] [cursor=pointer]:
+        - /url: /#nearby?state=empty
+        - img "Расписание двора — Пусто" [ref=f24e142]
+      - heading "Расписание двора" [level=2] [ref=f24e143]
+      - paragraph [ref=f24e144]: Пусто
+      - generic [ref=f24e145]:
+        - link "Открыть макет" [ref=f24e146] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#nearby?state=empty
+        - link "PNG целиком" [ref=f24e147] [cursor=pointer]:
+          - /url: /png/nearby--empty.png
+    - article [ref=f24e148]:
+      - link [ref=f24e149] [cursor=pointer]:
+        - /url: /#nearby?state=loading
+        - img "Расписание двора — Загрузка" [ref=f24e150]
+      - heading "Расписание двора" [level=2] [ref=f24e151]
+      - paragraph [ref=f24e152]: Загрузка
+      - generic [ref=f24e153]:
+        - link "Открыть макет" [ref=f24e154] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#nearby?state=loading
+        - link "PNG целиком" [ref=f24e155] [cursor=pointer]:
+          - /url: /png/nearby--loading.png
+    - article [ref=f24e156]:
+      - link [ref=f24e157] [cursor=pointer]:
+        - /url: /#nearby?state=error
+        - img "Расписание двора — Ошибка" [ref=f24e158]
+      - heading "Расписание двора" [level=2] [ref=f24e159]
+      - paragraph [ref=f24e160]: Ошибка
+      - generic [ref=f24e161]:
+        - link "Открыть макет" [ref=f24e162] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#nearby?state=error
+        - link "PNG целиком" [ref=f24e163] [cursor=pointer]:
+          - /url: /png/nearby--error.png
+    - article [ref=f24e164]:
+      - link [ref=f24e165] [cursor=pointer]:
+        - /url: /#filters
+        - img "Время прогулки — Обычное" [ref=f24e166]
+      - heading "Время прогулки" [level=2] [ref=f24e167]
+      - paragraph [ref=f24e168]: Обычное
+      - generic [ref=f24e169]:
+        - link "Открыть макет" [ref=f24e170] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#filters
+        - link "PNG целиком" [ref=f24e171] [cursor=pointer]:
+          - /url: /png/filters--base.png
+    - article [ref=f24e172]:
+      - link [ref=f24e173] [cursor=pointer]:
+        - /url: /#walk
+        - img "Встреча на прогулке — Обычное" [ref=f24e174]
+      - heading "Встреча на прогулке" [level=2] [ref=f24e175]
+      - paragraph [ref=f24e176]: Обычное
+      - generic [ref=f24e177]:
+        - link "Открыть макет" [ref=f24e178] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#walk
+        - link "PNG целиком" [ref=f24e179] [cursor=pointer]:
+          - /url: /png/walk--base.png
+    - article [ref=f24e180]:
+      - link [ref=f24e181] [cursor=pointer]:
+        - /url: /#announce
+        - img "Сообщить о прогулке — Обычное" [ref=f24e182]
+      - heading "Сообщить о прогулке" [level=2] [ref=f24e183]
+      - paragraph [ref=f24e184]: Обычное
+      - generic [ref=f24e185]:
+        - link "Открыть макет" [ref=f24e186] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#announce
+        - link "PNG целиком" [ref=f24e187] [cursor=pointer]:
+          - /url: /png/announce--base.png
+    - article [ref=f24e188]:
+      - link [ref=f24e189] [cursor=pointer]:
+        - /url: /#announce?state=validation
+        - img "Сообщить о прогулке — Валидация" [ref=f24e190]
+      - heading "Сообщить о прогулке" [level=2] [ref=f24e191]
+      - paragraph [ref=f24e192]: Валидация
+      - generic [ref=f24e193]:
+        - link "Открыть макет" [ref=f24e194] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#announce?state=validation
+        - link "PNG целиком" [ref=f24e195] [cursor=pointer]:
+          - /url: /png/announce--validation.png
+    - article [ref=f24e196]:
+      - link [ref=f24e197] [cursor=pointer]:
+        - /url: /#announce?state=loading
+        - img "Сообщить о прогулке — Загрузка" [ref=f24e198]
+      - heading "Сообщить о прогулке" [level=2] [ref=f24e199]
+      - paragraph [ref=f24e200]: Загрузка
+      - generic [ref=f24e201]:
+        - link "Открыть макет" [ref=f24e202] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#announce?state=loading
+        - link "PNG целиком" [ref=f24e203] [cursor=pointer]:
+          - /url: /png/announce--loading.png
+    - article [ref=f24e204]:
+      - link [ref=f24e205] [cursor=pointer]:
+        - /url: /#announce?state=error
+        - img "Сообщить о прогулке — Ошибка" [ref=f24e206]
+      - heading "Сообщить о прогулке" [level=2] [ref=f24e207]
+      - paragraph [ref=f24e208]: Ошибка
+      - generic [ref=f24e209]:
+        - link "Открыть макет" [ref=f24e210] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#announce?state=error
+        - link "PNG целиком" [ref=f24e211] [cursor=pointer]:
+          - /url: /png/announce--error.png
+    - article [ref=f24e212]:
+      - link [ref=f24e213] [cursor=pointer]:
+        - /url: /#announce?state=success
+        - img "Сообщить о прогулке — Успех" [ref=f24e214]
+      - heading "Сообщить о прогулке" [level=2] [ref=f24e215]
+      - paragraph [ref=f24e216]: Успех
+      - generic [ref=f24e217]:
+        - link "Открыть макет" [ref=f24e218] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#announce?state=success
+        - link "PNG целиком" [ref=f24e219] [cursor=pointer]:
+          - /url: /png/announce--success.png
+    - article [ref=f24e220]:
+      - link [ref=f24e221] [cursor=pointer]:
+        - /url: /#edit-walk
+        - img "Изменить прогулку — Обычное" [ref=f24e222]
+      - heading "Изменить прогулку" [level=2] [ref=f24e223]
+      - paragraph [ref=f24e224]: Обычное
+      - generic [ref=f24e225]:
+        - link "Открыть макет" [ref=f24e226] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-walk
+        - link "PNG целиком" [ref=f24e227] [cursor=pointer]:
+          - /url: /png/edit-walk--base.png
+    - article [ref=f24e228]:
+      - link [ref=f24e229] [cursor=pointer]:
+        - /url: /#edit-walk?state=validation
+        - img "Изменить прогулку — Валидация" [ref=f24e230]
+      - heading "Изменить прогулку" [level=2] [ref=f24e231]
+      - paragraph [ref=f24e232]: Валидация
+      - generic [ref=f24e233]:
+        - link "Открыть макет" [ref=f24e234] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-walk?state=validation
+        - link "PNG целиком" [ref=f24e235] [cursor=pointer]:
+          - /url: /png/edit-walk--validation.png
+    - article [ref=f24e236]:
+      - link [ref=f24e237] [cursor=pointer]:
+        - /url: /#edit-walk?state=loading
+        - img "Изменить прогулку — Загрузка" [ref=f24e238]
+      - heading "Изменить прогулку" [level=2] [ref=f24e239]
+      - paragraph [ref=f24e240]: Загрузка
+      - generic [ref=f24e241]:
+        - link "Открыть макет" [ref=f24e242] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-walk?state=loading
+        - link "PNG целиком" [ref=f24e243] [cursor=pointer]:
+          - /url: /png/edit-walk--loading.png
+    - article [ref=f24e244]:
+      - link [ref=f24e245] [cursor=pointer]:
+        - /url: /#edit-walk?state=error
+        - img "Изменить прогулку — Ошибка" [ref=f24e246]
+      - heading "Изменить прогулку" [level=2] [ref=f24e247]
+      - paragraph [ref=f24e248]: Ошибка
+      - generic [ref=f24e249]:
+        - link "Открыть макет" [ref=f24e250] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-walk?state=error
+        - link "PNG целиком" [ref=f24e251] [cursor=pointer]:
+          - /url: /png/edit-walk--error.png
+    - article [ref=f24e252]:
+      - link [ref=f24e253] [cursor=pointer]:
+        - /url: /#edit-walk?state=success
+        - img "Изменить прогулку — Успех" [ref=f24e254]
+      - heading "Изменить прогулку" [level=2] [ref=f24e255]
+      - paragraph [ref=f24e256]: Успех
+      - generic [ref=f24e257]:
+        - link "Открыть макет" [ref=f24e258] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-walk?state=success
+        - link "PNG целиком" [ref=f24e259] [cursor=pointer]:
+          - /url: /png/edit-walk--success.png
+    - article [ref=f24e260]:
+      - link [ref=f24e261] [cursor=pointer]:
+        - /url: /#choose-pet
+        - img "С кем гуляем — Обычное" [ref=f24e262]
+      - heading "С кем гуляем" [level=2] [ref=f24e263]
+      - paragraph [ref=f24e264]: Обычное
+      - generic [ref=f24e265]:
+        - link "Открыть макет" [ref=f24e266] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-pet
+        - link "PNG целиком" [ref=f24e267] [cursor=pointer]:
+          - /url: /png/choose-pet--base.png
+    - article [ref=f24e268]:
+      - link [ref=f24e269] [cursor=pointer]:
+        - /url: /#choose-pet?state=empty
+        - img "С кем гуляем — Пусто" [ref=f24e270]
+      - heading "С кем гуляем" [level=2] [ref=f24e271]
+      - paragraph [ref=f24e272]: Пусто
+      - generic [ref=f24e273]:
+        - link "Открыть макет" [ref=f24e274] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-pet?state=empty
+        - link "PNG целиком" [ref=f24e275] [cursor=pointer]:
+          - /url: /png/choose-pet--empty.png
+    - article [ref=f24e276]:
+      - link [ref=f24e277] [cursor=pointer]:
+        - /url: /#choose-pet?state=loading
+        - img "С кем гуляем — Загрузка" [ref=f24e278]
+      - heading "С кем гуляем" [level=2] [ref=f24e279]
+      - paragraph [ref=f24e280]: Загрузка
+      - generic [ref=f24e281]:
+        - link "Открыть макет" [ref=f24e282] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-pet?state=loading
+        - link "PNG целиком" [ref=f24e283] [cursor=pointer]:
+          - /url: /png/choose-pet--loading.png
+    - article [ref=f24e284]:
+      - link [ref=f24e285] [cursor=pointer]:
+        - /url: /#choose-pet?state=error
+        - img "С кем гуляем — Ошибка" [ref=f24e286]
+      - heading "С кем гуляем" [level=2] [ref=f24e287]
+      - paragraph [ref=f24e288]: Ошибка
+      - generic [ref=f24e289]:
+        - link "Открыть макет" [ref=f24e290] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-pet?state=error
+        - link "PNG целиком" [ref=f24e291] [cursor=pointer]:
+          - /url: /png/choose-pet--error.png
+    - article [ref=f24e292]:
+      - link [ref=f24e293] [cursor=pointer]:
+        - /url: /#choose-place
+        - img "Место встречи — Обычное" [ref=f24e294]
+      - heading "Место встречи" [level=2] [ref=f24e295]
+      - paragraph [ref=f24e296]: Обычное
+      - generic [ref=f24e297]:
+        - link "Открыть макет" [ref=f24e298] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-place
+        - link "PNG целиком" [ref=f24e299] [cursor=pointer]:
+          - /url: /png/choose-place--base.png
+    - article [ref=f24e300]:
+      - link [ref=f24e301] [cursor=pointer]:
+        - /url: /#choose-place?state=empty
+        - img "Место встречи — Пусто" [ref=f24e302]
+      - heading "Место встречи" [level=2] [ref=f24e303]
+      - paragraph [ref=f24e304]: Пусто
+      - generic [ref=f24e305]:
+        - link "Открыть макет" [ref=f24e306] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-place?state=empty
+        - link "PNG целиком" [ref=f24e307] [cursor=pointer]:
+          - /url: /png/choose-place--empty.png
+    - article [ref=f24e308]:
+      - link [ref=f24e309] [cursor=pointer]:
+        - /url: /#choose-place?state=loading
+        - img "Место встречи — Загрузка" [ref=f24e310]
+      - heading "Место встречи" [level=2] [ref=f24e311]
+      - paragraph [ref=f24e312]: Загрузка
+      - generic [ref=f24e313]:
+        - link "Открыть макет" [ref=f24e314] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-place?state=loading
+        - link "PNG целиком" [ref=f24e315] [cursor=pointer]:
+          - /url: /png/choose-place--loading.png
+    - article [ref=f24e316]:
+      - link [ref=f24e317] [cursor=pointer]:
+        - /url: /#choose-place?state=error
+        - img "Место встречи — Ошибка" [ref=f24e318]
+      - heading "Место встречи" [level=2] [ref=f24e319]
+      - paragraph [ref=f24e320]: Ошибка
+      - generic [ref=f24e321]:
+        - link "Открыть макет" [ref=f24e322] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-place?state=error
+        - link "PNG целиком" [ref=f24e323] [cursor=pointer]:
+          - /url: /png/choose-place--error.png
+    - article [ref=f24e324]:
+      - link [ref=f24e325] [cursor=pointer]:
+        - /url: /#choose-place?state=validation
+        - img "Место встречи — Валидация" [ref=f24e326]
+      - heading "Место встречи" [level=2] [ref=f24e327]
+      - paragraph [ref=f24e328]: Валидация
+      - generic [ref=f24e329]:
+        - link "Открыть макет" [ref=f24e330] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-place?state=validation
+        - link "PNG целиком" [ref=f24e331] [cursor=pointer]:
+          - /url: /png/choose-place--validation.png
+    - article [ref=f24e332]:
+      - link [ref=f24e333] [cursor=pointer]:
+        - /url: /#choose-time
+        - img "Время встречи — Обычное" [ref=f24e334]
+      - heading "Время встречи" [level=2] [ref=f24e335]
+      - paragraph [ref=f24e336]: Обычное
+      - generic [ref=f24e337]:
+        - link "Открыть макет" [ref=f24e338] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#choose-time
+        - link "PNG целиком" [ref=f24e339] [cursor=pointer]:
+          - /url: /png/choose-time--base.png
+    - article [ref=f24e340]:
+      - link [ref=f24e341] [cursor=pointer]:
+        - /url: /#pet-required
+        - img "Сначала питомец — Обычное" [ref=f24e342]
+      - heading "Сначала питомец" [level=2] [ref=f24e343]
+      - paragraph [ref=f24e344]: Обычное
+      - generic [ref=f24e345]:
+        - link "Открыть макет" [ref=f24e346] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pet-required
+        - link "PNG целиком" [ref=f24e347] [cursor=pointer]:
+          - /url: /png/pet-required--base.png
+    - article [ref=f24e348]:
+      - link [ref=f24e349] [cursor=pointer]:
+        - /url: /#plans
+        - img "Мои планы — Обычное" [ref=f24e350]
+      - heading "Мои планы" [level=2] [ref=f24e351]
+      - paragraph [ref=f24e352]: Обычное
+      - generic [ref=f24e353]:
+        - link "Открыть макет" [ref=f24e354] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#plans
+        - link "PNG целиком" [ref=f24e355] [cursor=pointer]:
+          - /url: /png/plans--base.png
+    - article [ref=f24e356]:
+      - link [ref=f24e357] [cursor=pointer]:
+        - /url: /#plans?state=empty
+        - img "Мои планы — Пусто" [ref=f24e358]
+      - heading "Мои планы" [level=2] [ref=f24e359]
+      - paragraph [ref=f24e360]: Пусто
+      - generic [ref=f24e361]:
+        - link "Открыть макет" [ref=f24e362] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#plans?state=empty
+        - link "PNG целиком" [ref=f24e363] [cursor=pointer]:
+          - /url: /png/plans--empty.png
+    - article [ref=f24e364]:
+      - link [ref=f24e365] [cursor=pointer]:
+        - /url: /#plans?state=loading
+        - img "Мои планы — Загрузка" [ref=f24e366]
+      - heading "Мои планы" [level=2] [ref=f24e367]
+      - paragraph [ref=f24e368]: Загрузка
+      - generic [ref=f24e369]:
+        - link "Открыть макет" [ref=f24e370] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#plans?state=loading
+        - link "PNG целиком" [ref=f24e371] [cursor=pointer]:
+          - /url: /png/plans--loading.png
+    - article [ref=f24e372]:
+      - link [ref=f24e373] [cursor=pointer]:
+        - /url: /#plans?state=error
+        - img "Мои планы — Ошибка" [ref=f24e374]
+      - heading "Мои планы" [level=2] [ref=f24e375]
+      - paragraph [ref=f24e376]: Ошибка
+      - generic [ref=f24e377]:
+        - link "Открыть макет" [ref=f24e378] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#plans?state=error
+        - link "PNG целиком" [ref=f24e379] [cursor=pointer]:
+          - /url: /png/plans--error.png
+    - article [ref=f24e380]:
+      - link [ref=f24e381] [cursor=pointer]:
+        - /url: /#walk-actions
+        - img "Управление прогулкой — Обычное" [ref=f24e382]
+      - heading "Управление прогулкой" [level=2] [ref=f24e383]
+      - paragraph [ref=f24e384]: Обычное
+      - generic [ref=f24e385]:
+        - link "Открыть макет" [ref=f24e386] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#walk-actions
+        - link "PNG целиком" [ref=f24e387] [cursor=pointer]:
+          - /url: /png/walk-actions--base.png
+    - article [ref=f24e388]:
+      - link [ref=f24e389] [cursor=pointer]:
+        - /url: /#delete-walk
+        - img "Удалить прогулку — Обычное" [ref=f24e390]
+      - heading "Удалить прогулку" [level=2] [ref=f24e391]
+      - paragraph [ref=f24e392]: Обычное
+      - generic [ref=f24e393]:
+        - link "Открыть макет" [ref=f24e394] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-walk
+        - link "PNG целиком" [ref=f24e395] [cursor=pointer]:
+          - /url: /png/delete-walk--base.png
+    - article [ref=f24e396]:
+      - link [ref=f24e397] [cursor=pointer]:
+        - /url: /#delete-walk?state=loading
+        - img "Удалить прогулку — Загрузка" [ref=f24e398]
+      - heading "Удалить прогулку" [level=2] [ref=f24e399]
+      - paragraph [ref=f24e400]: Загрузка
+      - generic [ref=f24e401]:
+        - link "Открыть макет" [ref=f24e402] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-walk?state=loading
+        - link "PNG целиком" [ref=f24e403] [cursor=pointer]:
+          - /url: /png/delete-walk--loading.png
+    - article [ref=f24e404]:
+      - link [ref=f24e405] [cursor=pointer]:
+        - /url: /#delete-walk?state=error
+        - img "Удалить прогулку — Ошибка" [ref=f24e406]
+      - heading "Удалить прогулку" [level=2] [ref=f24e407]
+      - paragraph [ref=f24e408]: Ошибка
+      - generic [ref=f24e409]:
+        - link "Открыть макет" [ref=f24e410] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-walk?state=error
+        - link "PNG целиком" [ref=f24e411] [cursor=pointer]:
+          - /url: /png/delete-walk--error.png
+    - article [ref=f24e412]:
+      - link [ref=f24e413] [cursor=pointer]:
+        - /url: /#delete-walk?state=success
+        - img "Удалить прогулку — Успех" [ref=f24e414]
+      - heading "Удалить прогулку" [level=2] [ref=f24e415]
+      - paragraph [ref=f24e416]: Успех
+      - generic [ref=f24e417]:
+        - link "Открыть макет" [ref=f24e418] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-walk?state=success
+        - link "PNG целиком" [ref=f24e419] [cursor=pointer]:
+          - /url: /png/delete-walk--success.png
+    - article [ref=f24e420]:
+      - link [ref=f24e421] [cursor=pointer]:
+        - /url: /#pets
+        - img "Мои питомцы — Обычное" [ref=f24e422]
+      - heading "Мои питомцы" [level=2] [ref=f24e423]
+      - paragraph [ref=f24e424]: Обычное
+      - generic [ref=f24e425]:
+        - link "Открыть макет" [ref=f24e426] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pets
+        - link "PNG целиком" [ref=f24e427] [cursor=pointer]:
+          - /url: /png/pets--base.png
+    - article [ref=f24e428]:
+      - link [ref=f24e429] [cursor=pointer]:
+        - /url: /#pets?state=empty
+        - img "Мои питомцы — Пусто" [ref=f24e430]
+      - heading "Мои питомцы" [level=2] [ref=f24e431]
+      - paragraph [ref=f24e432]: Пусто
+      - generic [ref=f24e433]:
+        - link "Открыть макет" [ref=f24e434] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pets?state=empty
+        - link "PNG целиком" [ref=f24e435] [cursor=pointer]:
+          - /url: /png/pets--empty.png
+    - article [ref=f24e436]:
+      - link [ref=f24e437] [cursor=pointer]:
+        - /url: /#pets?state=loading
+        - img "Мои питомцы — Загрузка" [ref=f24e438]
+      - heading "Мои питомцы" [level=2] [ref=f24e439]
+      - paragraph [ref=f24e440]: Загрузка
+      - generic [ref=f24e441]:
+        - link "Открыть макет" [ref=f24e442] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pets?state=loading
+        - link "PNG целиком" [ref=f24e443] [cursor=pointer]:
+          - /url: /png/pets--loading.png
+    - article [ref=f24e444]:
+      - link [ref=f24e445] [cursor=pointer]:
+        - /url: /#pets?state=error
+        - img "Мои питомцы — Ошибка" [ref=f24e446]
+      - heading "Мои питомцы" [level=2] [ref=f24e447]
+      - paragraph [ref=f24e448]: Ошибка
+      - generic [ref=f24e449]:
+        - link "Открыть макет" [ref=f24e450] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pets?state=error
+        - link "PNG целиком" [ref=f24e451] [cursor=pointer]:
+          - /url: /png/pets--error.png
+    - article [ref=f24e452]:
+      - link [ref=f24e453] [cursor=pointer]:
+        - /url: /#pet
+        - img "Паспорт питомца — Обычное" [ref=f24e454]
+      - heading "Паспорт питомца" [level=2] [ref=f24e455]
+      - paragraph [ref=f24e456]: Обычное
+      - generic [ref=f24e457]:
+        - link "Открыть макет" [ref=f24e458] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pet
+        - link "PNG целиком" [ref=f24e459] [cursor=pointer]:
+          - /url: /png/pet--base.png
+    - article [ref=f24e460]:
+      - link [ref=f24e461] [cursor=pointer]:
+        - /url: /#pet?state=shared
+        - img "Паспорт питомца — Общий питомец" [ref=f24e462]
+      - heading "Паспорт питомца" [level=2] [ref=f24e463]
+      - paragraph [ref=f24e464]: Общий питомец
+      - generic [ref=f24e465]:
+        - link "Открыть макет" [ref=f24e466] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#pet?state=shared
+        - link "PNG целиком" [ref=f24e467] [cursor=pointer]:
+          - /url: /png/pet--shared.png
+    - article [ref=f24e468]:
+      - link [ref=f24e469] [cursor=pointer]:
+        - /url: /#new-pet
+        - img "Добавить питомца — Обычное" [ref=f24e470]
+      - heading "Добавить питомца" [level=2] [ref=f24e471]
+      - paragraph [ref=f24e472]: Обычное
+      - generic [ref=f24e473]:
+        - link "Открыть макет" [ref=f24e474] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#new-pet
+        - link "PNG целиком" [ref=f24e475] [cursor=pointer]:
+          - /url: /png/new-pet--base.png
+    - article [ref=f24e476]:
+      - link [ref=f24e477] [cursor=pointer]:
+        - /url: /#new-pet?state=validation
+        - img "Добавить питомца — Валидация" [ref=f24e478]
+      - heading "Добавить питомца" [level=2] [ref=f24e479]
+      - paragraph [ref=f24e480]: Валидация
+      - generic [ref=f24e481]:
+        - link "Открыть макет" [ref=f24e482] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#new-pet?state=validation
+        - link "PNG целиком" [ref=f24e483] [cursor=pointer]:
+          - /url: /png/new-pet--validation.png
+    - article [ref=f24e484]:
+      - link [ref=f24e485] [cursor=pointer]:
+        - /url: /#new-pet?state=loading
+        - img "Добавить питомца — Загрузка" [ref=f24e486]
+      - heading "Добавить питомца" [level=2] [ref=f24e487]
+      - paragraph [ref=f24e488]: Загрузка
+      - generic [ref=f24e489]:
+        - link "Открыть макет" [ref=f24e490] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#new-pet?state=loading
+        - link "PNG целиком" [ref=f24e491] [cursor=pointer]:
+          - /url: /png/new-pet--loading.png
+    - article [ref=f24e492]:
+      - link [ref=f24e493] [cursor=pointer]:
+        - /url: /#new-pet?state=error
+        - img "Добавить питомца — Ошибка" [ref=f24e494]
+      - heading "Добавить питомца" [level=2] [ref=f24e495]
+      - paragraph [ref=f24e496]: Ошибка
+      - generic [ref=f24e497]:
+        - link "Открыть макет" [ref=f24e498] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#new-pet?state=error
+        - link "PNG целиком" [ref=f24e499] [cursor=pointer]:
+          - /url: /png/new-pet--error.png
+    - article [ref=f24e500]:
+      - link [ref=f24e501] [cursor=pointer]:
+        - /url: /#new-pet?state=success
+        - img "Добавить питомца — Успех" [ref=f24e502]
+      - heading "Добавить питомца" [level=2] [ref=f24e503]
+      - paragraph [ref=f24e504]: Успех
+      - generic [ref=f24e505]:
+        - link "Открыть макет" [ref=f24e506] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#new-pet?state=success
+        - link "PNG целиком" [ref=f24e507] [cursor=pointer]:
+          - /url: /png/new-pet--success.png
+    - article [ref=f24e508]:
+      - link [ref=f24e509] [cursor=pointer]:
+        - /url: /#edit-pet
+        - img "Изменить питомца — Обычное" [ref=f24e510]
+      - heading "Изменить питомца" [level=2] [ref=f24e511]
+      - paragraph [ref=f24e512]: Обычное
+      - generic [ref=f24e513]:
+        - link "Открыть макет" [ref=f24e514] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-pet
+        - link "PNG целиком" [ref=f24e515] [cursor=pointer]:
+          - /url: /png/edit-pet--base.png
+    - article [ref=f24e516]:
+      - link [ref=f24e517] [cursor=pointer]:
+        - /url: /#edit-pet?state=validation
+        - img "Изменить питомца — Валидация" [ref=f24e518]
+      - heading "Изменить питомца" [level=2] [ref=f24e519]
+      - paragraph [ref=f24e520]: Валидация
+      - generic [ref=f24e521]:
+        - link "Открыть макет" [ref=f24e522] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-pet?state=validation
+        - link "PNG целиком" [ref=f24e523] [cursor=pointer]:
+          - /url: /png/edit-pet--validation.png
+    - article [ref=f24e524]:
+      - link [ref=f24e525] [cursor=pointer]:
+        - /url: /#edit-pet?state=loading
+        - img "Изменить питомца — Загрузка" [ref=f24e526]
+      - heading "Изменить питомца" [level=2] [ref=f24e527]
+      - paragraph [ref=f24e528]: Загрузка
+      - generic [ref=f24e529]:
+        - link "Открыть макет" [ref=f24e530] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-pet?state=loading
+        - link "PNG целиком" [ref=f24e531] [cursor=pointer]:
+          - /url: /png/edit-pet--loading.png
+    - article [ref=f24e532]:
+      - link [ref=f24e533] [cursor=pointer]:
+        - /url: /#edit-pet?state=error
+        - img "Изменить питомца — Ошибка" [ref=f24e534]
+      - heading "Изменить питомца" [level=2] [ref=f24e535]
+      - paragraph [ref=f24e536]: Ошибка
+      - generic [ref=f24e537]:
+        - link "Открыть макет" [ref=f24e538] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-pet?state=error
+        - link "PNG целиком" [ref=f24e539] [cursor=pointer]:
+          - /url: /png/edit-pet--error.png
+    - article [ref=f24e540]:
+      - link [ref=f24e541] [cursor=pointer]:
+        - /url: /#edit-pet?state=success
+        - img "Изменить питомца — Успех" [ref=f24e542]
+      - heading "Изменить питомца" [level=2] [ref=f24e543]
+      - paragraph [ref=f24e544]: Успех
+      - generic [ref=f24e545]:
+        - link "Открыть макет" [ref=f24e546] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#edit-pet?state=success
+        - link "PNG целиком" [ref=f24e547] [cursor=pointer]:
+          - /url: /png/edit-pet--success.png
+    - article [ref=f24e548]:
+      - link [ref=f24e549] [cursor=pointer]:
+        - /url: /#photo
+        - img "Фотография — Обычное" [ref=f24e550]
+      - heading "Фотография" [level=2] [ref=f24e551]
+      - paragraph [ref=f24e552]: Обычное
+      - generic [ref=f24e553]:
+        - link "Открыть макет" [ref=f24e554] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#photo
+        - link "PNG целиком" [ref=f24e555] [cursor=pointer]:
+          - /url: /png/photo--base.png
+    - article [ref=f24e556]:
+      - link [ref=f24e557] [cursor=pointer]:
+        - /url: /#photo?state=validation
+        - img "Фотография — Валидация" [ref=f24e558]
+      - heading "Фотография" [level=2] [ref=f24e559]
+      - paragraph [ref=f24e560]: Валидация
+      - generic [ref=f24e561]:
+        - link "Открыть макет" [ref=f24e562] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#photo?state=validation
+        - link "PNG целиком" [ref=f24e563] [cursor=pointer]:
+          - /url: /png/photo--validation.png
+    - article [ref=f24e564]:
+      - link [ref=f24e565] [cursor=pointer]:
+        - /url: /#photo?state=loading
+        - img "Фотография — Загрузка" [ref=f24e566]
+      - heading "Фотография" [level=2] [ref=f24e567]
+      - paragraph [ref=f24e568]: Загрузка
+      - generic [ref=f24e569]:
+        - link "Открыть макет" [ref=f24e570] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#photo?state=loading
+        - link "PNG целиком" [ref=f24e571] [cursor=pointer]:
+          - /url: /png/photo--loading.png
+    - article [ref=f24e572]:
+      - link [ref=f24e573] [cursor=pointer]:
+        - /url: /#photo?state=success
+        - img "Фотография — Успех" [ref=f24e574]
+      - heading "Фотография" [level=2] [ref=f24e575]
+      - paragraph [ref=f24e576]: Успех
+      - generic [ref=f24e577]:
+        - link "Открыть макет" [ref=f24e578] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#photo?state=success
+        - link "PNG целиком" [ref=f24e579] [cursor=pointer]:
+          - /url: /png/photo--success.png
+    - article [ref=f24e580]:
+      - link [ref=f24e581] [cursor=pointer]:
+        - /url: /#delete-pet
+        - img "Удалить питомца — Обычное" [ref=f24e582]
+      - heading "Удалить питомца" [level=2] [ref=f24e583]
+      - paragraph [ref=f24e584]: Обычное
+      - generic [ref=f24e585]:
+        - link "Открыть макет" [ref=f24e586] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-pet
+        - link "PNG целиком" [ref=f24e587] [cursor=pointer]:
+          - /url: /png/delete-pet--base.png
+    - article [ref=f24e588]:
+      - link [ref=f24e589] [cursor=pointer]:
+        - /url: /#delete-pet?state=loading
+        - img "Удалить питомца — Загрузка" [ref=f24e590]
+      - heading "Удалить питомца" [level=2] [ref=f24e591]
+      - paragraph [ref=f24e592]: Загрузка
+      - generic [ref=f24e593]:
+        - link "Открыть макет" [ref=f24e594] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-pet?state=loading
+        - link "PNG целиком" [ref=f24e595] [cursor=pointer]:
+          - /url: /png/delete-pet--loading.png
+    - article [ref=f24e596]:
+      - link [ref=f24e597] [cursor=pointer]:
+        - /url: /#delete-pet?state=error
+        - img "Удалить питомца — Ошибка" [ref=f24e598]
+      - heading "Удалить питомца" [level=2] [ref=f24e599]
+      - paragraph [ref=f24e600]: Ошибка
+      - generic [ref=f24e601]:
+        - link "Открыть макет" [ref=f24e602] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-pet?state=error
+        - link "PNG целиком" [ref=f24e603] [cursor=pointer]:
+          - /url: /png/delete-pet--error.png
+    - article [ref=f24e604]:
+      - link [ref=f24e605] [cursor=pointer]:
+        - /url: /#delete-pet?state=success
+        - img "Удалить питомца — Успех" [ref=f24e606]
+      - heading "Удалить питомца" [level=2] [ref=f24e607]
+      - paragraph [ref=f24e608]: Успех
+      - generic [ref=f24e609]:
+        - link "Открыть макет" [ref=f24e610] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-pet?state=success
+        - link "PNG целиком" [ref=f24e611] [cursor=pointer]:
+          - /url: /png/delete-pet--success.png
+    - article [ref=f24e612]:
+      - link [ref=f24e613] [cursor=pointer]:
+        - /url: /#delete-pet?state=shared
+        - img "Удалить питомца — Общий питомец" [ref=f24e614]
+      - heading "Удалить питомца" [level=2] [ref=f24e615]
+      - paragraph [ref=f24e616]: Общий питомец
+      - generic [ref=f24e617]:
+        - link "Открыть макет" [ref=f24e618] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#delete-pet?state=shared
+        - link "PNG целиком" [ref=f24e619] [cursor=pointer]:
+          - /url: /png/delete-pet--shared.png
+    - article [ref=f24e620]:
+      - link [ref=f24e621] [cursor=pointer]:
+        - /url: /#share
+        - img "Поделиться питомцем — Обычное" [ref=f24e622]
+      - heading "Поделиться питомцем" [level=2] [ref=f24e623]
+      - paragraph [ref=f24e624]: Обычное
+      - generic [ref=f24e625]:
+        - link "Открыть макет" [ref=f24e626] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#share
+        - link "PNG целиком" [ref=f24e627] [cursor=pointer]:
+          - /url: /png/share--base.png
+    - article [ref=f24e628]:
+      - link [ref=f24e629] [cursor=pointer]:
+        - /url: /#share?state=loading
+        - img "Поделиться питомцем — Загрузка" [ref=f24e630]
+      - heading "Поделиться питомцем" [level=2] [ref=f24e631]
+      - paragraph [ref=f24e632]: Загрузка
+      - generic [ref=f24e633]:
+        - link "Открыть макет" [ref=f24e634] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#share?state=loading
+        - link "PNG целиком" [ref=f24e635] [cursor=pointer]:
+          - /url: /png/share--loading.png
+    - article [ref=f24e636]:
+      - link [ref=f24e637] [cursor=pointer]:
+        - /url: /#share?state=error
+        - img "Поделиться питомцем — Ошибка" [ref=f24e638]
+      - heading "Поделиться питомцем" [level=2] [ref=f24e639]
+      - paragraph [ref=f24e640]: Ошибка
+      - generic [ref=f24e641]:
+        - link "Открыть макет" [ref=f24e642] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#share?state=error
+        - link "PNG целиком" [ref=f24e643] [cursor=pointer]:
+          - /url: /png/share--error.png
+    - article [ref=f24e644]:
+      - link [ref=f24e645] [cursor=pointer]:
+        - /url: /#share?state=success
+        - img "Поделиться питомцем — Успех" [ref=f24e646]
+      - heading "Поделиться питомцем" [level=2] [ref=f24e647]
+      - paragraph [ref=f24e648]: Успех
+      - generic [ref=f24e649]:
+        - link "Открыть макет" [ref=f24e650] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#share?state=success
+        - link "PNG целиком" [ref=f24e651] [cursor=pointer]:
+          - /url: /png/share--success.png
+    - article [ref=f24e652]:
+      - link [ref=f24e653] [cursor=pointer]:
+        - /url: /#rotate-link
+        - img "Обновить ссылку — Обычное" [ref=f24e654]
+      - heading "Обновить ссылку" [level=2] [ref=f24e655]
+      - paragraph [ref=f24e656]: Обычное
+      - generic [ref=f24e657]:
+        - link "Открыть макет" [ref=f24e658] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#rotate-link
+        - link "PNG целиком" [ref=f24e659] [cursor=pointer]:
+          - /url: /png/rotate-link--base.png
+    - article [ref=f24e660]:
+      - link [ref=f24e661] [cursor=pointer]:
+        - /url: /#rotate-link?state=loading
+        - img "Обновить ссылку — Загрузка" [ref=f24e662]
+      - heading "Обновить ссылку" [level=2] [ref=f24e663]
+      - paragraph [ref=f24e664]: Загрузка
+      - generic [ref=f24e665]:
+        - link "Открыть макет" [ref=f24e666] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#rotate-link?state=loading
+        - link "PNG целиком" [ref=f24e667] [cursor=pointer]:
+          - /url: /png/rotate-link--loading.png
+    - article [ref=f24e668]:
+      - link [ref=f24e669] [cursor=pointer]:
+        - /url: /#rotate-link?state=error
+        - img "Обновить ссылку — Ошибка" [ref=f24e670]
+      - heading "Обновить ссылку" [level=2] [ref=f24e671]
+      - paragraph [ref=f24e672]: Ошибка
+      - generic [ref=f24e673]:
+        - link "Открыть макет" [ref=f24e674] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#rotate-link?state=error
+        - link "PNG целиком" [ref=f24e675] [cursor=pointer]:
+          - /url: /png/rotate-link--error.png
+    - article [ref=f24e676]:
+      - link [ref=f24e677] [cursor=pointer]:
+        - /url: /#rotate-link?state=success
+        - img "Обновить ссылку — Успех" [ref=f24e678]
+      - heading "Обновить ссылку" [level=2] [ref=f24e679]
+      - paragraph [ref=f24e680]: Успех
+      - generic [ref=f24e681]:
+        - link "Открыть макет" [ref=f24e682] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#rotate-link?state=success
+        - link "PNG целиком" [ref=f24e683] [cursor=pointer]:
+          - /url: /png/rotate-link--success.png
+    - article [ref=f24e684]:
+      - link [ref=f24e685] [cursor=pointer]:
+        - /url: /#accept
+        - img "Приглашение — Обычное" [ref=f24e686]
+      - heading "Приглашение" [level=2] [ref=f24e687]
+      - paragraph [ref=f24e688]: Обычное
+      - generic [ref=f24e689]:
+        - link "Открыть макет" [ref=f24e690] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept
+        - link "PNG целиком" [ref=f24e691] [cursor=pointer]:
+          - /url: /png/accept--base.png
+    - article [ref=f24e692]:
+      - link [ref=f24e693] [cursor=pointer]:
+        - /url: /#accept?state=loading
+        - img "Приглашение — Загрузка" [ref=f24e694]
+      - heading "Приглашение" [level=2] [ref=f24e695]
+      - paragraph [ref=f24e696]: Загрузка
+      - generic [ref=f24e697]:
+        - link "Открыть макет" [ref=f24e698] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept?state=loading
+        - link "PNG целиком" [ref=f24e699] [cursor=pointer]:
+          - /url: /png/accept--loading.png
+    - article [ref=f24e700]:
+      - link [ref=f24e701] [cursor=pointer]:
+        - /url: /#accept?state=error
+        - img "Приглашение — Ошибка" [ref=f24e702]
+      - heading "Приглашение" [level=2] [ref=f24e703]
+      - paragraph [ref=f24e704]: Ошибка
+      - generic [ref=f24e705]:
+        - link "Открыть макет" [ref=f24e706] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept?state=error
+        - link "PNG целиком" [ref=f24e707] [cursor=pointer]:
+          - /url: /png/accept--error.png
+    - article [ref=f24e708]:
+      - link [ref=f24e709] [cursor=pointer]:
+        - /url: /#accept?state=success
+        - img "Приглашение — Успех" [ref=f24e710]
+      - heading "Приглашение" [level=2] [ref=f24e711]
+      - paragraph [ref=f24e712]: Успех
+      - generic [ref=f24e713]:
+        - link "Открыть макет" [ref=f24e714] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept?state=success
+        - link "PNG целиком" [ref=f24e715] [cursor=pointer]:
+          - /url: /png/accept--success.png
+    - article [ref=f24e716]:
+      - link [ref=f24e717] [cursor=pointer]:
+        - /url: /#accept?state=expired
+        - img "Приглашение — Ссылка недействительна" [ref=f24e718]
+      - heading "Приглашение" [level=2] [ref=f24e719]
+      - paragraph [ref=f24e720]: Ссылка недействительна
+      - generic [ref=f24e721]:
+        - link "Открыть макет" [ref=f24e722] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept?state=expired
+        - link "PNG целиком" [ref=f24e723] [cursor=pointer]:
+          - /url: /png/accept--expired.png
+    - article [ref=f24e724]:
+      - link [ref=f24e725] [cursor=pointer]:
+        - /url: /#accept?state=used
+        - img "Приглашение — Ссылка использована" [ref=f24e726]
+      - heading "Приглашение" [level=2] [ref=f24e727]
+      - paragraph [ref=f24e728]: Ссылка использована
+      - generic [ref=f24e729]:
+        - link "Открыть макет" [ref=f24e730] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#accept?state=used
+        - link "PNG целиком" [ref=f24e731] [cursor=pointer]:
+          - /url: /png/accept--used.png
+    - article [ref=f24e732]:
+      - link [ref=f24e733] [cursor=pointer]:
+        - /url: /#already-added
+        - img "Питомец уже добавлен — Обычное" [ref=f24e734]
+      - heading "Питомец уже добавлен" [level=2] [ref=f24e735]
+      - paragraph [ref=f24e736]: Обычное
+      - generic [ref=f24e737]:
+        - link "Открыть макет" [ref=f24e738] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#already-added
+        - link "PNG целиком" [ref=f24e739] [cursor=pointer]:
+          - /url: /png/already-added--base.png
+    - article [ref=f24e740]:
+      - link [ref=f24e741] [cursor=pointer]:
+        - /url: /#profile
+        - img "Мой район и настройки — Обычное" [ref=f24e742]
+      - heading "Мой район и настройки" [level=2] [ref=f24e743]
+      - paragraph [ref=f24e744]: Обычное
+      - generic [ref=f24e745]:
+        - link "Открыть макет" [ref=f24e746] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#profile
+        - link "PNG целиком" [ref=f24e747] [cursor=pointer]:
+          - /url: /png/profile--base.png
+    - article [ref=f24e748]:
+      - link [ref=f24e749] [cursor=pointer]:
+        - /url: /#contact
+        - img "Связь с разработчиком — Обычное" [ref=f24e750]
+      - heading "Связь с разработчиком" [level=2] [ref=f24e751]
+      - paragraph [ref=f24e752]: Обычное
+      - generic [ref=f24e753]:
+        - link "Открыть макет" [ref=f24e754] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#contact
+        - link "PNG целиком" [ref=f24e755] [cursor=pointer]:
+          - /url: /png/contact--base.png
+    - article [ref=f24e756]:
+      - link [ref=f24e757] [cursor=pointer]:
+        - /url: /#contact?state=success
+        - img "Связь с разработчиком — Успех" [ref=f24e758]
+      - heading "Связь с разработчиком" [level=2] [ref=f24e759]
+      - paragraph [ref=f24e760]: Успех
+      - generic [ref=f24e761]:
+        - link "Открыть макет" [ref=f24e762] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#contact?state=success
+        - link "PNG целиком" [ref=f24e763] [cursor=pointer]:
+          - /url: /png/contact--success.png
+    - article [ref=f24e764]:
+      - link [ref=f24e765] [cursor=pointer]:
+        - /url: /#admin-login
+        - img "Вход администратора — Обычное" [ref=f24e766]
+      - heading "Вход администратора" [level=2] [ref=f24e767]
+      - paragraph [ref=f24e768]: Обычное
+      - generic [ref=f24e769]:
+        - link "Открыть макет" [ref=f24e770] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-login
+        - link "PNG целиком" [ref=f24e771] [cursor=pointer]:
+          - /url: /png/admin-login--base.png
+    - article [ref=f24e772]:
+      - link [ref=f24e773] [cursor=pointer]:
+        - /url: /#admin-login?state=validation
+        - img "Вход администратора — Валидация" [ref=f24e774]
+      - heading "Вход администратора" [level=2] [ref=f24e775]
+      - paragraph [ref=f24e776]: Валидация
+      - generic [ref=f24e777]:
+        - link "Открыть макет" [ref=f24e778] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-login?state=validation
+        - link "PNG целиком" [ref=f24e779] [cursor=pointer]:
+          - /url: /png/admin-login--validation.png
+    - article [ref=f24e780]:
+      - link [ref=f24e781] [cursor=pointer]:
+        - /url: /#admin-login?state=loading
+        - img "Вход администратора — Загрузка" [ref=f24e782]
+      - heading "Вход администратора" [level=2] [ref=f24e783]
+      - paragraph [ref=f24e784]: Загрузка
+      - generic [ref=f24e785]:
+        - link "Открыть макет" [ref=f24e786] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-login?state=loading
+        - link "PNG целиком" [ref=f24e787] [cursor=pointer]:
+          - /url: /png/admin-login--loading.png
+    - article [ref=f24e788]:
+      - link [ref=f24e789] [cursor=pointer]:
+        - /url: /#admin-login?state=error
+        - img "Вход администратора — Ошибка" [ref=f24e790]
+      - heading "Вход администратора" [level=2] [ref=f24e791]
+      - paragraph [ref=f24e792]: Ошибка
+      - generic [ref=f24e793]:
+        - link "Открыть макет" [ref=f24e794] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-login?state=error
+        - link "PNG целиком" [ref=f24e795] [cursor=pointer]:
+          - /url: /png/admin-login--error.png
+    - article [ref=f24e796]:
+      - link [ref=f24e797] [cursor=pointer]:
+        - /url: /#admin-login?state=success
+        - img "Вход администратора — Успех" [ref=f24e798]
+      - heading "Вход администратора" [level=2] [ref=f24e799]
+      - paragraph [ref=f24e800]: Успех
+      - generic [ref=f24e801]:
+        - link "Открыть макет" [ref=f24e802] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-login?state=success
+        - link "PNG целиком" [ref=f24e803] [cursor=pointer]:
+          - /url: /png/admin-login--success.png
+    - article [ref=f24e804]:
+      - link [ref=f24e805] [cursor=pointer]:
+        - /url: /#admin
+        - img "Управление — Обычное" [ref=f24e806]
+      - heading "Управление" [level=2] [ref=f24e807]
+      - paragraph [ref=f24e808]: Обычное
+      - generic [ref=f24e809]:
+        - link "Открыть макет" [ref=f24e810] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin
+        - link "PNG целиком" [ref=f24e811] [cursor=pointer]:
+          - /url: /png/admin--base.png
+    - article [ref=f24e812]:
+      - link [ref=f24e813] [cursor=pointer]:
+        - /url: /#admin?state=loading
+        - img "Управление — Загрузка" [ref=f24e814]
+      - heading "Управление" [level=2] [ref=f24e815]
+      - paragraph [ref=f24e816]: Загрузка
+      - generic [ref=f24e817]:
+        - link "Открыть макет" [ref=f24e818] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin?state=loading
+        - link "PNG целиком" [ref=f24e819] [cursor=pointer]:
+          - /url: /png/admin--loading.png
+    - article [ref=f24e820]:
+      - link [ref=f24e821] [cursor=pointer]:
+        - /url: /#admin?state=error
+        - img "Управление — Ошибка" [ref=f24e822]
+      - heading "Управление" [level=2] [ref=f24e823]
+      - paragraph [ref=f24e824]: Ошибка
+      - generic [ref=f24e825]:
+        - link "Открыть макет" [ref=f24e826] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin?state=error
+        - link "PNG целиком" [ref=f24e827] [cursor=pointer]:
+          - /url: /png/admin--error.png
+    - article [ref=f24e828]:
+      - link [ref=f24e829] [cursor=pointer]:
+        - /url: /#requests
+        - img "Заявки жителей — Обычное" [ref=f24e830]
+      - heading "Заявки жителей" [level=2] [ref=f24e831]
+      - paragraph [ref=f24e832]: Обычное
+      - generic [ref=f24e833]:
+        - link "Открыть макет" [ref=f24e834] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#requests
+        - link "PNG целиком" [ref=f24e835] [cursor=pointer]:
+          - /url: /png/requests--base.png
+    - article [ref=f24e836]:
+      - link [ref=f24e837] [cursor=pointer]:
+        - /url: /#requests?state=empty
+        - img "Заявки жителей — Пусто" [ref=f24e838]
+      - heading "Заявки жителей" [level=2] [ref=f24e839]
+      - paragraph [ref=f24e840]: Пусто
+      - generic [ref=f24e841]:
+        - link "Открыть макет" [ref=f24e842] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#requests?state=empty
+        - link "PNG целиком" [ref=f24e843] [cursor=pointer]:
+          - /url: /png/requests--empty.png
+    - article [ref=f24e844]:
+      - link [ref=f24e845] [cursor=pointer]:
+        - /url: /#requests?state=loading
+        - img "Заявки жителей — Загрузка" [ref=f24e846]
+      - heading "Заявки жителей" [level=2] [ref=f24e847]
+      - paragraph [ref=f24e848]: Загрузка
+      - generic [ref=f24e849]:
+        - link "Открыть макет" [ref=f24e850] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#requests?state=loading
+        - link "PNG целиком" [ref=f24e851] [cursor=pointer]:
+          - /url: /png/requests--loading.png
+    - article [ref=f24e852]:
+      - link [ref=f24e853] [cursor=pointer]:
+        - /url: /#requests?state=error
+        - img "Заявки жителей — Ошибка" [ref=f24e854]
+      - heading "Заявки жителей" [level=2] [ref=f24e855]
+      - paragraph [ref=f24e856]: Ошибка
+      - generic [ref=f24e857]:
+        - link "Открыть макет" [ref=f24e858] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#requests?state=error
+        - link "PNG целиком" [ref=f24e859] [cursor=pointer]:
+          - /url: /png/requests--error.png
+    - article [ref=f24e860]:
+      - link [ref=f24e861] [cursor=pointer]:
+        - /url: /#approve
+        - img "Добавить локацию — Обычное" [ref=f24e862]
+      - heading "Добавить локацию" [level=2] [ref=f24e863]
+      - paragraph [ref=f24e864]: Обычное
+      - generic [ref=f24e865]:
+        - link "Открыть макет" [ref=f24e866] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#approve
+        - link "PNG целиком" [ref=f24e867] [cursor=pointer]:
+          - /url: /png/approve--base.png
+    - article [ref=f24e868]:
+      - link [ref=f24e869] [cursor=pointer]:
+        - /url: /#approve?state=loading
+        - img "Добавить локацию — Загрузка" [ref=f24e870]
+      - heading "Добавить локацию" [level=2] [ref=f24e871]
+      - paragraph [ref=f24e872]: Загрузка
+      - generic [ref=f24e873]:
+        - link "Открыть макет" [ref=f24e874] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#approve?state=loading
+        - link "PNG целиком" [ref=f24e875] [cursor=pointer]:
+          - /url: /png/approve--loading.png
+    - article [ref=f24e876]:
+      - link [ref=f24e877] [cursor=pointer]:
+        - /url: /#approve?state=error
+        - img "Добавить локацию — Ошибка" [ref=f24e878]
+      - heading "Добавить локацию" [level=2] [ref=f24e879]
+      - paragraph [ref=f24e880]: Ошибка
+      - generic [ref=f24e881]:
+        - link "Открыть макет" [ref=f24e882] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#approve?state=error
+        - link "PNG целиком" [ref=f24e883] [cursor=pointer]:
+          - /url: /png/approve--error.png
+    - article [ref=f24e884]:
+      - link [ref=f24e885] [cursor=pointer]:
+        - /url: /#approve?state=success
+        - img "Добавить локацию — Успех" [ref=f24e886]
+      - heading "Добавить локацию" [level=2] [ref=f24e887]
+      - paragraph [ref=f24e888]: Успех
+      - generic [ref=f24e889]:
+        - link "Открыть макет" [ref=f24e890] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#approve?state=success
+        - link "PNG целиком" [ref=f24e891] [cursor=pointer]:
+          - /url: /png/approve--success.png
+    - article [ref=f24e892]:
+      - link [ref=f24e893] [cursor=pointer]:
+        - /url: /#reject
+        - img "Отклонить заявку — Обычное" [ref=f24e894]
+      - heading "Отклонить заявку" [level=2] [ref=f24e895]
+      - paragraph [ref=f24e896]: Обычное
+      - generic [ref=f24e897]:
+        - link "Открыть макет" [ref=f24e898] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#reject
+        - link "PNG целиком" [ref=f24e899] [cursor=pointer]:
+          - /url: /png/reject--base.png
+    - article [ref=f24e900]:
+      - link [ref=f24e901] [cursor=pointer]:
+        - /url: /#reject?state=loading
+        - img "Отклонить заявку — Загрузка" [ref=f24e902]
+      - heading "Отклонить заявку" [level=2] [ref=f24e903]
+      - paragraph [ref=f24e904]: Загрузка
+      - generic [ref=f24e905]:
+        - link "Открыть макет" [ref=f24e906] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#reject?state=loading
+        - link "PNG целиком" [ref=f24e907] [cursor=pointer]:
+          - /url: /png/reject--loading.png
+    - article [ref=f24e908]:
+      - link [ref=f24e909] [cursor=pointer]:
+        - /url: /#reject?state=error
+        - img "Отклонить заявку — Ошибка" [ref=f24e910]
+      - heading "Отклонить заявку" [level=2] [ref=f24e911]
+      - paragraph [ref=f24e912]: Ошибка
+      - generic [ref=f24e913]:
+        - link "Открыть макет" [ref=f24e914] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#reject?state=error
+        - link "PNG целиком" [ref=f24e915] [cursor=pointer]:
+          - /url: /png/reject--error.png
+    - article [ref=f24e916]:
+      - link [ref=f24e917] [cursor=pointer]:
+        - /url: /#reject?state=success
+        - img "Отклонить заявку — Успех" [ref=f24e918]
+      - heading "Отклонить заявку" [level=2] [ref=f24e919]
+      - paragraph [ref=f24e920]: Успех
+      - generic [ref=f24e921]:
+        - link "Открыть макет" [ref=f24e922] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#reject?state=success
+        - link "PNG целиком" [ref=f24e923] [cursor=pointer]:
+          - /url: /png/reject--success.png
+    - article [ref=f24e924]:
+      - link [ref=f24e925] [cursor=pointer]:
+        - /url: /#admin-pets
+        - img "Все питомцы — Обычное" [ref=f24e926]
+      - heading "Все питомцы" [level=2] [ref=f24e927]
+      - paragraph [ref=f24e928]: Обычное
+      - generic [ref=f24e929]:
+        - link "Открыть макет" [ref=f24e930] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-pets
+        - link "PNG целиком" [ref=f24e931] [cursor=pointer]:
+          - /url: /png/admin-pets--base.png
+    - article [ref=f24e932]:
+      - link [ref=f24e933] [cursor=pointer]:
+        - /url: /#admin-pets?state=empty
+        - img "Все питомцы — Пусто" [ref=f24e934]
+      - heading "Все питомцы" [level=2] [ref=f24e935]
+      - paragraph [ref=f24e936]: Пусто
+      - generic [ref=f24e937]:
+        - link "Открыть макет" [ref=f24e938] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-pets?state=empty
+        - link "PNG целиком" [ref=f24e939] [cursor=pointer]:
+          - /url: /png/admin-pets--empty.png
+    - article [ref=f24e940]:
+      - link [ref=f24e941] [cursor=pointer]:
+        - /url: /#admin-pets?state=loading
+        - img "Все питомцы — Загрузка" [ref=f24e942]
+      - heading "Все питомцы" [level=2] [ref=f24e943]
+      - paragraph [ref=f24e944]: Загрузка
+      - generic [ref=f24e945]:
+        - link "Открыть макет" [ref=f24e946] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-pets?state=loading
+        - link "PNG целиком" [ref=f24e947] [cursor=pointer]:
+          - /url: /png/admin-pets--loading.png
+    - article [ref=f24e948]:
+      - link [ref=f24e949] [cursor=pointer]:
+        - /url: /#admin-pets?state=error
+        - img "Все питомцы — Ошибка" [ref=f24e950]
+      - heading "Все питомцы" [level=2] [ref=f24e951]
+      - paragraph [ref=f24e952]: Ошибка
+      - generic [ref=f24e953]:
+        - link "Открыть макет" [ref=f24e954] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-pets?state=error
+        - link "PNG целиком" [ref=f24e955] [cursor=pointer]:
+          - /url: /png/admin-pets--error.png
+    - article [ref=f24e956]:
+      - link [ref=f24e957] [cursor=pointer]:
+        - /url: /#admin-edit
+        - img "Правка питомца — Обычное" [ref=f24e958]
+      - heading "Правка питомца" [level=2] [ref=f24e959]
+      - paragraph [ref=f24e960]: Обычное
+      - generic [ref=f24e961]:
+        - link "Открыть макет" [ref=f24e962] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-edit
+        - link "PNG целиком" [ref=f24e963] [cursor=pointer]:
+          - /url: /png/admin-edit--base.png
+    - article [ref=f24e964]:
+      - link [ref=f24e965] [cursor=pointer]:
+        - /url: /#admin-edit?state=validation
+        - img "Правка питомца — Валидация" [ref=f24e966]
+      - heading "Правка питомца" [level=2] [ref=f24e967]
+      - paragraph [ref=f24e968]: Валидация
+      - generic [ref=f24e969]:
+        - link "Открыть макет" [ref=f24e970] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-edit?state=validation
+        - link "PNG целиком" [ref=f24e971] [cursor=pointer]:
+          - /url: /png/admin-edit--validation.png
+    - article [ref=f24e972]:
+      - link [ref=f24e973] [cursor=pointer]:
+        - /url: /#admin-edit?state=loading
+        - img "Правка питомца — Загрузка" [ref=f24e974]
+      - heading "Правка питомца" [level=2] [ref=f24e975]
+      - paragraph [ref=f24e976]: Загрузка
+      - generic [ref=f24e977]:
+        - link "Открыть макет" [ref=f24e978] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-edit?state=loading
+        - link "PNG целиком" [ref=f24e979] [cursor=pointer]:
+          - /url: /png/admin-edit--loading.png
+    - article [ref=f24e980]:
+      - link [ref=f24e981] [cursor=pointer]:
+        - /url: /#admin-edit?state=error
+        - img "Правка питомца — Ошибка" [ref=f24e982]
+      - heading "Правка питомца" [level=2] [ref=f24e983]
+      - paragraph [ref=f24e984]: Ошибка
+      - generic [ref=f24e985]:
+        - link "Открыть макет" [ref=f24e986] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-edit?state=error
+        - link "PNG целиком" [ref=f24e987] [cursor=pointer]:
+          - /url: /png/admin-edit--error.png
+    - article [ref=f24e988]:
+      - link [ref=f24e989] [cursor=pointer]:
+        - /url: /#admin-edit?state=success
+        - img "Правка питомца — Успех" [ref=f24e990]
+      - heading "Правка питомца" [level=2] [ref=f24e991]
+      - paragraph [ref=f24e992]: Успех
+      - generic [ref=f24e993]:
+        - link "Открыть макет" [ref=f24e994] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-edit?state=success
+        - link "PNG целиком" [ref=f24e995] [cursor=pointer]:
+          - /url: /png/admin-edit--success.png
+    - article [ref=f24e996]:
+      - link [ref=f24e997] [cursor=pointer]:
+        - /url: /#admin-delete
+        - img "Удаление администратором — Обычное" [ref=f24e998]
+      - heading "Удаление администратором" [level=2] [ref=f24e999]
+      - paragraph [ref=f24e1000]: Обычное
+      - generic [ref=f24e1001]:
+        - link "Открыть макет" [ref=f24e1002] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-delete
+        - link "PNG целиком" [ref=f24e1003] [cursor=pointer]:
+          - /url: /png/admin-delete--base.png
+    - article [ref=f24e1004]:
+      - link [ref=f24e1005] [cursor=pointer]:
+        - /url: /#admin-delete?state=loading
+        - img "Удаление администратором — Загрузка" [ref=f24e1006]
+      - heading "Удаление администратором" [level=2] [ref=f24e1007]
+      - paragraph [ref=f24e1008]: Загрузка
+      - generic [ref=f24e1009]:
+        - link "Открыть макет" [ref=f24e1010] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-delete?state=loading
+        - link "PNG целиком" [ref=f24e1011] [cursor=pointer]:
+          - /url: /png/admin-delete--loading.png
+    - article [ref=f24e1012]:
+      - link [ref=f24e1013] [cursor=pointer]:
+        - /url: /#admin-delete?state=error
+        - img "Удаление администратором — Ошибка" [ref=f24e1014]
+      - heading "Удаление администратором" [level=2] [ref=f24e1015]
+      - paragraph [ref=f24e1016]: Ошибка
+      - generic [ref=f24e1017]:
+        - link "Открыть макет" [ref=f24e1018] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-delete?state=error
+        - link "PNG целиком" [ref=f24e1019] [cursor=pointer]:
+          - /url: /png/admin-delete--error.png
+    - article [ref=f24e1020]:
+      - link [ref=f24e1021] [cursor=pointer]:
+        - /url: /#admin-delete?state=success
+        - img "Удаление администратором — Успех" [ref=f24e1022]
+      - heading "Удаление администратором" [level=2] [ref=f24e1023]
+      - paragraph [ref=f24e1024]: Успех
+      - generic [ref=f24e1025]:
+        - link "Открыть макет" [ref=f24e1026] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-delete?state=success
+        - link "PNG целиком" [ref=f24e1027] [cursor=pointer]:
+          - /url: /png/admin-delete--success.png
+    - article [ref=f24e1028]:
+      - link [ref=f24e1029] [cursor=pointer]:
+        - /url: /#notifications
+        - img "Уведомления — Обычное" [ref=f24e1030]
+      - heading "Уведомления" [level=2] [ref=f24e1031]
+      - paragraph [ref=f24e1032]: Обычное
+      - generic [ref=f24e1033]:
+        - link "Открыть макет" [ref=f24e1034] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications
+        - link "PNG целиком" [ref=f24e1035] [cursor=pointer]:
+          - /url: /png/notifications--base.png
+    - article [ref=f24e1036]:
+      - link [ref=f24e1037] [cursor=pointer]:
+        - /url: /#notifications?state=loading
+        - img "Уведомления — Загрузка" [ref=f24e1038]
+      - heading "Уведомления" [level=2] [ref=f24e1039]
+      - paragraph [ref=f24e1040]: Загрузка
+      - generic [ref=f24e1041]:
+        - link "Открыть макет" [ref=f24e1042] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications?state=loading
+        - link "PNG целиком" [ref=f24e1043] [cursor=pointer]:
+          - /url: /png/notifications--loading.png
+    - article [ref=f24e1044]:
+      - link [ref=f24e1045] [cursor=pointer]:
+        - /url: /#notifications?state=error
+        - img "Уведомления — Ошибка" [ref=f24e1046]
+      - heading "Уведомления" [level=2] [ref=f24e1047]
+      - paragraph [ref=f24e1048]: Ошибка
+      - generic [ref=f24e1049]:
+        - link "Открыть макет" [ref=f24e1050] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications?state=error
+        - link "PNG целиком" [ref=f24e1051] [cursor=pointer]:
+          - /url: /png/notifications--error.png
+    - article [ref=f24e1052]:
+      - link [ref=f24e1053] [cursor=pointer]:
+        - /url: /#notifications?state=success
+        - img "Уведомления — Успех" [ref=f24e1054]
+      - heading "Уведомления" [level=2] [ref=f24e1055]
+      - paragraph [ref=f24e1056]: Успех
+      - generic [ref=f24e1057]:
+        - link "Открыть макет" [ref=f24e1058] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications?state=success
+        - link "PNG целиком" [ref=f24e1059] [cursor=pointer]:
+          - /url: /png/notifications--success.png
+    - article [ref=f24e1060]:
+      - link [ref=f24e1061] [cursor=pointer]:
+        - /url: /#notifications?state=denied
+        - img "Уведомления — Доступ запрещён" [ref=f24e1062]
+      - heading "Уведомления" [level=2] [ref=f24e1063]
+      - paragraph [ref=f24e1064]: Доступ запрещён
+      - generic [ref=f24e1065]:
+        - link "Открыть макет" [ref=f24e1066] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications?state=denied
+        - link "PNG целиком" [ref=f24e1067] [cursor=pointer]:
+          - /url: /png/notifications--denied.png
+    - article [ref=f24e1068]:
+      - link [ref=f24e1069] [cursor=pointer]:
+        - /url: /#notifications?state=unsupported
+        - img "Уведомления — Не поддерживается" [ref=f24e1070]
+      - heading "Уведомления" [level=2] [ref=f24e1071]
+      - paragraph [ref=f24e1072]: Не поддерживается
+      - generic [ref=f24e1073]:
+        - link "Открыть макет" [ref=f24e1074] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#notifications?state=unsupported
+        - link "PNG целиком" [ref=f24e1075] [cursor=pointer]:
+          - /url: /png/notifications--unsupported.png
+    - article [ref=f24e1076]:
+      - link [ref=f24e1077] [cursor=pointer]:
+        - /url: /#admin-logout
+        - img "Выход — Обычное" [ref=f24e1078]
+      - heading "Выход" [level=2] [ref=f24e1079]
+      - paragraph [ref=f24e1080]: Обычное
+      - generic [ref=f24e1081]:
+        - link "Открыть макет" [ref=f24e1082] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-logout
+        - link "PNG целиком" [ref=f24e1083] [cursor=pointer]:
+          - /url: /png/admin-logout--base.png
+    - article [ref=f24e1084]:
+      - link [ref=f24e1085] [cursor=pointer]:
+        - /url: /#admin-logout?state=loading
+        - img "Выход — Загрузка" [ref=f24e1086]
+      - heading "Выход" [level=2] [ref=f24e1087]
+      - paragraph [ref=f24e1088]: Загрузка
+      - generic [ref=f24e1089]:
+        - link "Открыть макет" [ref=f24e1090] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-logout?state=loading
+        - link "PNG целиком" [ref=f24e1091] [cursor=pointer]:
+          - /url: /png/admin-logout--loading.png
+    - article [ref=f24e1092]:
+      - link [ref=f24e1093] [cursor=pointer]:
+        - /url: /#admin-logout?state=error
+        - img "Выход — Ошибка" [ref=f24e1094]
+      - heading "Выход" [level=2] [ref=f24e1095]
+      - paragraph [ref=f24e1096]: Ошибка
+      - generic [ref=f24e1097]:
+        - link "Открыть макет" [ref=f24e1098] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-logout?state=error
+        - link "PNG целиком" [ref=f24e1099] [cursor=pointer]:
+          - /url: /png/admin-logout--error.png
+    - article [ref=f24e1100]:
+      - link [ref=f24e1101] [cursor=pointer]:
+        - /url: /#admin-logout?state=success
+        - img "Выход — Успех" [ref=f24e1102]
+      - heading "Выход" [level=2] [ref=f24e1103]
+      - paragraph [ref=f24e1104]: Успех
+      - generic [ref=f24e1105]:
+        - link "Открыть макет" [ref=f24e1106] [cursor=pointer]:
+          - /url: http://127.0.0.1:4178/#admin-logout?state=success
+        - link "PNG целиком" [ref=f24e1107] [cursor=pointer]:
+          - /url: /png/admin-logout--success.png

@@ -1,0 +1,369 @@
+- generic [active] [ref=f12e1]:
+  - generic [ref=f12e2]:
+    - status [ref=f12e3]
+    - region "Notifications alt+T"
+    - generic [ref=f12e4]:
+      - link "перейти к содержанию" [ref=f12e5] [cursor=pointer]:
+        - /url: "#main"
+      - generic [ref=f12e6]:
+        - banner [ref=f12e7]:
+          - generic [ref=f12e8]:
+            - generic [ref=f12e9]:
+              - link [ref=f12e10] [cursor=pointer]:
+                - /url: https://www.meetup.com/ru-RU/
+                - img "meetupLogoHorizontal icon" [ref=f12e13]
+              - generic [ref=f12e23]:
+                - button [ref=f12e25] [cursor=pointer]
+                - button "Войти" [ref=f12e31] [cursor=pointer]
+                - button "Зарегистрироваться" [ref=f12e35] [cursor=pointer]
+            - generic [ref=f12e40]:
+              - generic [ref=f12e41]: Искать события...
+              - button [ref=f12e47] [cursor=pointer]
+        - generic [ref=f12e53]:
+          - main [ref=f12e54]:
+            - generic [ref=f12e58]:
+              - heading [level=1] [ref=f12e59]:
+                - generic [ref=f12e60]:
+                  - generic [ref=f12e61]:
+                    - text: Платформа для
+                    - img "people1 icon" [ref=f12e62]
+                    - text: людей.
+                  - generic [ref=f12e63]:
+                    - text: Где
+                    - img "ball icon" [ref=f12e64]
+                    - text: интересы
+                  - generic [ref=f12e65]:
+                    - text: становятся
+                    - img "heart icon" [ref=f12e66]
+                    - text: дружбой.
+              - paragraph [ref=f12e67]: Каким бы ни был ваш интерес — от походов и чтения до нетворкинга и обмена навыками — на Meetup есть тысячи людей, которые разделяют его. События проходят каждый день — зарегистрируйтесь, чтобы присоединиться к веселью.
+              - link "Присоединиться к Meetup" [ref=f12e68] [cursor=pointer]:
+                - /url: https://www.meetup.com/ru-RU/register/
+            - generic [ref=f12e75]:
+              - generic [ref=f12e78]:
+                - heading "Предстоящие онлайн-мероприятия" [level=2] [ref=f12e80]
+                - generic [ref=f12e81]:
+                  - link "Бесплатно A Council of Highly Supportive Women (guest-hosted by Tristan, male) A Council of Highly Supportive Women (guest-hosted by Tristan, male) 15 сент. 2026 г. 19:30 GMT+3 · Онлайн от Kelda (women's group) Фото пользователя Фото пользователя Фото пользователя 324 участников" [ref=f12e83] [cursor=pointer]:
+                    - /url: https://www.meetup.com/ru-RU/keldagroup/events/315604881/?eventOrigin=home_logged_out_online
+                    - generic [ref=f12e84]:
+                      - generic [ref=f12e86]: Бесплатно
+                      - img "A Council of Highly Supportive Women (guest-hosted by Tristan, male)" [ref=f12e90]
+                      - button [ref=f12e93]
+                    - generic [ref=f12e97]:
+                      - heading "A Council of Highly Supportive Women (guest-hosted by Tristan, male)" [level=3] [ref=f12e98]
+                      - generic [ref=f12e99]:
+                        - time [ref=f12e102]:
+                          - text: 15 сент. 2026 г. 19:30
+                          - generic [ref=f12e103]: GMT+3
+                        - generic [ref=f12e104]:
+                          - generic [ref=f12e105]: ·
+                          - generic [ref=f12e106]: Онлайн
+                      - generic [ref=f12e111]: от Kelda (women's group)
+                      - generic [ref=f12e113]:
+                        - list [ref=f12e115]:
+                          - listitem [ref=f12e116]:
+                            - img "Фото пользователя" [ref=f12e119]
+                          - listitem [ref=f12e120]:
+                            - img "Фото пользователя" [ref=f12e123]
+                          - listitem [ref=f12e124]:
+                            - img "Фото пользователя" [ref=f12e127]
+                        - generic [ref=f12e128]: 324 участников
+                  - 'link "Бесплатно MCP Toolbox for Databases: Connecting AI Agents to Enterprise Data MCP Toolbox for Databases: Connecting AI Agents to Enterprise Data 15 сент. 2026 г. 20:00 GMT+3 · Онлайн от PyData Milton Keynes Фото пользователя Фото пользователя Фото пользователя 432 участников" [ref=f12e130] [cursor=pointer]':
+                    - /url: https://www.meetup.com/ru-RU/pydata-milton-keynes/events/316072928/?eventOrigin=home_logged_out_online
+                    - generic [ref=f12e131]:
+                      - generic [ref=f12e133]: Бесплатно
+                      - 'img "MCP Toolbox for Databases: Connecting AI Agents to Enterprise Data" [ref=f12e137]'
+                      - button [ref=f12e140]
+                    - generic [ref=f12e144]:
+                      - 'heading "MCP Toolbox for Databases: Connecting AI Agents to Enterprise Data" [level=3] [ref=f12e145]'
+                      - generic [ref=f12e146]:
+                        - time [ref=f12e149]:
+                          - text: 15 сент. 2026 г. 20:00
+                          - generic [ref=f12e150]: GMT+3
+                        - generic [ref=f12e151]:
+                          - generic [ref=f12e152]: ·
+                          - generic [ref=f12e153]: Онлайн
+                      - generic [ref=f12e158]: от PyData Milton Keynes
+                      - generic [ref=f12e160]:
+                        - list [ref=f12e162]:
+                          - listitem [ref=f12e163]:
+                            - img "Фото пользователя" [ref=f12e166]
+                          - listitem [ref=f12e167]:
+                            - img "Фото пользователя" [ref=f12e170]
+                          - listitem [ref=f12e171]:
+                            - img "Фото пользователя" [ref=f12e174]
+                        - generic [ref=f12e175]: 432 участников
+                  - link "Бесплатно 10 Years of Cloud-Native Evolution and the Emergence of AI 10 Years of Cloud-Native Evolution and the Emergence of AI 15 сент. 2026 г. 19:30 GMT+3 · Гибридный от Cloud Native Night Munich Фото пользователя Фото пользователя Фото пользователя 211 участников" [ref=f12e177] [cursor=pointer]:
+                    - /url: https://www.meetup.com/ru-RU/cloud-native-muc/events/316082300/?eventOrigin=home_logged_out_online
+                    - generic [ref=f12e178]:
+                      - generic [ref=f12e180]: Бесплатно
+                      - img "10 Years of Cloud-Native Evolution and the Emergence of AI" [ref=f12e184]
+                      - button [ref=f12e187]
+                    - generic [ref=f12e191]:
+                      - heading "10 Years of Cloud-Native Evolution and the Emergence of AI" [level=3] [ref=f12e192]
+                      - generic [ref=f12e193]:
+                        - time [ref=f12e196]:
+                          - text: 15 сент. 2026 г. 19:30
+                          - generic [ref=f12e197]: GMT+3
+                        - generic [ref=f12e198]:
+                          - generic [ref=f12e199]: ·
+                          - generic [ref=f12e200]: Гибридный
+                      - generic [ref=f12e207]: от Cloud Native Night Munich
+                      - generic [ref=f12e209]:
+                        - list [ref=f12e211]:
+                          - listitem [ref=f12e212]:
+                            - img "Фото пользователя" [ref=f12e215]
+                          - listitem [ref=f12e216]:
+                            - img "Фото пользователя" [ref=f12e219]
+                          - listitem [ref=f12e220]:
+                            - img "Фото пользователя" [ref=f12e223]
+                        - generic [ref=f12e224]: 211 участников
+                  - link "Бесплатно FIT ONLINE - free class 🔥🔥🔥 FULL BODY FIT ONLINE - free class 🔥🔥🔥 FULL BODY 14 сент. 2026 г. 20:15 GMT+3 · Онлайн от Centre for Health - Medigroup Genève Фото пользователя Фото пользователя Фото пользователя 16 участников" [ref=f12e226] [cursor=pointer]:
+                    - /url: https://www.meetup.com/ru-RU/fit-fun-meetup-group-geneve/events/315957944/?eventOrigin=home_logged_out_online
+                    - generic [ref=f12e227]:
+                      - generic [ref=f12e229]: Бесплатно
+                      - img "FIT ONLINE - free class 🔥🔥🔥 FULL BODY" [ref=f12e233]
+                      - button [ref=f12e236]
+                    - generic [ref=f12e240]:
+                      - heading "FIT ONLINE - free class 🔥🔥🔥 FULL BODY" [level=3] [ref=f12e241]
+                      - generic [ref=f12e242]:
+                        - time [ref=f12e245]:
+                          - text: 14 сент. 2026 г. 20:15
+                          - generic [ref=f12e246]: GMT+3
+                        - generic [ref=f12e247]:
+                          - generic [ref=f12e248]: ·
+                          - generic [ref=f12e249]: Онлайн
+                      - generic [ref=f12e254]: от Centre for Health - Medigroup Genève
+                      - generic [ref=f12e256]:
+                        - list [ref=f12e258]:
+                          - listitem [ref=f12e259]:
+                            - img "Фото пользователя" [ref=f12e262]
+                          - listitem [ref=f12e263]:
+                            - img "Фото пользователя" [ref=f12e266]
+                          - listitem [ref=f12e267]:
+                            - img "Фото пользователя" [ref=f12e270]
+                        - generic [ref=f12e271]: 16 участников
+              - link "Посмотреть все мероприятия" [ref=f12e274] [cursor=pointer]:
+                - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&eventType=online&customStartDate=2026-09-14T12%3A03%3A07-04%3A00&customEndDate=2026-09-15T23%3A59%3A59-04%3A00&location=lt--Gargzhdai
+            - generic [ref=f12e284]:
+              - generic [ref=f12e285]:
+                - heading "Присоединиться к Meetup" [level=2] [ref=f12e286]
+                - paragraph [ref=f12e287]: Люди используют Meetup для знакомств, получения новых знаний, получения поддержки, смены привычной среды и развивать свои увлечения вместе с единомышленниками. Участие совершенно бесплатно.
+              - link "Зарегистрироваться бесплатно" [ref=f12e289] [cursor=pointer]:
+                - /url: https://www.meetup.com/ru-RU/register/
+            - generic [ref=f12e294]:
+              - heading "Ознакомьтесь с популярными категориями" [level=2] [ref=f12e296]
+              - generic [ref=f12e297]:
+                - link [ref=f12e298] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=684&keywords=%D0%9F%D1%83%D1%82%D0%B5%D1%88%D0%B5%D1%81%D1%82%D0%B2%D0%B8%D1%8F+%D0%B8+%D0%BE%D1%82%D0%B4%D1%8B%D1%85+%D0%BD%D0%B0+%D0%BF%D1%80%D0%B8%D1%80%D0%BE%D0%B4%D0%B5&location=lt--Gargzhdai
+                  - generic [ref=f12e300]:
+                    - paragraph [ref=f12e302]: Путешествия и отдых на природе
+                    - img "tree icon" [ref=f12e305]
+                - link [ref=f12e306] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=652&keywords=%D0%A1%D0%BE%D1%86%D0%B8%D0%B0%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F+%D0%B0%D0%BA%D1%82%D0%B8%D0%B2%D0%BD%D0%BE%D1%81%D1%82%D1%8C&location=lt--Gargzhdai
+                  - generic [ref=f12e308]:
+                    - paragraph [ref=f12e310]: Социальная активность
+                    - img "pizza icon" [ref=f12e313]
+                - link [ref=f12e314] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=571&keywords=%D0%A5%D0%BE%D0%B1%D0%B1%D0%B8+%D0%B8+%D1%83%D0%B2%D0%BB%D0%B5%D1%87%D0%B5%D0%BD%D0%B8%D1%8F&location=lt--Gargzhdai
+                  - generic [ref=f12e316]:
+                    - paragraph [ref=f12e318]: Хобби и увлечения
+                    - img "toy icon" [ref=f12e321]
+                - link [ref=f12e322] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=482&keywords=%D0%A1%D0%BF%D0%BE%D1%80%D1%82+%D0%B8+%D1%84%D0%B8%D1%82%D0%BD%D0%B5%D1%81&location=lt--Gargzhdai
+                  - generic [ref=f12e324]:
+                    - paragraph [ref=f12e326]: Спорт и фитнес
+                    - img "ball icon" [ref=f12e329]
+                - link [ref=f12e330] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=511&keywords=%D0%97%D0%B4%D0%BE%D1%80%D0%BE%D0%B2%D1%8C%D0%B5+%D0%B8+%D0%B1%D0%BB%D0%B0%D0%B3%D0%BE%D0%BF%D0%BE%D0%BB%D1%83%D1%87%D0%B8%D0%B5&location=lt--Gargzhdai
+                  - generic [ref=f12e332]:
+                    - paragraph [ref=f12e334]: Здоровье и благополучие
+                    - img "mentalHealth icon" [ref=f12e337]
+                - link [ref=f12e338] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=546&keywords=%D0%A2%D0%B5%D1%85%D0%BD%D0%BE%D0%BB%D0%BE%D0%B3%D0%B8%D0%B8&location=lt--Gargzhdai
+                  - generic [ref=f12e340]:
+                    - paragraph [ref=f12e342]: Технологии
+                    - img "computer icon" [ref=f12e345]
+                - link [ref=f12e346] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=521&keywords=%D0%98%D1%81%D0%BA%D1%83%D1%81%D1%81%D1%82%D0%B2%D0%BE+%D0%B8+%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D1%83%D1%80%D0%B0&location=lt--Gargzhdai
+                  - generic [ref=f12e348]:
+                    - paragraph [ref=f12e350]: Искусство и культура
+                    - img "painting icon" [ref=f12e353]
+                - link [ref=f12e354] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=535&keywords=%D0%98%D0%B3%D1%80%D1%8B&location=lt--Gargzhdai
+                  - generic [ref=f12e356]:
+                    - paragraph [ref=f12e358]: Игры
+                    - img "videogame icon" [ref=f12e361]
+                - link [ref=f12e362] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=405&keywords=%D0%9A%D0%B0%D1%80%D1%8C%D0%B5%D1%80%D0%B0+%D0%B8+%D0%B1%D0%B8%D0%B7%D0%BD%D0%B5%D1%81&location=lt--Gargzhdai
+                  - generic [ref=f12e364]:
+                    - paragraph [ref=f12e366]: Карьера и бизнес
+                    - img "suitcase icon" [ref=f12e369]
+                - link [ref=f12e370] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS&categoryId=436&keywords=%D0%9D%D0%B0%D1%83%D0%BA%D0%B0+%D0%B8+%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5&location=lt--Gargzhdai
+                  - generic [ref=f12e372]:
+                    - paragraph [ref=f12e374]: Наука и образование
+                    - img "potion icon" [ref=f12e377]
+            - generic [ref=f12e379]:
+              - heading "Как работает Meetup" [level=2] [ref=f12e380]
+              - generic [ref=f12e381]:
+                - link [ref=f12e382] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?location=lt--Gargzhdai
+                  - img "search icon" [ref=f12e384]
+                  - generic [ref=f12e385]:
+                    - heading "Поиск мероприятий и групп" [level=3] [ref=f12e386]
+                    - paragraph [ref=f12e387]: Узнайте, кто организует местные мероприятия по всем вашим интересам
+                    - text: Начать поиск
+                - link [ref=f12e388] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/find/?location=lt--Gargzhdai
+                  - img "people2 icon" [ref=f12e390]
+                  - generic [ref=f12e391]:
+                    - heading "Найдите своих людей" [level=3] [ref=f12e392]
+                    - paragraph [ref=f12e393]: Соединяйтесь по общим интересам и наслаждайтесь значимыми впечатлениями.
+                - link [ref=f12e394] [cursor=pointer]:
+                  - /url: https://www.meetup.com/ru-RU/how-to-group-start/
+                  - img "sparkle icon" [ref=f12e396]
+                  - generic [ref=f12e397]:
+                    - heading "Создайте группу и проводите мероприятия" [level=3] [ref=f12e398]
+                    - paragraph [ref=f12e399]: Создайте собственную группу Meetup и добавляйте в нее участников
+                    - text: Создать группу
+            - generic [ref=f12e401]:
+              - generic [ref=f12e402]:
+                - heading "Дружба начинается в Meetup" [level=2] [ref=f12e403]
+                - paragraph [ref=f12e404]: С 2002 года участники используют Meetup, чтобы заводить новых друзей, находить единомышленников, заниматься хобби и знакомиться с местными людьми по общим интересам.
+              - generic [ref=f12e405]:
+                - article [ref=f12e407]:
+                  - link "Я использовала Meetup, чтобы завести друзей на бранче Писательница из Нью-Джерси Брианна Страйкер хотела завести друзей в своём родном городе. Узнайте, как она использовала Meetup, присоединившись к группе Meetup «Girls Night Out», чтобы завести новые знакомства." [ref=f12e408] [cursor=pointer]:
+                    - /url: https://www.meetup.com/blog/i-used-meetup-to-make-friends-at-brunch/
+                    - generic [ref=f12e411]:
+                      - heading "Я использовала Meetup, чтобы завести друзей на бранче" [level=3] [ref=f12e412]
+                      - paragraph [ref=f12e413]: Писательница из Нью-Джерси Брианна Страйкер хотела завести друзей в своём родном городе. Узнайте, как она использовала Meetup, присоединившись к группе Meetup «Girls Night Out», чтобы завести новые знакомства.
+                - article [ref=f12e415]:
+                  - 'link "Как превратить поверхностные знакомства в близкие дружеские отношения Уже доказано, чем старше мы становимся, тем сложнее нам завести настоящих друзей. Не берите в голову: вот, что можно сделать, чтобы упростить процесс поиска друзей." [ref=f12e416] [cursor=pointer]':
+                    - /url: https://www.meetup.com/blog/how-to-turn-casual-connections-into-close-friendships/
+                    - generic [ref=f12e419]:
+                      - heading "Как превратить поверхностные знакомства в близкие дружеские отношения" [level=3] [ref=f12e420]
+                      - paragraph [ref=f12e421]: "Уже доказано, чем старше мы становимся, тем сложнее нам завести настоящих друзей. Не берите в голову: вот, что можно сделать, чтобы упростить процесс поиска друзей."
+                - article [ref=f12e423]:
+                  - link "У вас «правильное» количество друзей? Чтобы помочь людям ответить на этот вопрос, проводилось множество исследований по всему миру. Узнайте о трех уровнях дружбы и о том, как их достичь." [ref=f12e424] [cursor=pointer]:
+                    - /url: https://www.meetup.com/blog/do-you-have-the-right-number-of-friends/
+                    - generic [ref=f12e427]:
+                      - heading "У вас «правильное» количество друзей?" [level=3] [ref=f12e428]
+                      - paragraph [ref=f12e429]: Чтобы помочь людям ответить на этот вопрос, проводилось множество исследований по всему миру. Узнайте о трех уровнях дружбы и о том, как их достичь.
+          - generic [ref=f12e434]:
+            - generic [ref=f12e435]: Присоединяйтесь к Meetup и найдите подходящее сообщество
+            - link "Зарегистрироваться" [ref=f12e436] [cursor=pointer]:
+              - /url: https://www.meetup.com/ru-RU/register/
+        - contentinfo [ref=f12e441]:
+          - generic [ref=f12e442]:
+            - generic [ref=f12e443]:
+              - img "meetupLogoHorizontal icon" [ref=f12e449]
+              - link "Создание новой группы" [ref=f12e460] [cursor=pointer]:
+                - /url: https://www.meetup.com/ru-RU/start?origin=groups&eventOrigin=page-footer
+            - generic [ref=f12e463]:
+              - generic [ref=f12e464]:
+                - navigation [ref=f12e465]:
+                  - paragraph [ref=f12e466]: Ваш аккаунт
+                  - list [ref=f12e467]:
+                    - listitem [ref=f12e468]:
+                      - link "Регистрация" [ref=f12e469] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/register/
+                    - listitem [ref=f12e470]:
+                      - link "Войти" [ref=f12e471] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/login/
+                    - listitem [ref=f12e472]:
+                      - link "Справка" [ref=f12e473] [cursor=pointer]:
+                        - /url: https://help.meetup.com/hc
+                - navigation [ref=f12e474]:
+                  - paragraph [ref=f12e475]: Найти
+                  - list [ref=f12e476]:
+                    - listitem [ref=f12e477]:
+                      - link "Группы" [ref=f12e478] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/find/?source=GROUPS
+                    - listitem [ref=f12e479]:
+                      - link "События" [ref=f12e480] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/find/?source=EVENTS
+                    - listitem [ref=f12e481]:
+                      - link "Темы" [ref=f12e482] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/topics/
+                    - listitem [ref=f12e483]:
+                      - link "Города" [ref=f12e484] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/cities/
+                    - listitem [ref=f12e485]:
+                      - link "Онлайн‑мероприятия" [ref=f12e486] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/find/online-events/
+                    - listitem [ref=f12e487]:
+                      - link "Местные гиды" [ref=f12e488] [cursor=pointer]:
+                        - /url: https://www.meetup.com/blog/category/local-guides/
+                    - listitem [ref=f12e489]:
+                      - link "Завести друзей" [ref=f12e490] [cursor=pointer]:
+                        - /url: https://www.meetup.com/lp/friendship-and-socializing/
+                    - listitem [ref=f12e491]:
+                      - link "Карта сайта" [ref=f12e492] [cursor=pointer]:
+                        - /url: https://www.meetup.com/sitemap/
+                - navigation [ref=f12e493]:
+                  - paragraph [ref=f12e494]: Meetup
+                  - list [ref=f12e495]:
+                    - listitem [ref=f12e496]:
+                      - link "О компании" [ref=f12e497] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/about/
+                    - listitem [ref=f12e498]:
+                      - link "Блог" [ref=f12e499] [cursor=pointer]:
+                        - /url: https://www.meetup.com/blog/
+                    - listitem [ref=f12e500]:
+                      - link "Meetup Pro" [ref=f12e501] [cursor=pointer]:
+                        - /url: https://www.meetup.com/ru-RU/meetup-pro/
+                    - listitem [ref=f12e502]:
+                      - link "Работа" [ref=f12e503] [cursor=pointer]:
+                        - /url: https://bndspn.com/join-meetup
+                    - listitem [ref=f12e504]:
+                      - link "Приложения" [ref=f12e505] [cursor=pointer]:
+                        - /url: https://www.meetup.com/apps/
+                    - listitem [ref=f12e506]:
+                      - link "Подкаст" [ref=f12e507] [cursor=pointer]:
+                        - /url: https://www.meetup.com/blog/category/keep-connected-podcast/
+              - generic [ref=f12e508]:
+                - generic [ref=f12e509]:
+                  - paragraph [ref=f12e510]: Подписаться на нас
+                  - generic [ref=f12e511]:
+                    - link "Meetup на Facebook" [ref=f12e512] [cursor=pointer]:
+                      - /url: https://www.facebook.com/meetup/
+                    - link "Meetup в Twitter" [ref=f12e515] [cursor=pointer]:
+                      - /url: https://twitter.com/Meetup/
+                    - link "Meetup на YouTube" [ref=f12e518] [cursor=pointer]:
+                      - /url: https://www.youtube.com/meetup
+                    - link "Instagram" [ref=f12e521] [cursor=pointer]:
+                      - /url: https://www.instagram.com/meetup/
+                    - link "TikTok" [ref=f12e526] [cursor=pointer]:
+                      - /url: https://www.tiktok.com/@meetup
+                - generic [ref=f12e530]:
+                  - link "Скачать приложение из Google Play" [ref=f12e531] [cursor=pointer]:
+                    - /url: https://play.google.com/store/apps/details?id=com.meetup&hl=ru-RU
+                    - generic [ref=f12e537]:
+                      - paragraph [ref=f12e538]: Скачать в
+                      - paragraph [ref=f12e539]: Google Play
+                  - link "Скачать приложение из App Store" [ref=f12e540] [cursor=pointer]:
+                    - /url: https://apps.apple.com/ru/app/meetup/id375990038
+                    - generic [ref=f12e543]:
+                      - paragraph [ref=f12e544]: Скачать в
+                      - paragraph [ref=f12e545]: App Store
+            - generic [ref=f12e546]:
+              - generic [ref=f12e547]:
+                - generic [ref=f12e548]: © 2026 Bending Spoons US Inc.
+                - generic [ref=f12e549]:
+                  - link "Условия использования" [ref=f12e550] [cursor=pointer]:
+                    - /url: https://help.meetup.com/hc/articles/360027447252
+                  - link "Политика конфиденциальности" [ref=f12e551] [cursor=pointer]:
+                    - /url: https://help.meetup.com/hc/articles/360044422391
+                  - link "Политика использования файлов cookie" [ref=f12e552] [cursor=pointer]:
+                    - /url: https://help.meetup.com/hc/articles/360046339551
+                  - link "Указание лицензии" [ref=f12e553] [cursor=pointer]:
+                    - /url: /ru-RU/license-attribution/index.html
+                  - link "Справка" [ref=f12e554] [cursor=pointer]:
+                    - /url: https://help.meetup.com/hc
+              - generic [ref=f12e555]:
+                - paragraph [ref=f12e556]: С любовью от
+                - link "Bending Spoons" [ref=f12e559] [cursor=pointer]:
+                  - /url: https://www.bendingspoons.com
+                  - img "Bending Spoons" [ref=f12e560]
+  - alert [ref=f12e574]

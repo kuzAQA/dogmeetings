@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../../db";
 import { petCollaborators, petShareLinks, pets } from "../../../../db/schema";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../../lib/session";
+import { petPhotoUrl } from "../../../../server/domain/pet";
 
 const shareTokenPattern = /^[0-9a-f]{20}$/i;
 
@@ -15,6 +16,7 @@ async function sharedPet(token: string) {
       name: pets.name,
       breed: pets.breed,
       ownerName: pets.ownerName,
+      photoType: pets.photoType,
       updatedAt: pets.updatedAt
     })
     .from(petShareLinks)
@@ -60,7 +62,7 @@ export async function GET(request: Request, context: RouteContext) {
         name: pet.name,
         breed: pet.breed,
         ownerName: pet.ownerName,
-        photoUrl: `/api/pet-photo?id=${encodeURIComponent(pet.id)}&v=${pet.updatedAt.getTime()}`
+        photoUrl: petPhotoUrl(pet.id, pet.updatedAt, pet.photoType)
       },
       alreadyAdded
     }, {

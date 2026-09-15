@@ -11,6 +11,7 @@ export type Walk = {
   point: string;
   comment: string;
   period: Exclude<Period, "Все">;
+  scheduleType: ScheduleType;
   image: string;
 };
 
@@ -47,6 +48,7 @@ export function apiWalkToCard(walk: ApiWalk): Walk {
     point: walk.point,
     comment: walk.comment?.trim() ?? "",
     period,
+    scheduleType: walk.scheduleType,
     image: walk.image,
     time: `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`
   };
