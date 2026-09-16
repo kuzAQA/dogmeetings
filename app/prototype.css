@@ -158,8 +158,11 @@ main.with-nav{padding-bottom:120px}
 .time-picker{display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:15px}
 .time-picker svg{color:var(--orange)}
 .time-picker label{font-size:13px}
-.time-picker input{max-width:100%;border:0;border-bottom:1px solid var(--line);font-size:44px;font-weight:700;background:transparent;padding:12px;color:var(--ink);font-variant-numeric:tabular-nums;text-align:center}
-.time-picker input::-webkit-calendar-picker-indicator{display:none}
+.time-input{position:relative;display:grid;place-items:center;width:100%;min-height:80px;border:1px solid var(--line);border-radius:10px;background:var(--white)}
+.time-input>span{pointer-events:none;font-size:44px;font-weight:700;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.time-input>span.time-input-placeholder{font-size:16px;font-weight:600;color:var(--muted)}
+.time-input input{position:absolute;inset:0;width:100%;height:100%;max-width:none;border:0;background:transparent;opacity:0;cursor:pointer}
+.time-input:focus-within{outline:3px solid var(--orange);outline-offset:3px}
 .portrait{width:calc(100% + 44px);max-width:none;height:300px;object-fit:cover;margin:24px -22px}
 .pet-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .pet-title h2{font-size:38px;letter-spacing:-.03em}
