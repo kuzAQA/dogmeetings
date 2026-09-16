@@ -69,8 +69,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={() => { selectPet(pet.id, inDock); setPicker(null); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{pet.id === selectedPetId ? <Check /> : <ChevronRight />}</button>)}</div>
         <button type="button" className="button quiet" onClick={() => { setPicker(null); onAddPet(); }}><Plus />Добавить питомца</button>
       </DogmeetDialog>}
-      {picker === "time" && <DogmeetDialog title="Время прогулки" onDismiss={() => setPicker(null)}>
-        <p>{scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"}</p>
+      {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)}>
         <div className="time-picker"><Clock3 /><span>Время прогулки</span><input type="time" name="walkTime" step={300} aria-label="Время прогулки" value={walkTime} aria-invalid={Boolean(touchedFields["walk-time"] && !timeIsValid)} onChange={(event) => changeWalkTime(event.target.value, inDock)} onBlur={() => touchField("walk-time")} /></div>
         <button type="button" className="button" disabled={!timeIsValid} onClick={() => setPicker(null)}>Готово<Check /></button>
       </DogmeetDialog>}

@@ -158,7 +158,8 @@ main.with-nav{padding-bottom:120px}
 .time-picker{display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:15px}
 .time-picker svg{color:var(--orange)}
 .time-picker label{font-size:13px}
-.time-picker input{max-width:100%;border:0;border-bottom:1px solid var(--line);font-size:44px;font-weight:700;background:transparent;padding:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.time-picker input{max-width:100%;border:0;border-bottom:1px solid var(--line);font-size:44px;font-weight:700;background:transparent;padding:12px;color:var(--ink);font-variant-numeric:tabular-nums;text-align:center;appearance:none}
+.time-picker input::-webkit-calendar-picker-indicator{display:none}
 .portrait{width:calc(100% + 44px);max-width:none;height:300px;object-fit:cover;margin:24px -22px}
 .pet-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .pet-title h2{font-size:38px;letter-spacing:-.03em}
@@ -412,7 +413,7 @@ main{min-height:calc(100dvh - 40px)}
 
 .bottom-nav .nav-tabs button svg{width:18px;height:18px}
 
-.bottom-nav button.dock-add{flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:1px solid #b94423;border-radius:50%;background:var(--paper);color:var(--ink);box-shadow:0 8px 28px #222a3926}
+.bottom-nav button.dock-add{flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:1px solid var(--orange-pale);border-radius:50%;background:var(--paper);color:var(--ink);box-shadow:0 8px 28px #222a3926}
 
 .bottom-nav .dock-add svg{width:clamp(22px,6.15vw,24px);height:clamp(22px,6.15vw,24px)}
 @media(hover:hover) and (pointer:fine){
