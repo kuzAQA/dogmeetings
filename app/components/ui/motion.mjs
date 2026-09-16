@@ -155,23 +155,32 @@ let activeTransition;
 export function skipPageTransition() { activeTransition?.skipTransition(); }
 let cancelDockAddAnimation = () => {};
 
-function animateDockAdd() {
- const plus = document.querySelector('.bottom-nav[data-action="visible"] .dock-add');
- const drop = document.querySelector('.bottom-nav[data-action="visible"] .dock-drop-shape');
+function animateDockAdd(show) {
+ const plus = document.querySelector('.bottom-nav .dock-add');
+ const drop = document.querySelector('.bottom-nav .dock-drop-shape');
  const nav = plus?.closest('.bottom-nav');
  if (!plus || !drop || !nav || reducedMotion()) return;
 
  const START = 458;
  const END = 565;
- const start = START - END;
- const end = 0;
+ const travel = END - START;
+ const dockSize = Number.parseFloat(getComputedStyle(nav).getPropertyValue('--dock-size')) || 60;
+ const dockGap = Number.parseFloat(getComputedStyle(nav).getPropertyValue('--dock-gap')) || 12;
+ const menuShift = (dockSize + dockGap) / 2;
+ const dockOffset = dockSize + dockGap;
+ const start = show ? travel : 0;
+ const end = show ? 0 : -dockOffset;
+ const menuStart = show ? -menuShift : 0;
+ const menuEnd = show ? 0 : -menuShift;
  const duration = durationMs('--motion-screen', 180);
  const previous = {
   transition: plus.style.transition,
   transform: plus.style.transform,
   opacity: plus.style.opacity,
   borderColor: plus.style.borderColor,
-  dropTransform: drop.style.transform
+  dropTransform: drop.style.transform,
+  navTransition: nav.style.transition,
+  navTransform: nav.style.transform
  };
  let raf = 0;
 
@@ -182,37 +191,45 @@ function animateDockAdd() {
   plus.style.opacity = previous.opacity;
   plus.style.borderColor = previous.borderColor;
   drop.style.transform = previous.dropTransform;
+  nav.style.transition = previous.navTransition;
+  nav.style.transform = previous.navTransform;
   if (cancelDockAddAnimation === cancel) cancelDockAddAnimation = () => {};
  };
  const cancel = restore;
  cancelDockAddAnimation();
  cancelDockAddAnimation = cancel;
  plus.style.transition = 'none';
+ nav.style.transition = 'none';
  const setX = x => {
   const transform = `translateX(${x}px)`;
   drop.style.transform = transform;
   plus.style.transform = transform;
  };
+ const setMenuX = x => { nav.style.transform = `translateX(${x}px)`; };
  setX(start);
- plus.style.opacity = '0';
- plus.style.borderColor = 'transparent';
+ setMenuX(menuStart);
+ plus.style.opacity = show ? '0' : '1';
+ plus.style.borderColor = show ? 'transparent' : 'rgba(239, 217, 198, 1)';
  const startTime = performance.now();
 
  function frame(now) {
   const raw = Math.min(1, (now - startTime) / duration);
   const smooth = raw * raw * (3 - 2 * raw);
   const kick = raw > .72 ? Math.sin((raw - .72) / .28 * Math.PI) * 7 * (1 - raw) : 0;
-  const progress = smooth + kick / (end - start);
+  const progress = smooth + kick / Math.abs(end - start || travel);
   setX(start + (end - start) * progress);
+  setMenuX(menuStart + (menuEnd - menuStart) * progress);
   const reveal = Math.max(0, Math.min(1, (raw - .42) / .35));
-  plus.style.opacity = String(reveal);
-  plus.style.borderColor = `rgba(239, 217, 198, ${reveal})`;
+  const visibility = show ? reveal : 1 - reveal;
+  plus.style.opacity = String(visibility);
+  plus.style.borderColor = `rgba(239, 217, 198, ${visibility})`;
 
   if (raw < 1) raf = requestAnimationFrame(frame);
   else {
    setX(end);
-   plus.style.opacity = '1';
-   plus.style.borderColor = 'rgba(239,217,198,1)';
+   setMenuX(menuEnd);
+   plus.style.opacity = show ? '1' : '0';
+   plus.style.borderColor = show ? 'rgba(239,217,198,1)' : 'transparent';
    restore();
   }
  }
@@ -225,6 +242,7 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
  cancelDockAddAnimation();
  const dockAddWasVisible = Boolean(document.querySelector('.bottom-nav[data-action="visible"] .dock-add'));
  const shouldAnimateDockAdd = !dockAddWasVisible && (target === 'plans' || target === 'pets') && !keyboard;
+ const shouldHideDockAdd = dockAddWasVisible && target === 'nearby' && !keyboard;
  const root = document.documentElement;
  root.dataset.motionDirection = direction < 0 ? 'back' : 'forward';
  const previousHasBack = Boolean(document.querySelector('.page-header .header-back'));
@@ -236,13 +254,14 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
  if (target === 'nearby' || keyboard) {
   update();
   headerExit?.(Boolean(document.querySelector('.page-header .header-back')));
+  if (shouldHideDockAdd) animateDockAdd(false);
   return;
  }
  if (!canViewTransition) {
   update();
   if (headerExit) headerExit(Boolean(document.querySelector('.page-header .header-back')));
   else animateHeaderEntry(!previousHasBack);
-  if (shouldAnimateDockAdd) animateDockAdd();
+  if (shouldAnimateDockAdd) animateDockAdd(true);
   return;
  }
  if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
@@ -287,5 +306,5 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
   activeTransition = null;
   delete root.dataset.viewTransition;
  }
- if (isCurrentTransition && shouldAnimateDockAdd) animateDockAdd();
+ if (isCurrentTransition && shouldAnimateDockAdd) animateDockAdd(true);
 }

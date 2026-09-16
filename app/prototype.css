@@ -421,9 +421,10 @@ main{min-height:calc(100dvh - 40px)}
 }
 
 .bottom-nav{overflow:visible}
+.dock-goo-filter{position:absolute;width:0;height:0}
 .dock-goo{position:absolute;left:0;top:0;width:100%;height:var(--dock-size);filter:url(#dock-goo);overflow:visible;pointer-events:none;z-index:0}
-.dock-menu-shape{position:absolute;inset:0 calc(var(--dock-size) + var(--dock-gap)) 0 0;border-radius:999px;background:var(--paper)}
-.dock-drop-shape{position:absolute;right:0;top:0;width:var(--dock-size);height:var(--dock-size);border-radius:50%;background:var(--paper);transform:translateX(0);will-change:transform}
+.dock-menu-shape{position:absolute;inset:0 0 0 calc(var(--dock-size) + var(--dock-gap));border-radius:999px;background:var(--paper)}
+.dock-drop-shape{position:absolute;left:0;top:0;width:var(--dock-size);height:var(--dock-size);border-radius:50%;background:var(--paper);transform:translateX(0);will-change:transform}
 .bottom-nav[data-action=hidden] .dock-drop-shape{transform:translateX(calc(-1 * (var(--dock-size) + var(--dock-gap))))}
 
 .nav-tabs{display:flex;flex:1;min-width:0;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--paper);box-shadow:0 8px 28px #222a3926}
@@ -485,11 +486,13 @@ html:has(dialog[open]),body:has(dialog[open]){overflow:hidden}
 
 .phone :is(.menu-row,.pet-row,.nav-tabs button){transition:color var(--motion-fast) var(--ease-out),background-color var(--motion-fast) var(--ease-out)}
 
-.nav-tabs{position:relative;isolation:isolate;z-index:1;transform:translateX(0)}
+.nav-tabs{position:relative;isolation:isolate;z-index:1;transform:translateX(0);will-change:transform}
 
-.bottom-nav[data-action=hidden] .nav-tabs{transform:translateX(calc((var(--dock-size) + var(--dock-gap))/2))}
+.bottom-nav[data-action=hidden] .nav-tabs{transform:translateX(calc(-1 * (var(--dock-size) + var(--dock-gap))/2))}
 
-.bottom-nav .dock-add{position:relative;z-index:3;opacity:1;transform:translateX(0);transition:background-color var(--motion-fast) var(--ease-out),color var(--motion-fast) var(--ease-out)}
+.bottom-nav .dock-add{order:-1;position:relative;z-index:3;opacity:1;transform:translateX(0);transition:background-color var(--motion-fast) var(--ease-out),color var(--motion-fast) var(--ease-out)}
+
+.bottom-nav .nav-tabs{order:1}
 
 .bottom-nav[data-action=hidden] .dock-add{pointer-events:none;opacity:0;transform:translateX(calc(-1 * (var(--dock-size) + var(--dock-gap))))}
 
