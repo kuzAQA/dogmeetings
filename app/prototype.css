@@ -329,7 +329,7 @@ main{min-height:calc(100dvh - 40px)}
 
 .nav-shade{display:none}
 
-.floating-nav .nav-shade{display:block;position:fixed;pointer-events:none;z-index:2;left:50%;transform:translateX(-50%);bottom:36px;width:390px;max-width:100%;height:calc(42px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent 0%,#222a3910 36%,#222a3938 100%);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);view-transition-name:dogmeet-shade}
+.floating-nav .nav-shade{display:block;position:fixed;pointer-events:none;z-index:2;left:50%;transform:translateX(-50%);bottom:36px;width:390px;max-width:100%;height:calc(42px + env(safe-area-inset-bottom,0px));background:transparent;-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);view-transition-name:dogmeet-shade}
 
 /* Compact sheets keep native overflow available for keyboards and enlarged text. */
 @media(max-height:740px){

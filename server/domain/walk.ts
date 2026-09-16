@@ -11,6 +11,10 @@ export function isValidWalkTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+export function isWalkTimeInPast(scheduleType: string, walkTime: string) {
+  return scheduleType === "today" && new Date(`${moscowDate()}T${walkTime}:00+03:00`) <= new Date();
+}
+
 export function moscowDate(offsetDays = 0) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Moscow",

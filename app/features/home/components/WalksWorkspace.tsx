@@ -119,7 +119,6 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
 
   if (!walksLoaded) return <DogmeetState state="loading" />;
   if (walksError) return <DogmeetState state="error" message={walksError} onAction={onRetryWalks} />;
-  if (!visibleWalks.length) return <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk}><button className="button quiet" type="button" onClick={() => onPeriodChange("Все")}>Показать весь день</button></DogmeetState>;
 
   return (
     <div className="screen walks-screen">

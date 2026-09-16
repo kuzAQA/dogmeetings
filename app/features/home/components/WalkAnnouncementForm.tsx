@@ -7,7 +7,7 @@ import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../compo
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import type { Pet, SharedPlace } from "../model";
 import { MAX_WALK_COMMENT_LENGTH, MAX_WALK_PLACE_LENGTH } from "../model";
-import type { WalkFormState } from "../use-walk-form";
+import { getMinimumWalkTime, type WalkFormState } from "../use-walk-form";
 
 type Props = {
   inDock?: boolean;
@@ -70,7 +70,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         <button type="button" className="button quiet" onClick={(event) => requestDialogClose(event.currentTarget, onAddPet)}><Plus />Добавить питомца</button>
       </DogmeetDialog>}
       {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)}>
-        <div className="time-picker"><Clock3 /><span>Время прогулки</span><div className="time-input"><span className={walkTime ? "time-input-value" : "time-input-placeholder"} aria-hidden="true">{walkTime || "Выберите время"}</span><input type="time" name="walkTime" step={300} aria-label="Время прогулки" value={walkTime} aria-invalid={Boolean(touchedFields["walk-time"] && !timeIsValid)} onChange={(event) => changeWalkTime(event.target.value, inDock)} onBlur={() => touchField("walk-time")} /></div></div>
+        <div className="time-picker"><Clock3 /><span>Время прогулки</span><div className="time-input"><span className={walkTime ? "time-input-value" : "time-input-placeholder"} aria-hidden="true">{walkTime || "Выберите время"}</span><input type="time" name="walkTime" min={scheduleType === "today" ? getMinimumWalkTime() : undefined} step={300} aria-label="Время прогулки" value={walkTime} aria-invalid={Boolean(touchedFields["walk-time"] && !timeIsValid)} onChange={(event) => changeWalkTime(event.target.value, inDock)} onBlur={() => touchField("walk-time")} /></div></div>
         <button type="button" className="button" disabled={!timeIsValid} onClick={(event) => requestDialogClose(event.currentTarget)}>Готово<Check /></button>
       </DogmeetDialog>}
       {picker === "place" && <DogmeetDialog className="sheet--place-picker" title="Место встречи" onDismiss={() => setPicker(null)}>

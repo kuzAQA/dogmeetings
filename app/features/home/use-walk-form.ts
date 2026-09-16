@@ -18,6 +18,12 @@ export type WalkSubmission = {
   walkTime: string;
 };
 
+export function getMinimumWalkTime(now = new Date()) {
+  const [hours, minutes] = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Moscow", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now).split(":").map(Number);
+  const nextSlot = Math.floor((hours * 60 + minutes) / 5) * 5 + 5;
+  return nextSlot >= 24 * 60 ? "24:00" : `${String(Math.floor(nextSlot / 60)).padStart(2, "0")}:${String(nextSlot % 60).padStart(2, "0")}`;
+}
+
 export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], placesLoaded: boolean) {
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [submitError, setSubmitError] = useState("");
@@ -36,7 +42,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
   );
   const placeSuggestionsVisible = placeMenuOpen && (!normalizedValue || (placesLoaded && matchingSharedPlaces.length > 0));
   const placeIsValid = containsLetter.test(placeInput.trim()) && placeInput.trim().length <= MAX_WALK_PLACE_LENGTH;
-  const timeIsValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime);
+  const timeIsValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(walkTime) && (scheduleType !== "today" || walkTime >= getMinimumWalkTime());
   const formIsValid = Boolean(selectedPetId && placeIsValid && timeIsValid);
 
   function touchField(field: string) {
@@ -138,7 +144,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
       setSubmitError("");
       return null;
     }
-    if (typeof submittedWalkTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(submittedWalkTime)) {
+    if (typeof submittedWalkTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(submittedWalkTime) || (scheduleType === "today" && submittedWalkTime < getMinimumWalkTime())) {
       touchField("walk-time");
       setSubmitError("");
       return null;

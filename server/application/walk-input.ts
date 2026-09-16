@@ -3,6 +3,7 @@ import {
   cleanComment,
   isScheduleType,
   isValidWalkTime,
+  isWalkTimeInPast,
   normalizePlaceName,
   MAX_WALK_META_LENGTH,
   MAX_WALK_PLACE_LENGTH
@@ -66,6 +67,9 @@ export function parseWalkMutation(payload: unknown, mode: MutationMode): ParseRe
   }
   if (!isValidWalkTime(walkTime)) {
     return { ok: false, error: "Укажите корректное время прогулки." };
+  }
+  if (isWalkTimeInPast(scheduleType, walkTime)) {
+    return { ok: false, error: "Для сегодняшней прогулки выберите будущее время." };
   }
 
   const value: WalkMutationFields = {

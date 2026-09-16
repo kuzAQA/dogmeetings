@@ -165,7 +165,7 @@ function animateDockAdd() {
  const END = 565;
  const start = START - END;
  const end = 0;
- const duration = 980;
+ const duration = durationMs('--motion-screen', 180);
  const previous = {
   transition: plus.style.transition,
   transform: plus.style.transform,
