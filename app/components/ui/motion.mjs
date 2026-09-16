@@ -93,6 +93,7 @@ export async function closeSheet(element, keyboard = false) {
    transform: reducedMotion() ? 'none' : 'translateY(100%)'
   }], {duration: reducedMotion() ? 100 : 200, easing: token('--ease-out'), fill: 'forwards'});
   await animation.finished.catch(() => {});
+  element.close?.();
  }
 }
 
@@ -152,9 +153,78 @@ if (typeof document !== 'undefined') document.addEventListener('pointerdown', ev
 
 let activeTransition;
 export function skipPageTransition() { activeTransition?.skipTransition(); }
+let cancelDockAddAnimation = () => {};
+
+function animateDockAdd() {
+ const plus = document.querySelector('.bottom-nav[data-action="visible"] .dock-add');
+ const drop = document.querySelector('.bottom-nav[data-action="visible"] .dock-drop-shape');
+ const nav = plus?.closest('.bottom-nav');
+ if (!plus || !drop || !nav || reducedMotion()) return;
+
+ const START = 458;
+ const END = 565;
+ const start = START - END;
+ const end = 0;
+ const duration = 980;
+ const previous = {
+  transition: plus.style.transition,
+  transform: plus.style.transform,
+  opacity: plus.style.opacity,
+  borderColor: plus.style.borderColor,
+  dropTransform: drop.style.transform
+ };
+ let raf = 0;
+
+ const restore = () => {
+  cancelAnimationFrame(raf);
+  plus.style.transition = previous.transition;
+  plus.style.transform = previous.transform;
+  plus.style.opacity = previous.opacity;
+  plus.style.borderColor = previous.borderColor;
+  drop.style.transform = previous.dropTransform;
+  if (cancelDockAddAnimation === cancel) cancelDockAddAnimation = () => {};
+ };
+ const cancel = restore;
+ cancelDockAddAnimation();
+ cancelDockAddAnimation = cancel;
+ plus.style.transition = 'none';
+ const setX = x => {
+  const transform = `translateX(${x}px)`;
+  drop.style.transform = transform;
+  plus.style.transform = transform;
+ };
+ setX(start);
+ plus.style.opacity = '0';
+ plus.style.borderColor = 'transparent';
+ const startTime = performance.now();
+
+ function frame(now) {
+  const raw = Math.min(1, (now - startTime) / duration);
+  const smooth = raw * raw * (3 - 2 * raw);
+  const kick = raw > .72 ? Math.sin((raw - .72) / .28 * Math.PI) * 7 * (1 - raw) : 0;
+  const progress = smooth + kick / (end - start);
+  setX(start + (end - start) * progress);
+  const reveal = Math.max(0, Math.min(1, (raw - .42) / .35));
+  plus.style.opacity = String(reveal);
+  plus.style.borderColor = `rgba(239, 217, 198, ${reveal})`;
+
+  if (raw < 1) raf = requestAnimationFrame(frame);
+  else {
+   setX(end);
+   plus.style.opacity = '1';
+   plus.style.borderColor = 'rgba(239,217,198,1)';
+   restore();
+  }
+ }
+
+ raf = requestAnimationFrame(frame);
+}
 
 export async function transitionPage(update, {direction, photoId, keyboard, target}) {
  skipPageTransition();
+ cancelDockAddAnimation();
+ const dockAddWasVisible = Boolean(document.querySelector('.bottom-nav[data-action="visible"] .dock-add'));
+ const shouldAnimateDockAdd = !dockAddWasVisible && (target === 'plans' || target === 'pets') && !keyboard;
  const root = document.documentElement;
  root.dataset.motionDirection = direction < 0 ? 'back' : 'forward';
  const previousHasBack = Boolean(document.querySelector('.page-header .header-back'));
@@ -172,6 +242,7 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
   update();
   if (headerExit) headerExit(Boolean(document.querySelector('.page-header .header-back')));
   else animateHeaderEntry(!previousHasBack);
+  if (shouldAnimateDockAdd) animateDockAdd();
   return;
  }
  if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
@@ -209,10 +280,12 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
   transition.skipTransition();
  }
  await transition.finished.catch(() => {});
+ const isCurrentTransition = activeTransition === transition;
  if (source) source.style.viewTransitionName = '';
  if (activeTransition === transition) {
   if (destination) destination.style.viewTransitionName = '';
   activeTransition = null;
   delete root.dataset.viewTransition;
  }
+ if (isCurrentTransition && shouldAnimateDockAdd) animateDockAdd();
 }

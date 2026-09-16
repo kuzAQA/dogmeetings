@@ -22,6 +22,15 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
 
   return (
     <><div className="nav-shade" aria-hidden="true" /><nav className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
+      <svg className="dock-goo-filter" aria-hidden="true" width="0" height="0">
+        <defs>
+          <filter id="dock-goo" x="-40%" y="-80%" width="220%" height="260%" colorInterpolationFilters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+            <feColorMatrix in="blur" mode="matrix" values={'1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 22 -10'} result="goo" />
+          </filter>
+        </defs>
+      </svg>
+      <div className="dock-goo" aria-hidden="true"><span className="dock-menu-shape" /><span className="dock-drop-shape" /></div>
       <div className="nav-tabs dock-tabs" data-active={section === "walk" ? "nearby" : section}>
         <span className="nav-indicator" aria-hidden="true" />
         {([
@@ -30,7 +39,7 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
           ["pets", "Питомцы", PawPrint, onPetsClick]
         ] as const).map(([target, label, Icon, onClick]) => (
           <button className={`dock-item dock-item--${target} ${section === target ? "is-active" : ""}`} type="button" key={target} aria-current={section === target ? "page" : undefined} onClick={onClick}>
-            <span className="nav-label" style={{ viewTransitionName: `dogmeet-label-${target}` }}><Icon aria-hidden="true" /><span>{String(label)}</span></span>
+            <span className="nav-label"><Icon aria-hidden="true" /><span>{String(label)}</span></span>
           </button>
         ))}
       </div>

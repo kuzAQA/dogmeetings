@@ -47,7 +47,6 @@ export function LocationEditor({ location, cityOptions, districtOptions, complex
         {(locationsError || submitError) && <p className="field-error" role="alert">{locationsError || submitError}</p>}
         {!locationsLoaded && <div className="resource-loading" role="status" aria-label="Загружаем локации"><span /><span /><span /></div>}
         <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Продолжить"}<ArrowRight aria-hidden="true" /></button>
-        <span className="center-note">Нет вашего места?</span>
         <button className="button secondary" type="button" onClick={onRequestLocation}>Предложить новую локацию</button>
       </form>
     </div>
