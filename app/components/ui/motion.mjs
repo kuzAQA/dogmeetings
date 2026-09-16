@@ -40,6 +40,47 @@ export function animateHeaderEntry(shiftBrand) {
  }
 }
 
+function prepareHeaderExit() {
+ const header = document.querySelector('.page-header');
+ const back = header?.querySelector('.header-back');
+ if (!back?.animate || !document.body) return null;
+ const bounds = back.getBoundingClientRect();
+ const clone = back.cloneNode(true);
+ clone.classList.add('motion-header-back-exit');
+ clone.setAttribute('aria-hidden', 'true');
+ clone.removeAttribute('aria-label');
+ Object.assign(clone.style, {
+  position: 'fixed',
+  left: `${bounds.left}px`,
+  top: `${bounds.top}px`,
+  width: `${bounds.width}px`,
+  height: `${bounds.height}px`,
+  margin: '0',
+  pointerEvents: 'none',
+  zIndex: '2147483647'
+ });
+ document.body.appendChild(clone);
+ const width = bounds.width;
+ const reduced = reducedMotion();
+ const options = {duration: reduced ? 100 : durationMs('--motion-screen', 180), easing: token('--ease-out'), fill: 'both'};
+ const cleanup = () => clone.isConnected && clone.remove();
+ return nextHasBack => {
+  if (nextHasBack) { cleanup(); return; }
+  const animation = clone.animate(reduced ? [{opacity: 1}, {opacity: 0}] : [
+   {opacity: 1, transform: 'translateX(0)'},
+   {opacity: 0, transform: 'translateX(-100%)'}
+  ], options);
+  animation.finished.then(cleanup, cleanup);
+  const brand = document.querySelector('.page-header .brand');
+  if (!reduced && brand?.animate) {
+   brand.animate([
+    {transform: `translateX(${width}px)`},
+    {transform: 'translateX(0)'}
+   ], {...options, duration: durationMs('--motion-shared', 240)});
+  }
+ };
+}
+
 export async function closeSheet(element, keyboard = false) {
  if (!element) return;
  if (!keyboard && element.animate) {
@@ -121,10 +162,16 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
  const canViewTransition = !isAndroid
   && typeof document.startViewTransition === 'function'
   && typeof CSS !== 'undefined' && CSS.supports('view-transition-name', 'dogmeet-header');
- if (target === 'nearby' || keyboard) { update(); return; }
+ const headerExit = !canViewTransition && !keyboard && previousHasBack ? prepareHeaderExit() : null;
+ if (target === 'nearby' || keyboard) {
+  update();
+  headerExit?.(Boolean(document.querySelector('.page-header .header-back')));
+  return;
+ }
  if (!canViewTransition) {
   update();
-  animateHeaderEntry(!previousHasBack);
+  if (headerExit) headerExit(Boolean(document.querySelector('.page-header .header-back')));
+  else animateHeaderEntry(!previousHasBack);
   return;
  }
  if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }

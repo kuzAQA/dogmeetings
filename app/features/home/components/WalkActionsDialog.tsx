@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Pencil, Share2, Trash2 } from "lucide-react";
-import { DogmeetDialog } from "../../../components/ui/DogmeetFrame";
+import { DogmeetDialog, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import type { ApiWalk, Walk } from "../../../../lib/walks";
 import type { Pet } from "../model";
 
@@ -27,10 +27,10 @@ export function WalkActionsDialog({ walk, owned, pet, onClose, onEdit, onDelete,
   return (
     <DogmeetDialog className="sheet--walk-actions" title="Управление прогулкой" onDismiss={onClose}>
       <div className="receipt"><strong>{walkTime(walk)} · {scheduleLabel(walk)}</strong><span>{walk.point}</span><small>{walk.pet}</small></div>
-      <button className="menu-row" type="button" onClick={() => { onClose(); onEdit(owned); }}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>
-      {pet?.canShare && <button className="menu-row" type="button" onClick={() => { onClose(); onShare(pet); }}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}
-      <button className="menu-row danger-text" type="button" onClick={() => { onClose(); onDelete(owned); }}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button>
-      <button className="button quiet" type="button" onClick={onClose}>Закрыть</button>
+      <button className="menu-row" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onEdit(owned))}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>
+      {pet?.canShare && <button className="menu-row" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onShare(pet))}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}
+      <button className="menu-row danger-text" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onDelete(owned))}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button>
+      <button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, onClose)}>Закрыть</button>
     </DogmeetDialog>
   );
 }

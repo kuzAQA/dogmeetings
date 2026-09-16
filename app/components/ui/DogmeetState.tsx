@@ -1,14 +1,14 @@
 "use client";
 
 import { ArrowRight, CheckCircle2, CircleAlert, PawPrint, RefreshCw } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 export function DogmeetState({ state, title, message, action, onAction, children, onBack }: {
   state: "loading" | "error" | "empty" | "success";
   title?: string;
   message?: string;
   action?: string;
-  onAction?: () => void;
+  onAction?: (event: MouseEvent<HTMLButtonElement>) => void;
   onBack?: () => void;
   children?: ReactNode;
 }) {

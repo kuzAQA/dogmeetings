@@ -92,6 +92,54 @@ test("matches the requested typography and transition fixes", async ({ page }) =
   await expect(requiredPet).toHaveCount(0);
 });
 
+test("locks the page scroll while a sheet is open", async ({ page }) => {
+  await openNearby(page);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>("main")!.style.minHeight = "200vh";
+    window.scrollTo(0, 240);
+  });
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  expect(scrollBefore).toBeGreaterThan(0);
+  await page.locator(".filter-trigger").click();
+  const dialog = page.getByRole("dialog", { name: "Время прогулки" });
+  await expect(dialog).toBeVisible();
+  const lock = await page.evaluate(() => ({
+    scrollY: window.scrollY,
+    htmlOverflow: getComputedStyle(document.documentElement).overflow,
+    bodyPosition: getComputedStyle(document.body).position,
+    bodyTop: document.body.style.top
+  }));
+  expect(lock).toMatchObject({ scrollY: 0, htmlOverflow: "hidden", bodyPosition: "fixed", bodyTop: `-${scrollBefore}px` });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await dialog.getByRole("button", { name: "Закрыть панель" }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+});
+
+test("keeps a sheet mounted during an action close animation", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Весь день" }).click();
+  const dialog = page.getByRole("dialog", { name: "Время прогулки" });
+  await expect(dialog).toBeVisible();
+  await page.evaluate(() => {
+    const sheet = document.querySelector<HTMLDialogElement>("dialog[open]");
+    if (!sheet) throw new Error("sheet-not-found");
+    const state = window as Window & { sheetCloseObserved?: boolean };
+    state.sheetCloseObserved = false;
+    const observer = new MutationObserver(() => {
+      if (sheet.isConnected && sheet.classList.contains("is-closing")) {
+        state.sheetCloseObserved = true;
+        observer.disconnect();
+      }
+    });
+    observer.observe(sheet, { attributes: true, attributeFilter: ["class"] });
+  });
+  await dialog.getByRole("button", { name: "Показать прогулки" }).click();
+  await expect.poll(() => page.evaluate(() => (window as Window & { sheetCloseObserved?: boolean }).sheetCloseObserved)).toBe(true);
+  await expect(dialog).toHaveCount(0);
+});
+
 test("keeps the active dock tab inert", async ({ page }) => {
   await openNearby(page);
   await expect(page.locator(".nearby-toolbar")).toHaveCSS("view-transition-name", "dogmeet-header");

@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, type MouseEvent, useCallback, useEffect, useState } from "react";
 import { ApiRequestError } from "../features/api/client";
 import {
   approveLocationRequest,
@@ -44,7 +44,7 @@ import { base64UrlBytes, createLoginProof } from "../features/admin/login-proof"
 import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../features/shared/validation";
 import { compressPetPhoto } from "../../lib/pet-photo";
 import { DogmeetState } from "../components/ui/DogmeetState";
-import { DogmeetDialog, DogmeetFrame, DogmeetHeader } from "../components/ui/DogmeetFrame";
+import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 
 type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "notifications";
 
@@ -207,16 +207,19 @@ export default function AdminPage() {
     }
   }
 
-  async function signOut() {
+  async function signOut(event: MouseEvent<HTMLButtonElement>) {
+    const dialogTrigger = event.currentTarget;
     await disableNotifications().catch(() => undefined);
     await logoutAdmin();
     setRequests([]);
     setPets([]);
     setUsername("");
     setPassword("");
-    setSignOutPending(false);
-    setPhase("login");
-    setResult({ title: "Вы вышли", message: "Сессия администратора завершена.", heading: "Выход" });
+    await requestDialogClose(dialogTrigger, () => {
+      setSignOutPending(false);
+      setPhase("login");
+      setResult({ title: "Вы вышли", message: "Сессия администратора завершена.", heading: "Выход" });
+    }, true);
   }
 
   async function disableNotifications() {
@@ -321,8 +324,9 @@ export default function AdminPage() {
     setPetPhoto(file);
   }
 
-  async function confirmRequestAction() {
+  async function confirmRequestAction(event: MouseEvent<HTMLButtonElement>) {
     if (!pendingRequestAction) return;
+    const dialogTrigger = event.currentTarget;
     setSubmitting(true);
     setError("");
     try {
@@ -332,12 +336,16 @@ export default function AdminPage() {
         await rejectLocationRequest(pendingRequestAction.request.id);
       }
       setRequests((current) => current.filter((item) => item.id !== pendingRequestAction.request.id));
-      setResult({ title: pendingRequestAction.type === "approve" ? "Локация добавлена" : "Заявка отклонена", message: pendingRequestAction.type === "approve" ? "Жители смогут выбрать её при поиске прогулок." : "Локация не добавлена в список.", heading: pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку", sheet: true });
-      setPendingRequestAction(null);
+      await requestDialogClose(dialogTrigger, () => {
+        setPendingRequestAction(null);
+        setResult({ title: pendingRequestAction.type === "approve" ? "Локация добавлена" : "Заявка отклонена", message: pendingRequestAction.type === "approve" ? "Жители смогут выбрать её при поиске прогулок." : "Локация не добавлена в список.", heading: pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку", sheet: true });
+      }, true);
     } catch (actionError) {
       if (actionError instanceof ApiRequestError && actionError.status === 401) {
-        returnToLogin();
-        setPendingRequestAction(null);
+        await requestDialogClose(dialogTrigger, () => {
+          returnToLogin();
+          setPendingRequestAction(null);
+        }, true);
         return;
       }
       setError(actionError instanceof Error ? actionError.message : "Не удалось обработать заявку.");
@@ -382,19 +390,24 @@ export default function AdminPage() {
     }
   }
 
-  async function confirmPetDelete() {
+  async function confirmPetDelete(event: MouseEvent<HTMLButtonElement>) {
     if (!petPendingDelete || submitting) return;
+    const dialogTrigger = event.currentTarget;
     setSubmitting(true);
     setError("");
     try {
       await deleteAdminPet(petPendingDelete.id);
       setPets((current) => current.filter((pet) => pet.id !== petPendingDelete.id));
-      setPetPendingDelete(null);
-      setResult({ title: "Питомец удалён", message: "Связанные прогулки также удалены.", heading: "Удаление администратором", sheet: true });
+      await requestDialogClose(dialogTrigger, () => {
+        setPetPendingDelete(null);
+        setResult({ title: "Питомец удалён", message: "Связанные прогулки также удалены.", heading: "Удаление администратором", sheet: true });
+      }, true);
     } catch (deleteError) {
       if (deleteError instanceof ApiRequestError && deleteError.status === 401) {
-        returnToLogin();
-        setPetPendingDelete(null);
+        await requestDialogClose(dialogTrigger, () => {
+          returnToLogin();
+          setPetPendingDelete(null);
+        }, true);
         return;
       }
       setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить питомца.");
@@ -474,12 +487,12 @@ export default function AdminPage() {
       </>}
     </>}
     {pendingRequestAction && <DogmeetDialog title={pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку"} busy={submitting} role="alertdialog" onDismiss={() => setPendingRequestAction(null)}>
-      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><MapPin className="state-icon" /><h2>{pendingRequestAction.type === "approve" ? <>Ещё один район<br />для встреч</> : "Отклонить заявку?"}</h2><div className="receipt"><strong>{pendingRequestAction.request.complex}</strong><span>{pendingRequestAction.request.city} · {pendingRequestAction.request.district}</span></div><p>{pendingRequestAction.type === "approve" ? "Локация появится в списке. Жители смогут выбрать её для прогулок." : "Заявка будет удалена без добавления локации."}</p>{error && <p className="field-error" role="alert">{error}</p>}<button className={pendingRequestAction.type === "approve" ? "button" : "button danger"} type="button" onClick={confirmRequestAction}>{pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку"}</button><button className="button quiet" type="button" onClick={() => setPendingRequestAction(null)}>Отмена</button></>}
+      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><MapPin className="state-icon" /><h2>{pendingRequestAction.type === "approve" ? <>Ещё один район<br />для встреч</> : "Отклонить заявку?"}</h2><div className="receipt"><strong>{pendingRequestAction.request.complex}</strong><span>{pendingRequestAction.request.city} · {pendingRequestAction.request.district}</span></div><p>{pendingRequestAction.type === "approve" ? "Локация появится в списке. Жители смогут выбрать её для прогулок." : "Заявка будет удалена без добавления локации."}</p>{error && <p className="field-error" role="alert">{error}</p>}<button className={pendingRequestAction.type === "approve" ? "button" : "button danger"} type="button" onClick={confirmRequestAction}>{pendingRequestAction.type === "approve" ? "Добавить локацию" : "Отклонить заявку"}</button><button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => setPendingRequestAction(null))}>Отмена</button></>}
     </DogmeetDialog>}
     {petPendingDelete && <DogmeetDialog title="Удаление администратором" busy={submitting} role="alertdialog" onDismiss={() => setPetPendingDelete(null)}>
-      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><Image className="pet-face large" src={petPendingDelete.photoUrl} alt={petPendingDelete.name} width={92} height={92} unoptimized /><h2>Удалить {petPendingDelete.name}?</h2><p>Питомец и все его прогулки будут удалены. Это действие нельзя отменить.</p>{error && <p className="field-error" role="alert">{error}</p>}<button className="button danger" type="button" onClick={confirmPetDelete}>Удалить питомца</button><button className="button quiet" type="button" onClick={() => setPetPendingDelete(null)}>Оставить</button></>}
+      {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><Image className="pet-face large" src={petPendingDelete.photoUrl} alt={petPendingDelete.name} width={92} height={92} unoptimized /><h2>Удалить {petPendingDelete.name}?</h2><p>Питомец и все его прогулки будут удалены. Это действие нельзя отменить.</p>{error && <p className="field-error" role="alert">{error}</p>}<button className="button danger" type="button" onClick={confirmPetDelete}>Удалить питомца</button><button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => setPetPendingDelete(null))}>Оставить</button></>}
     </DogmeetDialog>}
-    {signOutPending && <DogmeetDialog title="Выход" busy={submitting} role="alertdialog" onDismiss={() => setSignOutPending(false)}><LogOut className="state-icon" /><h2>Закончить работу?</h2><p>Для возвращения в управление потребуется снова ввести логин и пароль.</p><button className="button" type="button" disabled={submitting} onClick={signOut}>{submitting ? "Выходим…" : "Выйти"}</button><button className="button quiet" type="button" disabled={submitting} onClick={() => setSignOutPending(false)}>Остаться</button></DogmeetDialog>}
-    {result?.sheet && <DogmeetDialog title={result.heading} onDismiss={() => setResult(null)}><DogmeetState state="success" title={result.title} message={result.message} onAction={() => setResult(null)} /></DogmeetDialog>}
+    {signOutPending && <DogmeetDialog title="Выход" busy={submitting} role="alertdialog" onDismiss={() => setSignOutPending(false)}><LogOut className="state-icon" /><h2>Закончить работу?</h2><p>Для возвращения в управление потребуется снова ввести логин и пароль.</p><button className="button" type="button" disabled={submitting} onClick={signOut}>{submitting ? "Выходим…" : "Выйти"}</button><button className="button quiet" type="button" disabled={submitting} onClick={(event) => requestDialogClose(event.currentTarget, () => setSignOutPending(false))}>Остаться</button></DogmeetDialog>}
+    {result?.sheet && <DogmeetDialog title={result.heading} onDismiss={() => setResult(null)}><DogmeetState state="success" title={result.title} message={result.message} onAction={(event) => requestDialogClose(event.currentTarget, () => setResult(null))} /></DogmeetDialog>}
   </section></main></DogmeetFrame>;
 }

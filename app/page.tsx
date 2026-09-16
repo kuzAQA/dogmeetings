@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "./components/ui/DogmeetState";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createLocationRequest,
   deletePet as deletePetRequest,
@@ -50,7 +50,7 @@ import { PetForm } from "./features/home/components/PetForm";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
 import { apiWalkToCard, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
-import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader } from "./components/ui/DogmeetFrame";
+import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "./components/ui/DogmeetFrame";
 
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
@@ -222,18 +222,14 @@ export default function Home() {
     if (!walkPendingDelete && !petPendingDelete && !(screen === "walks" && menuOpen)) return;
     if (walkPendingDelete || petPendingDelete) deleteCancelRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (walkPendingDelete) {
-        if (!walkDeleting) setWalkPendingDelete(null);
-      } else if (petPendingDelete) {
-        if (!petDeleting) setPetPendingDelete(null);
-      } else if (screen === "walks" && menuOpen) {
+      if (event.key !== "Escape" || walkPendingDelete || petPendingDelete) return;
+      if (screen === "walks" && menuOpen) {
         replaceNavigation("walks", { menuOpen: false, dockWalkOpen: false, dockReturnSection: "nearby" });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen, petDeleting, petPendingDelete, replaceNavigation, screen, walkDeleting, walkPendingDelete]);
+  }, [menuOpen, petPendingDelete, replaceNavigation, screen, walkPendingDelete]);
 
   useEffect(() => {
     if (screen === "walks" && menuOpen) profileHeadingRef.current?.focus();
@@ -767,8 +763,9 @@ export default function Home() {
     }
   }
 
-  async function deleteWalk() {
+  async function deleteWalk(event: MouseEvent<HTMLButtonElement>) {
     if (!walkPendingDelete || walkDeleting) return;
+    const dialogTrigger = event.currentTarget;
 
     setWalkDeleting(true);
     setWalkDeleteError("");
@@ -778,8 +775,10 @@ export default function Home() {
       const deletedId = walkPendingDelete.id;
       setMyWalks((current) => current.filter((walk) => walk.id !== deletedId));
       setSavedWalks((current) => current.filter((walk) => walk.id !== deletedId));
-      setWalkPendingDelete(null);
-      setResult({ title: "Прогулка удалена", sheet: "Удалить прогулку?", message: "Она больше не отображается в расписании.", action: "Посмотреть мои планы", onContinue: () => openCollectionScreen("my-walks") });
+      await requestDialogClose(dialogTrigger, () => {
+        setWalkPendingDelete(null);
+        setResult({ title: "Прогулка удалена", sheet: "Удалить прогулку?", message: "Она больше не отображается в расписании.", action: "Посмотреть мои планы", onContinue: () => openCollectionScreen("my-walks") });
+      }, true);
     } catch (error) {
       setWalkDeleteError(error instanceof Error ? error.message : "Не удалось удалить прогулку.");
     } finally {
@@ -787,8 +786,9 @@ export default function Home() {
     }
   }
 
-  async function deletePet() {
+  async function deletePet(event: MouseEvent<HTMLButtonElement>) {
     if (!petPendingDelete || petDeleting) return;
+    const dialogTrigger = event.currentTarget;
 
     setPetDeleting(true);
     setPetDeleteError("");
@@ -801,8 +801,10 @@ export default function Home() {
         setMyWalks((current) => current.filter((walk) => walk.petId !== deletedId));
         setSavedWalks((current) => current.filter((walk) => walk.petId !== deletedId));
       }
-      setPetPendingDelete(null);
-      setResult({ title: detached ? "Питомец убран из списка" : "Питомец удалён", sheet: "Удалить питомца", message: "Список питомцев обновлён.", onContinue: () => openCollectionScreen("my-pets", "dock") });
+      await requestDialogClose(dialogTrigger, () => {
+        setPetPendingDelete(null);
+        setResult({ title: detached ? "Питомец убран из списка" : "Питомец удалён", sheet: "Удалить питомца", message: "Список питомцев обновлён.", onContinue: () => openCollectionScreen("my-pets", "dock") });
+      }, true);
     } catch (error) {
       setPetDeleteError(error instanceof Error ? error.message : "Не удалось удалить питомца.");
     } finally {
@@ -1061,7 +1063,7 @@ export default function Home() {
           </div>
         )}
 
-        {result?.sheet && <DogmeetDialog title={result.sheet} onDismiss={() => { setResult(null); result.onContinue(); }}><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => { setResult(null); result.onContinue(); }} /></DogmeetDialog>}
+        {result?.sheet && <DogmeetDialog title={result.sheet} onDismiss={() => { setResult(null); result.onContinue(); }}><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })} /></DogmeetDialog>}
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
           onDismissPetRequired={() => setShowPetRequiredPopup(false)}

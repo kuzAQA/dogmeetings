@@ -86,6 +86,30 @@ test.describe("Android header entry", () => {
   });
 });
 
+test.describe("Android header exit", () => {
+  test.use({ userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+
+  test("reverses the back arrow and logo when returning to the previous screen", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+    await page.addStyleTag({ content: ":root { --motion-screen: 2s; --motion-shared: 2s; }" });
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Назад" })).toBeVisible();
+    await page.getByRole("button", { name: "Назад" }).click();
+    await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+
+    const animations = await page.evaluate(() => ({
+      back: document.querySelector<HTMLElement>(".motion-header-back-exit")?.getAnimations().map((animation) => animation.effect?.getTiming().duration),
+      brand: document.querySelector<HTMLElement>(".page-header .brand")?.getAnimations().map((animation) => animation.effect?.getTiming().duration)
+    }));
+    expect(animations.back).toContain(2000);
+    expect(animations.brand).toContain(2000);
+  });
+});
+
 test("place sheet keeps its footer visible and dismisses from the grip", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
