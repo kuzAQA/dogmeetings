@@ -27,7 +27,7 @@ test("matches the mobile schedule shell and stays within the viewport", async ({
     return { phone: phone.getBoundingClientRect().width, dock: dock.getBoundingClientRect().width, overflow: document.documentElement.scrollWidth - innerWidth, addIconOffset: Math.abs(add.x + add.width / 2 - icon.x - icon.width / 2) };
   });
   expect(geometry.phone).toBe(Math.min(390, page.viewportSize()!.width));
-  expect(geometry.dock).toBeLessThanOrEqual(312);
+  expect(geometry.dock).toBeLessThanOrEqual(359);
   expect(geometry.overflow).toBeLessThanOrEqual(0);
   expect(geometry.addIconOffset).toBeLessThan(1);
   await expect(page.locator(".status-bar")).toHaveCount(0);
@@ -65,6 +65,33 @@ test("centers the nearby menu and keeps the add action stable between plans and 
   await expect(tabs).not.toHaveCSS("transform", "none");
 });
 
+test("matches the requested typography and transition fixes", async ({ page }) => {
+  await openNearby(page);
+  expect(await page.locator(".walk-place").first().evaluate((element) => getComputedStyle(element).fontSize)).toBe("14px");
+  expect(await page.locator(".walk-comment").first().evaluate((element) => getComputedStyle(element).fontSize)).toBe("12px");
+  const viewportWidth = page.viewportSize()!.width;
+  expect(await page.locator(".bottom-nav").evaluate((element) => {
+    const dock = element.querySelector<HTMLElement>(".dock-add")!;
+    return { width: element.getBoundingClientRect().width, action: dock.getBoundingClientRect().width };
+  })).toEqual({
+    width: Math.min(359, viewportWidth - 30),
+    action: viewportWidth >= 390 ? 64 : viewportWidth >= 375 ? 63 : viewportWidth >= 361 ? 61 : 60
+  });
+
+  await page.getByRole("button", { name: "Мой район и настройки" }).click();
+  await expect(page.getByRole("button", { name: "Открыть в браузере", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Связь с разработчиком", exact: false }).click();
+  await expect(page.locator(".contact-screen .page-header")).toHaveCSS("view-transition-name", "none");
+
+  await openNearby(page, { pets: [], mine: [] });
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  const requiredPet = page.getByRole("dialog", { name: "Сначала питомец" });
+  await expect(requiredPet.locator(".sheet-header h1")).toHaveCount(0);
+  await requiredPet.getByRole("button", { name: "Закрыть панель" }).click();
+  await expect(requiredPet).toHaveCount(0);
+});
+
 test("keeps the active dock tab inert", async ({ page }) => {
   await openNearby(page);
   await expect(page.locator(".nearby-toolbar")).toHaveCSS("view-transition-name", "dogmeet-header");
@@ -89,6 +116,21 @@ test("keeps the active dock tab inert", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(transitions);
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+});
+
+test("returns to nearby without a page snapshot", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    const state = window as Window & { transitionStarts?: number };
+    state.transitionStarts = 0;
+    const start = document.startViewTransition?.bind(document);
+    if (start) document.startViewTransition = (callback) => { state.transitionStarts = (state.transitionStarts ?? 0) + 1; return start(callback); };
+  });
+  await page.getByRole("button", { name: "Рядом", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(0);
 });
 
 test("filters the timeline through the mockup bottom sheet", async ({ page }) => {

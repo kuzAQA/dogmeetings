@@ -57,11 +57,11 @@ if(process.argv.includes('--cta')){
     expect(Math.abs(b.x+b.width-n.x-n.width)).toBeLessThan(1);
     expect(Math.abs(n.y-b.y)).toBeLessThan(1);
     const tabs=await page.locator('.nav-tabs').boundingBox();
-    expect(Math.abs(b.x-tabs.x-tabs.width-10)).toBeLessThan(1);
+    expect(Math.abs(b.x-tabs.x-tabs.width-12)).toBeLessThan(1);
     expect(Math.abs(b.width-b.height)).toBeLessThan(1);
     expect(await cta.evaluate(el=>getComputedStyle(el).borderRadius)).toBe('50%');
     expect(b.width).toBeGreaterThanOrEqual(52);
-    expect(b.width).toBeLessThanOrEqual(56);
+    expect(b.width).toBeLessThanOrEqual(64);
    }).toPass();
   }
   await page.locator('.dock-add').click();await expect(page.locator('.dock-add')).toHaveCount(0);

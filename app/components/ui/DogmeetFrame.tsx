@@ -30,16 +30,10 @@ export function DogmeetDialog({ children, onDismiss, title, busy = false, classN
     const dialog = dialogRef.current;
     const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog) return;
-    const y = window.scrollY;
-    const body = document.body;
-    const previous = { position: body.style.position, top: body.style.top, width: body.style.width };
-    Object.assign(body.style, { position: "fixed", top: `-${y}px`, width: "100%" });
     dialog.showModal();
     dialog.querySelector<HTMLButtonElement>(".sheet-header button")?.focus({ preventScroll: true });
     return () => {
       if (dialog.open) dialog.close();
-      Object.assign(body.style, previous);
-      window.scrollTo(0, y);
       returnFocus?.focus({ preventScroll: true });
     };
   }, []);

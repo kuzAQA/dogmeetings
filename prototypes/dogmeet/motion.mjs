@@ -87,13 +87,13 @@ if (typeof document !== 'undefined') document.addEventListener('pointerdown', ev
 let activeTransition;
 export function skipPageTransition() { activeTransition?.skipTransition(); }
 
-export async function transitionPage(update, {direction, photoId, keyboard}) {
+export async function transitionPage(update, {direction, photoId, keyboard, target}) {
  skipPageTransition();
- if (!document.startViewTransition || keyboard) { update(); return; }
- if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
  const root = document.documentElement;
- root.dataset.viewTransition = 'active';
  root.dataset.motionDirection = direction < 0 ? 'back' : 'forward';
+ if (target === 'nearby' || !document.startViewTransition || keyboard) { update(); return; }
+ if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
+ root.dataset.viewTransition = 'active';
  const photo = () => photoId && document.querySelector(`main img[data-pet-photo="${CSS.escape(photoId)}"]`);
  const source = !reducedMotion() && photo();
  const usable = source?.complete && source.naturalWidth > 0 && source.getBoundingClientRect().bottom > 0;

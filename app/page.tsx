@@ -962,7 +962,6 @@ export default function Home() {
             onOpenLocationEditor={openLocationEditor}
             onOpenMyWalks={() => openCollectionScreen("my-walks")}
             onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
-            onOpenBrowserGuide={openBrowserGuide}
             onOpenProfile={() => selectDockSection("profile")}
             onBack={screen === "walk-detail" || screen === "contact" ? returnThroughHistory : dockWalkOpen ? closeDockWalkAnnouncement : () => selectDockSection("nearby")}
           />

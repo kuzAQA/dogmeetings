@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Compass, Copy, ExternalLink, MapPin, MessageCircle, Moon, PawPrint, Pencil, Share2, SlidersHorizontal, Sun, Trash2 } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, ExternalLink, MapPin, MessageCircle, Moon, PawPrint, SlidersHorizontal, Sun } from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { type FormEvent, type RefObject, useMemo, useState } from "react";
@@ -10,6 +10,7 @@ import type { Location, Pet, SharedPlace } from "../model";
 import type { DockSection } from "../use-home-navigation";
 import type { WalkFormState } from "../use-walk-form";
 import { WalkAnnouncementForm } from "./WalkAnnouncementForm";
+import { WalkActionsDialog } from "./WalkActionsDialog";
 
 const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
@@ -47,7 +48,6 @@ type Props = {
   onOpenLocationEditor: () => void;
   onOpenMyWalks: () => void;
   onOpenMyPets: () => void;
-  onOpenBrowserGuide: () => void;
   onOpenProfile: () => void;
   onBack: () => void;
   detailOpen: boolean;
@@ -58,7 +58,7 @@ type Props = {
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, petsById, onPeriodChange, onEditWalk, onDeleteWalk, onSharePet, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyWalks, onOpenMyPets, onOpenBrowserGuide, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, petsById, onPeriodChange, onEditWalk, onDeleteWalk, onSharePet, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
   const [contactCopied, setContactCopied] = useState(false);
@@ -94,7 +94,6 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
         </div>
         <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>
-        <button className="menu-row" type="button" onClick={onOpenBrowserGuide}><Compass aria-hidden="true" /><span><strong>Открыть в браузере</strong><small>Подсказка для iPhone и Android</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
       </div>
@@ -141,7 +140,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
       {actionsWalk && (() => {
         const owned = ownedWalksById.get(actionsWalk.id);
         const pet = petsById.get(actionsWalk.petId);
-        return <DogmeetDialog title="Управление прогулкой" onDismiss={() => setActionsWalk(null)}><div className="receipt"><strong>{actionsWalk.time} · {actionsWalk.scheduleType === "always" ? "Ежедневно" : actionsWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</strong><span>{actionsWalk.point}</span><small>{actionsWalk.pet}</small></div>{owned && <button className="menu-row" type="button" onClick={() => { setActionsWalk(null); onEditWalk(owned); }}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>}{pet?.canShare && <button className="menu-row" type="button" onClick={() => { setActionsWalk(null); onSharePet(pet); }}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}{owned && <button className="menu-row danger-text" type="button" onClick={() => { setActionsWalk(null); onDeleteWalk(owned); }}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button>}<button className="button quiet" type="button" onClick={() => setActionsWalk(null)}>Закрыть</button></DogmeetDialog>;
+        return owned && <WalkActionsDialog walk={actionsWalk} owned={owned} pet={pet} onClose={() => setActionsWalk(null)} onEdit={onEditWalk} onDelete={onDeleteWalk} onShare={onSharePet} />;
       })()}
     </div>
   );

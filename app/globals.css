@@ -22,13 +22,16 @@ html, body { min-height: 100%; background: #e5e5e2; }
 }
 
 @media (max-width: 899px) {
-  .production { padding-bottom: 0; }
-  .production .nav-shade { bottom: 0; }
+.production { padding-bottom: 0; }
+.production .nav-shade { bottom: 0; }
 }
 
 .production .page-header { view-transition-name: dogmeet-header; }
 .production .page-header .brand { view-transition-name: dogmeet-brand; }
 .production .header-back { view-transition-name: dogmeet-back; }
+.production .contact-screen .page-header,
+.production .contact-screen .page-header .brand,
+.production .contact-screen .header-back { view-transition-name: none; }
 .production main { view-transition-name: dogmeet-production-page; }
 .production .sheet { max-height: 80dvh; overflow: hidden; }
 .production .sheet[open] { display: flex; flex-direction: column; }
@@ -66,16 +69,16 @@ html, body { min-height: 100%; background: #e5e5e2; }
 }
 
 @keyframes production-screen-out {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-1 * var(--motion-screen-offset))); }
+from { transform: translateX(0); }
+to { transform: translateX(calc(-1 * var(--motion-screen-offset))); }
 }
 
 @keyframes dogmeet-back-in {
-  from { opacity: 0; transform: translateX(-100%); }
-  to { opacity: 1; transform: translateX(0); }
+ from { opacity: 0; transform: translateX(-100%); }
+ to { opacity: 1; transform: translateX(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(dogmeet-brand) { animation: none; }
-  ::view-transition-new(dogmeet-back) { animation: photo-in var(--motion-fast) var(--ease-out) both; }
+::view-transition-group(dogmeet-brand) { animation: none; }
+::view-transition-new(dogmeet-back) { animation: photo-in var(--motion-fast) var(--ease-out) both; }
 }

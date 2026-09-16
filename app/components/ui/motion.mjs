@@ -15,6 +15,31 @@ export function fadeIn(element, keyboard = false) {
  });
 }
 
+function durationMs(name, fallback) {
+ const value = token(name);
+ const duration = Number.parseFloat(value);
+ return Number.isFinite(duration) ? duration * (value.endsWith('s') && !value.endsWith('ms') ? 1000 : 1) : fallback;
+}
+
+export function animateHeaderEntry(shiftBrand) {
+ const header = document.querySelector('.page-header');
+ const back = header?.querySelector('.header-back');
+ if (!back?.animate) return;
+ const reduced = reducedMotion();
+ const options = {duration: reduced ? 100 : durationMs('--motion-screen', 180), easing: token('--ease-out'), fill: 'both'};
+ back.animate(reduced ? [{opacity: 0}, {opacity: 1}] : [
+  {opacity: 0, transform: 'translateX(-100%)'},
+  {opacity: 1, transform: 'translateX(0)'}
+ ], options);
+ const brand = header.querySelector('.brand');
+ if (!reduced && shiftBrand && brand?.animate) {
+  brand.animate([
+   {transform: `translateX(-${back.getBoundingClientRect().width}px)`},
+   {transform: 'translateX(0)'}
+  ], {...options, duration: durationMs('--motion-shared', 240)});
+ }
+}
+
 export async function closeSheet(element, keyboard = false) {
  if (!element) return;
  if (!keyboard && element.animate) {
@@ -87,13 +112,23 @@ if (typeof document !== 'undefined') document.addEventListener('pointerdown', ev
 let activeTransition;
 export function skipPageTransition() { activeTransition?.skipTransition(); }
 
-export async function transitionPage(update, {direction, photoId, keyboard}) {
+export async function transitionPage(update, {direction, photoId, keyboard, target}) {
  skipPageTransition();
- if (!document.startViewTransition || keyboard) { update(); return; }
- if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
  const root = document.documentElement;
- root.dataset.viewTransition = 'active';
  root.dataset.motionDirection = direction < 0 ? 'back' : 'forward';
+ const previousHasBack = Boolean(document.querySelector('.page-header .header-back'));
+ const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+ const canViewTransition = !isAndroid
+  && typeof document.startViewTransition === 'function'
+  && typeof CSS !== 'undefined' && CSS.supports('view-transition-name', 'dogmeet-header');
+ if (target === 'nearby' || keyboard) { update(); return; }
+ if (!canViewTransition) {
+  update();
+  animateHeaderEntry(!previousHasBack);
+  return;
+ }
+ if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
+ root.dataset.viewTransition = 'active';
  const photo = () => photoId && document.querySelector(`main img[data-pet-photo="${CSS.escape(photoId)}"]`);
  const source = !reducedMotion() && photo();
  const usable = source?.complete && source.naturalWidth > 0 && source.getBoundingClientRect().bottom > 0;

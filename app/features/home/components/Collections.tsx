@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, ChevronRight, MapPin, MessageCircle, Pencil, Share2, Trash2 } from "lucide-react";
+import { Check, ChevronRight, MapPin, MessageCircle, Share2 } from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import type { ApiWalk } from "../../../../lib/walks";
-import { DogmeetDialog, DogmeetHeader } from "../../../components/ui/DogmeetFrame";
+import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
 import type { Pet } from "../model";
+import { WalkActionsDialog } from "./WalkActionsDialog";
 
 type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () => void; onBack?: () => void };
 
@@ -32,7 +33,7 @@ export function WalkCollection({ walks, loaded, error, onRetry, openWalkActionsI
       <h1>Мои планы</h1>
       {loaded && !error && walks.length > 0 && <p>Ваши встречи сегодня, завтра<br />и маленькие ежедневные традиции.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : walks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (
-      <div className="timeline">{walks.map((walk) => <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.walkTime.slice(0, 5)}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary"><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}<button className="text-link" type="button" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>Управлять<ChevronRight aria-hidden="true" /></button></div>{openWalkActionsId === walk.id && <DogmeetDialog className="sheet--walk-actions" title="Управление прогулкой" onDismiss={onCloseWalkActions}><div className="receipt"><strong>{walk.walkTime.slice(0, 5)} · {walk.scheduleType === "always" ? "Ежедневно" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</strong><span>{walk.point}</span><small>{walk.pet}</small></div><button className="menu-row" type="button" onClick={() => onEditWalk(walk)}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>{petsById.get(walk.petId)?.canShare && <button className="menu-row" type="button" onClick={() => { onCloseWalkActions(); onSharePet(petsById.get(walk.petId)!); }}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}<button className="menu-row" type="button" onClick={() => onDeleteWalk(walk)}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button><button className="button quiet" type="button" onClick={onCloseWalkActions}>Закрыть</button></DogmeetDialog>}</div>)}</div>
+      <div className="timeline">{walks.map((walk) => <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.walkTime.slice(0, 5)}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary"><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}<button className="text-link" type="button" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>Управлять<ChevronRight aria-hidden="true" /></button></div>{openWalkActionsId === walk.id && <WalkActionsDialog walk={walk} owned={walk} pet={petsById.get(walk.petId)} onClose={onCloseWalkActions} onEdit={onEditWalk} onDelete={onDeleteWalk} onShare={onSharePet} />}</div>)}</div>
       )}
     </div>
   );
