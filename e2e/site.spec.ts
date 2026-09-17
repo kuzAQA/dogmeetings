@@ -87,8 +87,8 @@ test("matches the requested typography and transition fixes", async ({ page }) =
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   const requiredPet = page.getByRole("dialog", { name: "Сначала питомец" });
-  await expect(requiredPet.locator(".sheet-header h1")).toHaveCount(0);
-  await requiredPet.getByRole("button", { name: "Закрыть панель" }).click();
+  await expect(requiredPet.locator(".sheet-header")).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expect(requiredPet).toHaveCount(0);
 });
 
@@ -112,7 +112,7 @@ test("locks the page scroll while a sheet is open", async ({ page }) => {
   expect(lock).toMatchObject({ scrollY: 0, htmlOverflow: "hidden", bodyPosition: "fixed", bodyTop: `-${scrollBefore}px` });
   await page.evaluate(() => window.scrollTo(0, 0));
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
-  await dialog.getByRole("button", { name: "Закрыть панель" }).click();
+  await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 });
@@ -140,7 +140,7 @@ test("keeps a sheet mounted during an action close animation", async ({ page }) 
   await expect(dialog).toHaveCount(0);
 });
 
-test("keeps the active dock tab inert", async ({ page }) => {
+test("keeps dock tab and screen changes inert", async ({ page }) => {
   await openNearby(page);
   await expect(page.locator(".nearby-toolbar")).toHaveCSS("view-transition-name", "dogmeet-header");
   await page.evaluate(() => {
@@ -159,7 +159,12 @@ test("keeps the active dock tab inert", async ({ page }) => {
 
   await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(0);
+  expect(await page.locator(".dock-add").evaluate((element) => element.getAnimations().length)).toBe(0);
   const transitions = await page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts);
+  await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(transitions);
   await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(transitions);
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
@@ -220,7 +225,7 @@ test("opens the walk form with native time and preserved fields", async ({ page 
   await expect(page.getByLabel("Питомец")).toBeVisible();
   await page.getByRole("button", { name: /^Время/ }).click();
   await expect(page.locator('input[type="time"]')).toHaveAttribute("type", "time");
-  await page.getByRole("button", { name: "Закрыть панель" }).click();
+  await page.keyboard.press("Escape");
   await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "40");
 });
 

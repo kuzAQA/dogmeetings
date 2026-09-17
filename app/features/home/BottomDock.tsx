@@ -21,7 +21,7 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
   const actionLabel = addingPet ? "Добавить питомца" : section === "walk" && walkFormDirty && walkFormIsValid ? "Сохранить прогулку" : "Создать прогулку";
 
   return (
-    <><div className="nav-shade" aria-hidden="true" /><nav className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
+    <nav className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
       <svg className="dock-goo-filter" aria-hidden="true" width="0" height="0">
         <defs>
           <filter id="dock-goo" x="-40%" y="-80%" width="220%" height="260%" colorInterpolationFilters="sRGB">
@@ -46,6 +46,6 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
       <button className={`dock-add dock-context-action dock-item--walk ${section === "walk" ? "is-active" : ""}`} type="button" disabled={actionHidden || !petsLoaded || walkSaving || (section === "walk" && walkFormDirty && !walkFormIsValid)} aria-hidden={actionHidden || undefined} tabIndex={actionHidden ? -1 : undefined} aria-label={actionLabel} onClick={addingPet ? onAddPet : onWalkClick}>
         <span className="action-icon" data-done={section === "walk" && walkFormDirty && walkFormIsValid} aria-hidden="true"><Plus /><Check /></span>
       </button>
-    </nav></>
+    </nav>
   );
 }

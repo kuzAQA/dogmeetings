@@ -25,12 +25,11 @@ function scheduleLabel(walk: ApiWalk | Walk) {
 
 export function WalkActionsDialog({ walk, owned, pet, onClose, onEdit, onDelete, onShare }: Props) {
   return (
-    <DogmeetDialog className="sheet--walk-actions" title="Управление прогулкой" onDismiss={onClose}>
+    <DogmeetDialog className="sheet--walk-actions" title="Управление прогулкой" onDismiss={onClose} footer={<button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, onClose)}>Закрыть</button>}>
       <div className="receipt"><strong>{walkTime(walk)} · {scheduleLabel(walk)}</strong><span>{walk.point}</span><small>{walk.pet}</small></div>
       <button className="menu-row" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onEdit(owned))}><Pencil /><span><strong>Изменить прогулку</strong></span><ChevronRight /></button>
       {pet?.canShare && <button className="menu-row" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onShare(pet))}><Share2 /><span><strong>Поделиться питомцем</strong></span><ChevronRight /></button>}
       <button className="menu-row danger-text" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onDelete(owned))}><Trash2 /><span><strong>Удалить прогулку</strong></span><ChevronRight /></button>
-      <button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, onClose)}>Закрыть</button>
     </DogmeetDialog>
   );
 }

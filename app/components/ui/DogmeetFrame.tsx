@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowLeft, MapPin, MoreHorizontal, PawPrint, X } from "lucide-react";
-import { type DialogHTMLAttributes, type ReactNode, useEffect, useId, useRef } from "react";
+import { ArrowLeft, MapPin, MoreHorizontal, PawPrint } from "lucide-react";
+import { type DialogHTMLAttributes, type ReactNode, useEffect, useRef } from "react";
 import { closeSheet } from "./motion.mjs";
 
 export function DogmeetFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -16,6 +16,7 @@ export function DogmeetFrame({ children, className = "" }: { children: ReactNode
 
 type DogmeetDialogProps = DialogHTMLAttributes<HTMLDialogElement> & {
   children: ReactNode;
+  footer?: ReactNode;
   onDismiss: () => void;
   title?: string;
   busy?: boolean;
@@ -38,7 +39,7 @@ function lockPageScroll() {
     window.clearTimeout(pageScrollUnlockTimer);
     pageScrollUnlockTimer = null;
   }
-  if (pageScrollLockCount === 0) {
+  if (pageScrollLockCount === 0 && !pageScrollLockState) {
     const html = document.documentElement;
     const body = document.body;
     const scrollY = window.scrollY;
@@ -95,11 +96,10 @@ export function requestDialogClose(target: EventTarget | null, afterClose?: () =
   return Promise.resolve();
 }
 
-export function DogmeetDialog({ children, onDismiss, title, busy = false, className = "", ...props }: DogmeetDialogProps) {
+export function DogmeetDialog({ children, footer, onDismiss, title, busy = false, className = "", ...props }: DogmeetDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closing = useRef(false);
   const dismissRef = useRef<DialogDismissHandler>(() => Promise.resolve());
-  const titleId = useId();
 
   useEffect(() => {
     dismissRef.current = (afterClose, force) => dismiss(afterClose, force);
@@ -110,7 +110,6 @@ export function DogmeetDialog({ children, onDismiss, title, busy = false, classN
     const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog) return;
     dialog.showModal();
-    dialog.querySelector<HTMLButtonElement>(".sheet-header button")?.focus({ preventScroll: true });
     const unlockPageScroll = lockPageScroll();
     dialogDismissers.set(dialog, (afterClose, force) => dismissRef.current(afterClose, force));
     return () => {
@@ -132,10 +131,10 @@ export function DogmeetDialog({ children, onDismiss, title, busy = false, classN
     closing.current = false;
   }
 
-  return <dialog ref={dialogRef} className={`sheet ${className}`} {...props} aria-labelledby={title ? titleId : props["aria-labelledby"]} onCancel={(event) => { event.preventDefault(); void dismiss(); }}>
+  return <dialog ref={dialogRef} className={`sheet ${className}`} {...props} aria-label={props["aria-label"] ?? title} aria-labelledby={props["aria-labelledby"]} onCancel={(event) => { event.preventDefault(); void dismiss(); }}>
     <div className="sheet-grip" aria-hidden="true" />
-    <div className="sheet-header">{title && <h1 id={titleId}>{title}</h1>}<button type="button" className="icon-button" aria-label="Закрыть панель" disabled={busy} onClick={() => { void dismiss(); }}><X aria-hidden="true" /></button></div>
     <div className="sheet-content">{children}</div>
+    {footer && <div className="sheet-footer">{footer}</div>}
   </dialog>;
 }
 

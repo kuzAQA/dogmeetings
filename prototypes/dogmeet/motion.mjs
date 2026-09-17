@@ -15,6 +15,82 @@ export function fadeIn(element, keyboard = false) {
  });
 }
 
+function durationMs(name, fallback) {
+ const value = token(name);
+ const duration = Number.parseFloat(value);
+ return Number.isFinite(duration) ? duration * (value.endsWith('s') && !value.endsWith('ms') ? 1000 : 1) : fallback;
+}
+
+function headerBack(header) {
+ return header?.querySelector('.header-back, .icon-button:first-child');
+}
+
+export function animateHeaderEntry(shiftBrand) {
+ const header = document.querySelector('.page-header');
+ const back = headerBack(header);
+ if (!back?.animate) return;
+ const reduced = reducedMotion();
+ const options = {duration: reduced ? 100 : durationMs('--motion-screen', 180), easing: token('--ease-out'), fill: 'both'};
+ back.animate(reduced ? [{opacity: 0}, {opacity: 1}] : [
+  {opacity: 0, transform: 'translateX(-100%)'},
+  {opacity: 1, transform: 'translateX(0)'}
+ ], options);
+ const brand = header.querySelector('.brand');
+ if (!reduced && shiftBrand && brand?.animate) {
+  brand.animate([
+   {transform: `translateX(-${back.getBoundingClientRect().width}px)`},
+   {transform: 'translateX(0)'}
+  ], {...options, duration: durationMs('--motion-shared', 240)});
+ }
+}
+
+function prepareHeaderExit() {
+ const header = document.querySelector('.page-header');
+ const back = headerBack(header);
+ if (!back?.animate || !document.body) return null;
+ const bounds = back.getBoundingClientRect();
+ const clone = back.cloneNode(true);
+ clone.classList.add('motion-header-back-exit');
+ clone.setAttribute('aria-hidden', 'true');
+ clone.removeAttribute('aria-label');
+ Object.assign(clone.style, {
+  position: 'fixed',
+  left: `${bounds.left}px`,
+  top: `${bounds.top}px`,
+  width: `${bounds.width}px`,
+  height: `${bounds.height}px`,
+  margin: '0',
+  pointerEvents: 'none',
+  zIndex: '2147483647'
+ });
+ document.body.appendChild(clone);
+ const width = bounds.width;
+ const reduced = reducedMotion();
+ const options = {duration: reduced ? 100 : durationMs('--motion-screen', 180), easing: token('--ease-out'), fill: 'both'};
+ const cleanup = () => clone.isConnected && clone.remove();
+ return nextHasBack => {
+  if (nextHasBack) { cleanup(); return; }
+  const animation = clone.animate(reduced ? [{opacity: 1}, {opacity: 0}] : [
+   {opacity: 1, transform: 'translateX(0)'},
+   {opacity: 0, transform: 'translateX(-100%)'}
+  ], options);
+  animation.finished.then(cleanup, cleanup);
+  const brand = document.querySelector('.page-header .brand');
+  if (!reduced && brand?.animate) {
+   brand.animate([
+    {transform: `translateX(${width}px)`},
+    {transform: 'translateX(0)'}
+   ], {...options, duration: durationMs('--motion-shared', 240)});
+  }
+ };
+}
+
+export function animateHeaderExit() {
+ const headerExit = prepareHeaderExit();
+ if (!headerExit) return;
+ requestAnimationFrame(() => headerExit(false));
+}
+
 export async function closeSheet(element, keyboard = false) {
  if (!element) return;
  if (!keyboard && element.animate) {
@@ -79,9 +155,8 @@ if (typeof document !== 'undefined') document.addEventListener('pointerdown', ev
  const grip = event.target.closest?.('.sheet-grip');
  if (!grip) return;
  const sheet = grip.closest('dialog');
- const close = sheet?.querySelector('.sheet-header button');
- if (!close || close.disabled) return;
- startSheetDrag(event, sheet, () => close.click());
+ if (!sheet) return;
+ startSheetDrag(event, sheet, () => sheet.dispatchEvent(new Event('cancel', {cancelable: true})));
 });
 
 let activeTransition;
@@ -91,7 +166,27 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
  skipPageTransition();
  const root = document.documentElement;
  root.dataset.motionDirection = direction < 0 ? 'back' : 'forward';
- if (target === 'nearby' || !document.startViewTransition || keyboard) { update(); return; }
+ if (target === 'nearby' || target === 'plans' || target === 'pets') {
+  update();
+  return;
+ }
+ const previousHasBack = Boolean(document.querySelector('.page-header .icon-button:first-child'));
+ const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+ const canViewTransition = !isAndroid
+  && typeof document.startViewTransition === 'function'
+  && typeof CSS !== 'undefined' && CSS.supports('view-transition-name', 'dogmeet-header');
+ const headerExit = !canViewTransition && !keyboard && previousHasBack ? prepareHeaderExit() : null;
+ if (keyboard) {
+  update();
+  headerExit?.(Boolean(document.querySelector('.page-header .icon-button:first-child')));
+  return;
+ }
+ if (!canViewTransition) {
+  update();
+  if (headerExit) headerExit(Boolean(document.querySelector('.page-header .icon-button:first-child')));
+  else animateHeaderEntry(!previousHasBack);
+  return;
+ }
  if (reducedMotion()) { update(); fadeIn(document.querySelector('main')); return; }
  root.dataset.viewTransition = 'active';
  const photo = () => photoId && document.querySelector(`main img[data-pet-photo="${CSS.escape(photoId)}"]`);
@@ -127,7 +222,7 @@ export async function transitionPage(update, {direction, photoId, keyboard, targ
   transition.skipTransition();
  }
  await transition.finished.catch(() => {});
- source && (source.style.viewTransitionName = '');
+ if (source) source.style.viewTransitionName = '';
  if (activeTransition === transition) {
   if (destination) destination.style.viewTransitionName = '';
   activeTransition = null;

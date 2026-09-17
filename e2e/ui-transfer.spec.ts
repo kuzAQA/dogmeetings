@@ -101,6 +101,7 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   await capture(page, info, "choose-place-empty");
   await page.getByLabel("Или своё место встречи").fill("У входа в сквер");
   await page.getByRole("button", { name: "Выбрать место" }).click();
+  await expect(page.getByRole("dialog", { name: "Место встречи" })).toHaveCount(0);
   await page.getByLabel("Комментарий", { exact: false }).fill("Возьмём мячик");
   let payload: Record<string, unknown> = {};
   await page.route("**/api/walks", async (route) => { payload = route.request().postDataJSON(); await route.fulfill({ json: route.request().method() === "DELETE" ? { deleted: true } : { walk: { ...walk, point: "У входа в сквер" } } }); });
@@ -149,7 +150,7 @@ test("passport, edit, share, rotate confirmation and delete preserve permissions
   await capture(page, info, "rotate-link");
   await page.getByRole("button", { name: "Получить новую ссылку", exact: true }).click();
   await expect(page.getByLabel("Одноразовая ссылка")).toHaveValue(/share\/test-1/);
-  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Удалить питомца", exact: false }).click();
   await capture(page, info, "delete-pet");
   await page.getByRole("button", { name: "Оставить", exact: true }).click();
@@ -279,7 +280,7 @@ test("motion, interruption, keyboard focus and compact viewport", async ({ page 
   expect(await page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-old(dogmeet-header)").opacity)).toBe("0");
   const filter = page.getByRole("button", { name: "Весь день", exact: true });
   await filter.click();
-  await expect(page.getByRole("button", { name: "Закрыть панель" })).toBeFocused();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Весь день", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(filter).toBeFocused();
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();

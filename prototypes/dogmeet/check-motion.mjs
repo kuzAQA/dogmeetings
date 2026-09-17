@@ -48,8 +48,7 @@ try{
  await page.goForward();await expect(page.locator('main')).toHaveAttribute('data-motion-page','nearby');
  await settled();
  const samples=await page.evaluate(()=>window.motionSamples);
- assert.ok(samples.some(s=>s.effects.some(a=>a.frames?.some(f=>f.transform?.includes('20px')))),'screen snapshots move 20px');
- assert.ok(samples.filter(s=>tabOrder.includes(s.page)).every(s=>!s.effects.some(a=>a.pseudo?.includes('dogmeet-shade'))),'nav shade has no crossfade animation');
+ assert.equal(samples.length,0,'bottom-nav screen changes use no view transition');
  await page.evaluate(()=>{
   const tabs=[...document.querySelectorAll('.nav-tabs button')];
   tabs[2].click();tabs[1].click();tabs[0].click();
@@ -68,14 +67,14 @@ try{
 
  await open('nearby');const filter=page.getByRole('button',{name:'Весь день',exact:true});
  await filter.click();await expect(page.getByRole('dialog')).toBeVisible();await settled();
- await page.getByRole('button',{name:'Закрыть панель',exact:true}).click();
+ await page.keyboard.press('Escape');
  await expect(page.locator('dialog')).toHaveClass(/is-closing/);
  await expect(page.locator('dialog')).toHaveCount(0);await expect(filter).toBeFocused();
  assert.equal(await page.locator('.scenario-content').evaluate(el=>el.getAnimations().length),0,'closing a sheet does not fade the page');
  await filter.click();await page.keyboard.press('Escape');
  await expect(page.locator('dialog')).toHaveCount(0);await expect(filter).toBeFocused();
  await filter.click();await settled();
- await page.getByRole('button',{name:'Закрыть панель',exact:true}).click();
+ await page.keyboard.press('Escape');
  await page.goForward();await expect(page.getByRole('dialog')).toBeVisible();
  await settled();await expect(page.locator('dialog')).not.toHaveClass(/is-closing/);
  await page.keyboard.press('Escape');await expect(page.locator('dialog')).toHaveCount(0);
@@ -84,7 +83,7 @@ try{
  await open('announce');await page.locator('.selected-pet').click();await expect(page.getByRole('dialog')).toBeVisible();await settled();
  await page.locator('.pet-row').nth(1).click();await expect(page.locator('dialog')).toHaveCount(0);
  assert.equal(await page.locator('.scenario-content').evaluate(el=>el.getAnimations().length),0,'choosing a pet does not fade the walk form');
- await page.locator('.selected-pet').click();await page.getByRole('button',{name:'Закрыть панель',exact:true}).click();await expect(page.locator('dialog')).toHaveCount(0);
+ await page.locator('.selected-pet').click();await page.keyboard.press('Escape');await expect(page.locator('dialog')).toHaveCount(0);
  assert.equal(await page.locator('.scenario-content').evaluate(el=>el.getAnimations().length),0,'closing the pet picker does not fade the walk form');
  console.log('PASS pet picker close/select without background flash');
 
@@ -92,7 +91,7 @@ try{
   await open('plans');await page.locator('.walk-summary').first().click();await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button',{name:'Изменить прогулку',exact:true}).click();await expect(page.locator('main')).toHaveAttribute('data-motion-page','edit-walk');
   await page.locator('.walk-settings .menu-row').first().click();await expect(page.getByRole('dialog')).toBeVisible();await settled();
-  if(close==='button')await page.getByRole('button',{name:'Закрыть панель',exact:true}).click();
+  if(close==='button')await page.keyboard.press('Escape');
   else if(close==='escape')await page.keyboard.press('Escape');
   else await page.getByRole('button',{name:'Готово',exact:true}).click();
   await expect(page.locator('dialog')).toHaveCount(0);await expect(page.locator('main')).toHaveAttribute('data-motion-page','edit-walk');
@@ -129,7 +128,7 @@ try{
  await page.evaluate(()=>{document.startViewTransition=undefined});
  await page.getByRole('button',{name:'Рядом',exact:true}).click();
  await expect(page.locator('main')).toHaveAttribute('data-motion-page','nearby');
- await filter.click();await page.getByRole('button',{name:'Закрыть панель'}).click();
+ await filter.click();await page.keyboard.press('Escape');
  await expect(page.locator('dialog')).toHaveCount(0);
  console.log('PASS reduced motion and navigation without View Transitions');
 

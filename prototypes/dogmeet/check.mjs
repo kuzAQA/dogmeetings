@@ -22,7 +22,7 @@ if(process.argv.includes('--scroll-lock')){
  await open('share');
  await expect(page.locator('dialog img,dialog .share-portrait,dialog #sheet-title')).toHaveCount(0);
  await expect(page.getByRole('dialog',{name:'Поделиться питомцем'})).toBeVisible();
- await page.getByRole('button',{name:'Закрыть панель'}).click();
+ await page.keyboard.press('Escape');
  await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect.poll(()=>page.evaluate(()=>getComputedStyle(document.documentElement).overflow)).not.toBe('hidden');
  console.log('PASS: modal scroll lock and simplified share form');await browser.close();process.exit(0);

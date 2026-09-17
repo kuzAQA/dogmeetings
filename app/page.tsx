@@ -51,6 +51,7 @@ import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
 import { apiWalkToCard, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
 import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "./components/ui/DogmeetFrame";
+import { animateHeaderExit } from "./components/ui/motion.mjs";
 
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
@@ -58,7 +59,11 @@ type FormScreen = "pet" | "announce";
 
 export default function Home() {
   const [selectedWalk, setSelectedWalk] = useState<Walk | null>(null);
-  const [result, setResult] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
+  const [result, setResultState] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
+  function setResult(next: typeof result) {
+    if (next) animateHeaderExit();
+    setResultState(next);
+  }
   const [browserGuidePlatform, setBrowserGuidePlatform] = useState<BrowserGuidePlatform>("ios");
   const [location, setLocation] = useState<Location>(defaultLocation);
   const [locationDraft, setLocationDraft] = useState<Location>(defaultLocation);
@@ -1063,7 +1068,7 @@ export default function Home() {
           </div>
         )}
 
-        {result?.sheet && <DogmeetDialog title={result.sheet} onDismiss={() => { setResult(null); result.onContinue(); }}><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })} /></DogmeetDialog>}
+        {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={() => { setResult(null); result.onContinue(); }} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })}>{result.action ?? "Готово"}<ArrowRight aria-hidden="true" /></button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
           onDismissPetRequired={() => setShowPetRequiredPopup(false)}

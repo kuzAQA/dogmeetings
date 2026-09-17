@@ -148,7 +148,7 @@ test("place sheet keeps its footer visible and dismisses from the grip", async (
   const customPlace = page.getByLabel("Или своё место встречи");
   await customPlace.focus();
   expect(await customPlace.evaluate((input) => {
-    const content = input.closest<HTMLElement>(".sheet-content")!.getBoundingClientRect();
+    const content = input.closest<HTMLElement>(".sheet-footer")!.getBoundingClientRect();
     const bounds = input.getBoundingClientRect();
     const style = getComputedStyle(input);
     const focusRing = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
