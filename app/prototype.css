@@ -81,8 +81,10 @@ main.with-nav{padding-bottom:138px}
 .stacked-faces img{width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px}
 .stacked-faces img:first-child{margin-left:0}
 .section-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}
+.section-line--empty{border-top:1px solid var(--line);padding-top:12px}
+.section-line--empty + .state-block{padding-top:0}
 .section-line h2{font-size:17px;letter-spacing:-.02em}
-.filter-trigger{display:flex;gap:6px;align-items:center;min-height:44px;padding:8px 0 8px 8px;border:0;background:transparent;font-size:12px;color:var(--muted)}
+.filter-trigger{display:flex;flex:0 0 80px;justify-content:flex-end;gap:6px;align-items:center;min-height:44px;padding:8px 0;border:0;background:transparent;font-size:12px;color:var(--muted)}
 .filter-trigger svg{width:16px}
 .timeline{margin-top:10px}
 .walk-row{display:grid;grid-template-columns:65px minmax(0,1fr);gap:12px;position:relative}
@@ -121,6 +123,8 @@ main.with-nav{padding-bottom:138px}
 .counter{align-self:flex-end;color:var(--muted);margin-top:-5px}
 .note{display:flex;gap:10px;align-items:center;background:#eeece5;padding:15px;border-radius:10px;font-size:12px;line-height:1.7;color:var(--muted);margin:20px 0}
 .note svg{width:18px;height:21px;color:var(--ink)}
+.pets-screen .pet-share-note{position:relative}
+.pets-screen .pet-share-note::after{content:"";position:absolute;top:calc(100% + 20px);left:0;right:0;border-top:1px solid var(--line)}
 .location-preview{background:var(--orange-pale);display:flex;flex-direction:column;align-items:flex-start;padding:22px;gap:10px;margin:26px 0}
 .location-preview>svg{color:var(--orange);width:30px;height:30px;margin-bottom:10px}
 .location-preview strong{font-size:23px;letter-spacing:-.025em}
@@ -187,6 +191,7 @@ main.with-nav{padding-bottom:138px}
 .place-detail p{font-size:13px;margin:8px 0}
 blockquote{margin:24px 0;font-size:21px;letter-spacing:-.02em;line-height:1.5}
 .pet-row{display:flex;gap:14px;align-items:center;width:100%;padding:22px 12px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;min-height:100px}
+.pets-screen .pet-rows .pet-row:only-child{border-bottom:0}
 .pet-row .pet-face{width:72px;height:72px;border-radius:14px}
 .pet-row>span{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
 .pet-row strong{font-size:24px;letter-spacing:-.025em}

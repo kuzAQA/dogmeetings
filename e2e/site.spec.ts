@@ -194,9 +194,38 @@ test("filters the timeline through the mockup bottom sheet", async ({ page }) =>
   await page.getByRole("button", { name: "Весь день" }).click();
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Весь день" }).locator("svg.lucide-check")).toBeVisible();
   await dialog.getByRole("button", { name: /Вечер/ }).click();
+  await expect(dialog.getByRole("button", { name: /Вечер/ }).locator("svg.lucide-check")).toBeVisible();
   await dialog.getByRole("button", { name: "Показать прогулки" }).click();
   await expect(page.getByRole("button", { name: "Вечер", exact: true })).toBeVisible();
+});
+
+test("keeps the filter visible when it finds no walks", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Весь день" }).click();
+  const dialog = page.getByRole("dialog", { name: "Время прогулки" });
+  await dialog.getByRole("button", { name: /^Утро/ }).click();
+  await dialog.getByRole("button", { name: "Показать прогулки" }).click();
+
+  await expect(page.getByRole("heading", { name: "Сегодня рядом", exact: true })).toBeVisible();
+  const filter = page.getByRole("button", { name: "Утро", exact: true });
+  await expect(filter).toBeVisible();
+  expect(await filter.evaluate((element) => element.closest(".section-line")!.getBoundingClientRect().right - element.getBoundingClientRect().right)).toBe(0);
+  await expect(filter).toHaveCSS("padding-left", "0px");
+  await expect(filter).toHaveCSS("padding-right", "0px");
+  await expect(page.locator(".daily-summary")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Показать весь день", exact: true })).toHaveCount(0);
+  await expect(page.locator(".section-line")).toHaveClass(/section-line--empty/);
+  await expect(page.locator(".section-line")).toHaveCSS("border-top-style", "solid");
+  await expect(page.locator(".section-line--empty + .state-block")).toHaveCSS("padding-top", "0px");
+
+  const morningBox = await filter.boundingBox();
+  await filter.click();
+  await dialog.getByRole("button", { name: /^Вечер/ }).click();
+  await dialog.getByRole("button", { name: "Показать прогулки" }).click();
+  const eveningBox = await page.getByRole("button", { name: "Вечер", exact: true }).boundingBox();
+  expect({ x: eveningBox?.x, width: eveningBox?.width }).toEqual({ x: morningBox?.x, width: morningBox?.width });
 });
 
 test("opens plans and pets from the new dock", async ({ page }) => {
@@ -230,6 +259,27 @@ test("opens the walk form with native time and preserved fields", async ({ page 
   await expect(page.locator('input[type="time"]')).toHaveAttribute("type", "time");
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "40");
+});
+
+test("reopens walk pickers on the first click after closing", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+
+  for (const [triggerName, dialogName] of [["Время", "Встречаемся сегодня"], ["Место встречи", "Место встречи"]]) {
+    const trigger = page.getByRole("button", { name: new RegExp(`^${triggerName}`) });
+    const dialog = page.getByRole("dialog", { name: dialogName });
+    await trigger.click();
+    await expect(dialog).toBeVisible();
+    const sheet = page.locator(".react-modal-sheet-root").filter({ has: page.locator(`[data-app-bottom-sheet][aria-label="${dialogName}"]`) });
+    await sheet.locator(".sheet-backdrop").click({ force: true });
+    await expect(sheet).toHaveAttribute("data-sheet-state", "closing");
+    await trigger.click();
+    await expect(sheet).toHaveAttribute("data-sheet-state", "open");
+    await expect(dialog).toBeVisible();
+    await sheet.locator(".sheet-backdrop").click({ force: true });
+    await expect(dialog).toHaveCount(0);
+  }
 });
 
 test("blocks a walk until a pet is added", async ({ page }) => {

@@ -11,6 +11,7 @@ import {
   deletePet as deletePetRequest,
   deleteWalk as deleteWalkRequest,
   listLocations,
+  listWalks,
   requestPetShareLink as requestPetShareLinkRequest,
   savePet as savePetRequest,
   saveSessionLocation,
@@ -39,7 +40,7 @@ import {
   useHomeNavigation
 } from "./features/home/use-home-navigation";
 import { useHomeSession } from "./features/home/use-home-session";
-import { filterWalksByPeriod, locationOptions, petsById, walksById } from "./features/home/selectors";
+import { filterWalksByPeriod, locationOptions, walksById } from "./features/home/selectors";
 import { useWalkForm } from "./features/home/use-walk-form";
 import { compressPetPhoto } from "../lib/pet-photo";
 import { WalkAnnouncementForm } from "./features/home/components/WalkAnnouncementForm";
@@ -174,6 +175,8 @@ export default function Home() {
   const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
   const shareDoneButtonRef = useRef<HTMLButtonElement>(null);
   const profileHeadingRef = useRef<HTMLHeadingElement>(null);
+  const pendingWalkRefreshRef = useRef<{ deletedId: string; request: Promise<ApiWalk[]> } | null>(null);
+  const closingDeletedWalkResultRef = useRef(false);
 
   function touchField(field: string) {
     setTouchedFields((current) => current[field] ? current : { ...current, [field]: true });
@@ -264,7 +267,6 @@ export default function Home() {
 
   const visibleWalks = useMemo(() => filterWalksByPeriod(savedWalks, period), [period, savedWalks]);
   const ownedWalksById = useMemo(() => walksById(myWalks), [myWalks]);
-  const savedPetsById = useMemo(() => petsById(savedPets), [savedPets]);
   const { cities: locationCityOptions, districts: locationDistrictOptions, complexes: locationComplexOptions } = useMemo(
     () => locationOptions(availableLocations, locationDraft),
     [availableLocations, locationDraft]
@@ -768,6 +770,30 @@ export default function Home() {
     }
   }
 
+  async function closeDeletedWalkResult() {
+    if (closingDeletedWalkResultRef.current || !pendingWalkRefreshRef.current) return;
+    closingDeletedWalkResultRef.current = true;
+    setResult(null);
+
+    const { deletedId, request } = pendingWalkRefreshRef.current;
+    try {
+      const walks = await request;
+      setSavedWalks(walks.filter(isWalkScheduledForToday).map(apiWalkToCard));
+      setMyWalks((current) => current.filter((walk) => walk.id !== deletedId));
+    } catch (error) {
+      setWalksError(error instanceof Error ? error.message : "Не удалось загрузить прогулки.");
+    } finally {
+      pendingWalkRefreshRef.current = null;
+      openCollectionScreen("my-walks");
+    }
+  }
+
+  function closeResultSheet() {
+    if (!result) return;
+    setResult(null);
+    void result.onContinue();
+  }
+
   async function deleteWalk(event: MouseEvent<HTMLButtonElement>) {
     if (!walkPendingDelete || walkDeleting) return;
     const dialogTrigger = event.currentTarget;
@@ -778,11 +804,13 @@ export default function Home() {
       await deleteWalkRequest(walkPendingDelete.id);
 
       const deletedId = walkPendingDelete.id;
-      setMyWalks((current) => current.filter((walk) => walk.id !== deletedId));
-      setSavedWalks((current) => current.filter((walk) => walk.id !== deletedId));
+      const refresh = listWalks(location);
+      pendingWalkRefreshRef.current = { deletedId, request: refresh };
+      closingDeletedWalkResultRef.current = false;
+      void refresh.catch(() => undefined);
       await requestDialogClose(dialogTrigger, () => {
         setWalkPendingDelete(null);
-        setResult({ title: "Прогулка удалена", sheet: "Удалить прогулку?", message: "Она больше не отображается в расписании.", action: "Посмотреть мои планы", onContinue: () => openCollectionScreen("my-walks") });
+        setResult({ title: "Прогулка удалена", sheet: "Удалить прогулку?", message: "Она больше не отображается в расписании.", action: "Посмотреть мои планы", onContinue: closeDeletedWalkResult });
       }, true);
     } catch (error) {
       setWalkDeleteError(error instanceof Error ? error.message : "Не удалось удалить прогулку.");
@@ -945,14 +973,12 @@ export default function Home() {
             walksError={walksError}
             onRetryWalks={() => { void retryWalks(); }}
             ownedWalksById={ownedWalksById}
-            petsById={savedPetsById}
             openWalkActionsId={openWalkActionsId}
             onPeriodChange={selectPeriod}
             onToggleWalkActions={(id) => setOpenWalkActionsId((currentId) => currentId === id ? null : id)}
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
-            onSharePet={(pet) => { setOpenWalkActionsId(null); requestPetShareLink(pet); }}
             guidedWalkFlow={guidedWalkFlow}
             savedPets={savedPets}
             sharedPlaces={sharedPlaces}
@@ -977,8 +1003,6 @@ export default function Home() {
 
         {screen === "my-walks" && (
           <WalkCollection
-            petsById={savedPetsById}
-            onSharePet={requestPetShareLink}
             walks={myWalks}
             loaded={myWalksLoaded}
             error={myWalksError}
@@ -1068,7 +1092,7 @@ export default function Home() {
           </div>
         )}
 
-        {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={() => { setResult(null); result.onContinue(); }} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })}>{result.action ?? "Готово"}</button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
+        {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={closeResultSheet} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, closeResultSheet)}>{result.action ?? "Готово"}</button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
           onDismissPetRequired={() => setShowPetRequiredPopup(false)}

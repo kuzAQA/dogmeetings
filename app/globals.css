@@ -18,6 +18,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production main { display: block; }
 .production .bottom-nav { left: 50%; }
 .production .sheet { left: 0; }
+.production .react-modal-sheet-root[data-sheet-state="closing"] { pointer-events: none; }
 .production [hidden] { display: none !important; }
 .production .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .production .screen, .production .app-shell { min-width: 0; }

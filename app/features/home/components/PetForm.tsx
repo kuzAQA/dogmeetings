@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Check, ChevronRight, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+import { Camera, Check, ChevronRight, Pencil, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
@@ -76,7 +76,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
         <label className="field"><span>Имя хозяина</span><input name="ownerName" value={ownerName} required maxLength={60} placeholder="Например, Анна" aria-invalid={Boolean(touchedFields["owner-name"] && !ownerNameValid)} onBlur={() => onTouch("owner-name")} onChange={(event) => onOwnerNameChange(event.target.value)} />{touchedFields["owner-name"] && !ownerNameValid && <small className="field-error">Введите имя хозяина</small>}</label>
         <label className="field"><span>Порода</span><input name="breed" value={breed} required maxLength={MAX_BREED_LENGTH} placeholder="Например, корги" aria-invalid={Boolean(touchedFields["pet-breed"] && !breedValid)} onBlur={() => onTouch("pet-breed")} onChange={(event) => onBreedChange(event.target.value)} />{touchedFields["pet-breed"] && !breedValid && <small className="field-error">Введите породу</small>}</label>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
-        <button className="button" type="submit" disabled={Boolean(photoError) || saving}>{saving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Добавить питомца"}<span className="action-icon" data-done={formValid} aria-hidden="true"><Plus /><Check /></span></button>
+        <button className="button" type="submit" disabled={!formValid || Boolean(photoError) || saving}>{saving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Добавить питомца"}<Check aria-hidden="true" /></button>
         </div>
       </form>
     </div>

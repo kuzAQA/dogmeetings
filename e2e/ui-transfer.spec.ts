@@ -110,6 +110,50 @@ test("pet form retains upload, validation, multipart data and success", async ({
   await capture(page, info, "new-pet-success");
 });
 
+test("walk deletion refreshes once after the success sheet closes", async ({ page }) => {
+  const requests: string[] = [];
+  let mineGets = 0;
+  let nearbyGets = 0;
+  await mockApp(page);
+  await page.unroute("**/api/walks?*");
+  await page.route("**/api/walks?*", (route) => {
+    if (new URL(route.request().url()).searchParams.get("scope") === "mine") {
+      mineGets += 1;
+      return route.fulfill({ json: { walks: [walk] } });
+    }
+    nearbyGets += 1;
+    requests.push("GET");
+    return route.fulfill({ json: { walks: nearbyGets === 1 ? [walk] : [] } });
+  });
+  await page.route("**/api/walks", (route) => {
+    requests.push(route.request().method());
+    return route.fulfill({ json: { deleted: true } });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  await expect.poll(() => ({ mineGets, nearbyGets })).toEqual({ mineGets: 1, nearbyGets: 1 });
+  requests.length = 0;
+
+  await page.getByRole("button", { name: "Управлять", exact: true }).click();
+  const walkActions = page.getByRole("dialog", { name: "Управление прогулкой" });
+  await expect(walkActions.getByRole("button", { name: "Поделиться питомцем" })).toHaveCount(0);
+  await expect(walkActions.getByRole("button", { name: "Изменить прогулку" }).locator("svg")).toHaveCount(1);
+  await expect(walkActions.getByRole("button", { name: "Удалить прогулку" }).locator("svg")).toHaveCount(1);
+  await page.getByRole("button", { name: "Удалить прогулку", exact: false }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Удалить прогулку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Прогулка удалена" })).toBeVisible();
+  await expect.poll(() => requests).toEqual(["DELETE", "GET"]);
+  await expect(page.locator(".walks-screen")).toContainText(walk.pet);
+
+  await page.getByRole("button", { name: "Посмотреть мои планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.locator(".my-walks-screen")).not.toContainText(walk.pet);
+  await page.getByRole("button", { name: "Рядом", exact: true }).click();
+  await expect(page.locator(".walks-screen")).not.toContainText(walk.pet);
+  expect(requests).toEqual(["DELETE", "GET"]);
+});
+
 test("walk pickers preserve payload and create, edit and delete actions", async ({ page }, info) => {
   await openNearby(page);
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
@@ -147,7 +191,11 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   await capture(page, info, "announce-success");
   await page.getByRole("button", { name: "Посмотреть мои планы" }).click();
   await page.getByRole("button", { name: "Управлять", exact: false }).click();
-  expect(await page.getByRole("dialog", { name: "Управление прогулкой" }).locator(".menu-row").first().evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(64);
+  const walkActions = page.getByRole("dialog", { name: "Управление прогулкой" });
+  expect(await walkActions.locator(".menu-row").first().evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(64);
+  await expect(walkActions.getByRole("button", { name: "Поделиться питомцем" })).toHaveCount(0);
+  await expect(walkActions.getByRole("button", { name: "Изменить прогулку" }).locator("svg")).toHaveCount(1);
+  await expect(walkActions.getByRole("button", { name: "Удалить прогулку" }).locator("svg")).toHaveCount(1);
   await capture(page, info, "walk-actions");
   await page.getByRole("button", { name: "Изменить прогулку", exact: false }).click();
   await expect(page.getByRole("heading", { name: "Изменить прогулку" })).toBeVisible();
@@ -174,6 +222,11 @@ test("passport, edit, share, rotate confirmation and delete preserve permissions
   await capture(page, info, "pet");
   await page.getByRole("button", { name: "Изменить данные", exact: false }).click();
   await expect(page.getByLabel("Имя питомца")).toHaveValue(pet.name);
+  const savePet = page.getByRole("button", { name: "Сохранить изменения", exact: true });
+  await page.getByLabel("Имя питомца").fill("");
+  await expect(savePet).toBeDisabled();
+  await page.getByLabel("Имя питомца").fill(pet.name);
+  await expect(savePet).toBeEnabled();
   await capture(page, info, "edit-pet");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: /Собака Луна/ }).click();
