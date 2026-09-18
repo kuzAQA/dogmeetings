@@ -2,7 +2,7 @@
 
 import { ArrowLeft, MapPin, MoreHorizontal, PawPrint } from "lucide-react";
 import { type DialogHTMLAttributes, type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { Sheet, type SheetProps } from "react-modal-sheet";
+import { Sheet, type SheetProps, useVirtualKeyboard } from "react-modal-sheet";
 
 export function DogmeetFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -50,6 +50,7 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
   const dialogRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<SheetRef>(null);
   const dragClosePending = useRef(false);
+  const closingRef = useRef(false);
   const [isOpen, setIsOpen] = useState(open);
   const [previousOpen, setPreviousOpen] = useState(open);
   const [closing, setClosing] = useState(false);
@@ -58,6 +59,7 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const isPlacePicker = className.includes("sheet--place-picker");
   const mountPoint = typeof document === "undefined" ? undefined : document.querySelector(".production") ?? undefined;
+  useVirtualKeyboard({ containerRef: dialogRef, isEnabled: isOpen && isPlacePicker });
 
   if (open !== previousOpen) {
     setPreviousOpen(open);
@@ -66,14 +68,15 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
   }
 
   const dismiss = useCallback((afterClose?: () => void, force = false) => {
-    if ((!force && busy) || closing || dragClosePending.current) return Promise.resolve();
+    if ((!force && busy) || closingRef.current || dragClosePending.current) return Promise.resolve();
+    closingRef.current = true;
     setClosing(true);
     return new Promise<void>((resolve) => {
       if (afterClose) afterCloseCallbacks.current.push(afterClose);
       closeResolvers.current.push(resolve);
       setIsOpen(false);
     });
-  }, [busy, closing]);
+  }, [busy]);
 
   const finishDragClose = useCallback(() => {
     if (!dragClosePending.current) return;
@@ -82,10 +85,11 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
   }, []);
 
   const beginDragClose = useCallback(() => {
-    if (busy || closing || dragClosePending.current) return;
+    if (busy || closingRef.current || dragClosePending.current) return;
     dragClosePending.current = true;
+    closingRef.current = true;
     setClosing(true);
-  }, [busy, closing]);
+  }, [busy]);
 
   useLayoutEffect(() => sheetRef.current?.y.on("animationComplete", finishDragClose), [finishDragClose]);
 
@@ -120,9 +124,9 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
       }
     };
     const keepFocusInside = (event: FocusEvent) => {
-      if (event.target instanceof Node && dialog.contains(event.target)) return;
+      if (closingRef.current || (event.target instanceof Node && dialog.contains(event.target))) return;
       window.requestAnimationFrame(() => {
-        if (!dialog.contains(document.activeElement)) (focusableChildren(dialog)[0] ?? dialog).focus({ preventScroll: true });
+        if (!closingRef.current && !dialog.contains(document.activeElement)) (focusableChildren(dialog)[0] ?? dialog).focus({ preventScroll: true });
       });
     };
     window.addEventListener("keydown", onKeyDown);
@@ -137,7 +141,8 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
   useLayoutEffect(() => restoreFocus, [restoreFocus]);
 
   function finishClose() {
-    if (closing) {
+    if (closingRef.current) {
+      closingRef.current = false;
       setClosing(false);
       onClose();
       afterCloseCallbacks.current.splice(0).forEach((callback) => callback());
@@ -146,10 +151,10 @@ export function AppBottomSheet({ children, footer, open, onClose, title, busy = 
     restoreFocus();
   }
 
-  return <Sheet ref={sheetRef} isOpen={isOpen} onClose={beginDragClose} onCloseEnd={finishClose} avoidKeyboard disableDismiss={busy} detent={detent} snapPoints={snapPoints} initialSnap={initialSnap} mountPoint={mountPoint}>
+  return <Sheet ref={sheetRef} isOpen={isOpen} onClose={beginDragClose} onCloseEnd={finishClose} avoidKeyboard={!isPlacePicker} disableDismiss={busy} detent={detent} snapPoints={snapPoints} initialSnap={initialSnap} mountPoint={mountPoint}>
     <Sheet.Container ref={dialogRef} data-app-bottom-sheet className={`sheet ${className}`} role={props.role ?? "dialog"} aria-modal="true" aria-label={props["aria-label"] ?? title} aria-labelledby={props["aria-labelledby"]} tabIndex={-1}>
       <Sheet.Header className="sheet-drag-area" aria-hidden="true"><span className="sheet-grip" /></Sheet.Header>
-      <Sheet.Content className="sheet-content-shell" scrollClassName="sheet-content" disableDrag>{children}</Sheet.Content>
+      <Sheet.Content className="sheet-content-shell" scrollClassName="sheet-content" disableDrag disableScroll={isPlacePicker}>{children}</Sheet.Content>
       {footer && <div className="sheet-footer">{footer}</div>}
     </Sheet.Container>
     <Sheet.Backdrop className="sheet-backdrop" aria-label="Закрыть" tabIndex={-1} onTap={() => { void dismiss(); }} />

@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight, Check, ChevronDown, ChevronRight, Clock3, MapPin, Plus, Search } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ChevronRight, Clock3, MapPin, Search } from "lucide-react";
 import Image from "next/image";
-import { type FormEvent, type MouseEvent, useState } from "react";
+import { type FormEvent, type MouseEvent, type PointerEvent, useState } from "react";
 import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
 import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
@@ -49,6 +49,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
   const [timePickerError, setTimePickerError] = useState("");
   const [query, setQuery] = useState("");
   const [customPlace, setCustomPlace] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<SharedPlace | null>(null);
   const selectedPet = savedPets.find((pet) => pet.id === selectedPetId);
   const matchingPlaces = sharedPlaces.filter((place) => place.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru")));
   const minimumTime = scheduleType === "today" ? getMinimumWalkTime() : "00:00";
@@ -80,6 +81,18 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
     changeWalkTime(timeDraft, inDock);
     void requestDialogClose(event.currentTarget);
   }
+
+  function focusCustomPlace(event: PointerEvent<HTMLTextAreaElement>) {
+    if (document.activeElement !== event.currentTarget) event.currentTarget.focus({ preventScroll: true });
+  }
+
+  function applyPlace(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedPlace) chooseSharedPlace(selectedPlace, inDock);
+    else updatePlaceInput(customPlace.trim(), inDock);
+    void requestDialogClose(event.currentTarget.querySelector<HTMLButtonElement>("button"));
+  }
+
   return (
     <>
       {!inDock && onBack && <DogmeetHeader onBack={onBack} />}
@@ -102,7 +115,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
 
         <div className="walk-settings">
           <button type="button" className="menu-row" onClick={openTimePicker}><Clock3 aria-hidden="true" /><span><strong>Время</strong><small>{walkTime || "Выберите время"}</small></span><ChevronRight aria-hidden="true" /></button>
-          <button type="button" className="menu-row" onClick={() => { setQuery(""); setCustomPlace(""); setPicker("place"); }}><MapPin aria-hidden="true" /><span><strong>Место встречи</strong><small>{placeInput || "Выберите место"}</small></span><ChevronRight aria-hidden="true" /></button>
+          <button type="button" className="menu-row" onClick={() => { setQuery(""); setCustomPlace(""); setSelectedPlace(null); setPicker("place"); }}><MapPin aria-hidden="true" /><span><strong>Место встречи</strong><small>{placeInput || "Выберите место"}</small></span><ChevronRight aria-hidden="true" /></button>
         </div>
         {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
         {touchedFields["walk-place"] && !placeIsValid && <p className="field-error">Укажите место прогулки</p>}
@@ -112,10 +125,10 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
         <button className="button" type="submit" disabled={walkSaving}>{walkSaving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Сообщить о прогулке"}<ArrowRight aria-hidden="true" /></button>
       </form>
-      {picker === "pet" && <DogmeetDialog title="С кем гуляем" onDismiss={() => setPicker(null)} footer={<button type="button" className="button quiet" onClick={(event) => requestDialogClose(event.currentTarget, onAddPet)}><Plus />Добавить питомца</button>}>
-        <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={(event) => { selectPet(pet.id, inDock); requestDialogClose(event.currentTarget); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{pet.id === selectedPetId ? <Check /> : <ChevronRight />}</button>)}</div>
+      {picker === "pet" && <DogmeetDialog title="С кем гуляем" onDismiss={() => setPicker(null)} footer={<button type="button" className="button quiet" onClick={(event) => requestDialogClose(event.currentTarget, onAddPet)}>Добавить питомца</button>}>
+        <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={(event) => { selectPet(pet.id, inDock); requestDialogClose(event.currentTarget); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span></button>)}</div>
       </DogmeetDialog>}
-      {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)} footer={<button type="button" className="button" onClick={applyTimeDraft}>Готово<Check /></button>}>
+      {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)} footer={<button type="button" className="button" onClick={applyTimeDraft}>Готово</button>}>
         <div className="time-picker">
           <Clock3 aria-hidden="true" />
           <span>Время прогулки</span>
@@ -131,13 +144,13 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
       </DogmeetDialog>}
       {picker === "place" && <DogmeetDialog className="sheet--place-picker" title="Место встречи" onDismiss={() => setPicker(null)} footer={<>
         {placesError && <button className="button" type="button" onClick={onRetryPlaces}>Повторить</button>}
-        <form className="place-picker-footer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); updatePlaceInput(customPlace.trim(), inDock); requestDialogClose(event.currentTarget.querySelector<HTMLButtonElement>("button")); }}>
-          <label className="field"><span>Или своё место встречи</span><textarea className="single-line-input" rows={1} autoComplete="off" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onChange={(event) => setCustomPlace(event.target.value)} /></label>
-          <button className="button" type="submit" disabled={!/[\p{L}]/u.test(customPlace.trim())}>Выбрать место<ArrowRight /></button>
+        <form className="place-picker-footer" autoComplete="off" onSubmit={applyPlace}>
+          <label className="field"><span>Или своё место встречи</span><textarea className="single-line-input" rows={1} autoComplete="off" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onPointerDown={focusCustomPlace} onChange={(event) => { setSelectedPlace(null); setCustomPlace(event.target.value); }} /></label>
+          <button className="button" type="submit" disabled={!selectedPlace && !/[\p{L}]/u.test(customPlace.trim())}>Выбрать место</button>
         </form>
       </>}>
         <label className="search-field"><Search /><textarea className="single-line-input" rows={1} inputMode="text" autoComplete="off" enterKeyHint="search" aria-label="Найти место" placeholder="Название места" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <div className="place-picker-list">{!placesLoaded ? <p role="status">Загружаем места…</p> : placesError ? <div role="alert"><p className="field-error">{placesError}</p></div> : <div className="option-list">{matchingPlaces.map((place) => <button key={place.id} type="button" onClick={(event) => { chooseSharedPlace(place, inDock); requestDialogClose(event.currentTarget); }}><MapPin /><span>{place.name}</span>{place.name === placeInput ? <Check /> : <ChevronRight />}</button>)}</div>}
+        <div className="place-picker-list">{!placesLoaded ? <p role="status">Загружаем места…</p> : placesError ? <div role="alert"><p className="field-error">{placesError}</p></div> : <div className="option-list">{matchingPlaces.map((place) => <button key={place.id} type="button" aria-pressed={selectedPlace?.id === place.id} onClick={() => { setCustomPlace(""); setSelectedPlace(place); }}><span>{place.name}</span>{selectedPlace?.id === place.id && <Check aria-hidden="true" />}</button>)}</div>}
         {placesLoaded && !placesError && !matchingPlaces.length && <p>Совпадений нет. Укажите своё место.</p>}</div>
       </DogmeetDialog>}
     </>

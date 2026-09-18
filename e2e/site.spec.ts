@@ -124,11 +124,14 @@ test("keeps a sheet mounted during an action close animation", async ({ page }) 
   await page.evaluate(() => {
     const sheet = document.querySelector<HTMLElement>(".react-modal-sheet-root");
     if (!sheet) throw new Error("sheet-not-found");
-    const state = window as Window & { sheetCloseObserved?: boolean };
+    const backdrop = sheet.querySelector<HTMLElement>(".react-modal-sheet-backdrop");
+    if (!backdrop) throw new Error("sheet-backdrop-not-found");
+    const state = window as Window & { sheetCloseObserved?: boolean; sheetBackdropStable?: boolean };
     state.sheetCloseObserved = false;
     const observer = new MutationObserver(() => {
       if (sheet.isConnected && sheet.dataset.sheetState === "closing") {
         state.sheetCloseObserved = true;
+        state.sheetBackdropStable = sheet.querySelector(".react-modal-sheet-backdrop") === backdrop;
         observer.disconnect();
       }
     });
@@ -136,6 +139,7 @@ test("keeps a sheet mounted during an action close animation", async ({ page }) 
   });
   await dialog.getByRole("button", { name: "Показать прогулки" }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { sheetCloseObserved?: boolean }).sheetCloseObserved)).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as Window & { sheetBackdropStable?: boolean }).sheetBackdropStable)).toBe(true);
   await expect(dialog).toHaveCount(0);
 });
 

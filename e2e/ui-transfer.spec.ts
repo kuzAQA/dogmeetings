@@ -17,6 +17,34 @@ async function capture(page: Page, info: TestInfo, name: string) {
 
 test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: "reduce" }); });
 
+test("place picker confirms only its selected shared place", async ({ page }) => {
+  await mockApp(page);
+  await page.unroute("**/api/places?*");
+  await page.route("**/api/places?*", (route) => route.fulfill({ json: { places: [{ id: walk.placeId, name: walk.point }, { id: "place-2", name: "У детской площадки" }] } }));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await page.getByRole("button", { name: /^Место встречи/ }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Место встречи" });
+  const confirm = dialog.getByRole("button", { name: "Выбрать место" });
+  const firstPlace = dialog.getByRole("button", { name: walk.point, exact: true });
+  const secondPlace = dialog.getByRole("button", { name: "У детской площадки", exact: true });
+  await expect(confirm).toBeDisabled();
+  await firstPlace.click();
+  await expect(dialog).toBeVisible();
+  await expect(firstPlace).toHaveAttribute("aria-pressed", "true");
+  await expect(firstPlace.locator("svg")).toHaveCount(1);
+  await secondPlace.click();
+  await expect(firstPlace).toHaveAttribute("aria-pressed", "false");
+  await expect(secondPlace).toHaveAttribute("aria-pressed", "true");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Место встречи/ })).toContainText("У детской площадки");
+});
+
 test("location uses reference fields and preserves dependent options and submission", async ({ page }, info) => {
   await openNearby(page);
   await page.getByRole("button", { name: location.complex, exact: true }).click();
@@ -96,6 +124,14 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   await page.getByRole("button", { name: "Готово", exact: true }).click();
   await page.getByRole("button", { name: /^Место встречи/ }).click();
   await capture(page, info, "choose-place");
+  const placeDialog = page.getByRole("dialog", { name: "Место встречи" });
+  const choosePlace = placeDialog.getByRole("button", { name: "Выбрать место" });
+  await expect(choosePlace).toBeDisabled();
+  const firstPlace = placeDialog.getByRole("button", { name: walk.point, exact: true });
+  await firstPlace.click();
+  await expect(placeDialog).toBeVisible();
+  await expect(firstPlace).toHaveAttribute("aria-pressed", "true");
+  await expect(choosePlace).toBeEnabled();
   await page.getByLabel("Найти место").fill("Неизвестное");
   await expect(page.getByText("Совпадений нет. Укажите своё место.")).toBeVisible();
   await capture(page, info, "choose-place-empty");

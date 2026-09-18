@@ -1,9 +1,14 @@
 @import "./prototype.css";
 
+@media (max-width: 480px) {
+  .production .react-modal-sheet-container.sheet { max-width: none !important; }
+}
+
 @media (max-width: 899px) {
   .production .react-modal-sheet-container.sheet {
-    bottom: max(8px, var(--keyboard-inset-height, 0px)) !important;
-    max-height: min(80dvh, calc(100dvh - 16px - env(safe-area-inset-top, 0px))) !important;
+    --sheet-keyboard-offset: max(12px, calc(var(--keyboard-inset-height, 0px) + 12px));
+    bottom: var(--sheet-keyboard-offset) !important;
+    max-height: min(80dvh, calc(100dvh - var(--sheet-keyboard-offset) - 8px - env(safe-area-inset-top, 0px))) !important;
   }
 }
 
@@ -46,7 +51,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .sheet-footer > .button { margin-top: 0; }
 .production .sheet-footer > p { margin: 0; }
 
-.production .sheet--place-picker .sheet-content { display: flex; flex-direction: column; overflow: hidden; }
+.production .sheet--place-picker .sheet-content { display: flex; flex-direction: column; overflow: clip; }
 .production .sheet--place-picker .search-field { flex: none; margin-block: 0 var(--space-2); }
 .production .place-picker-list { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .production .sheet--place-picker .option-list { margin-block: 0; }

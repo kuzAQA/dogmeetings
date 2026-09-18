@@ -1068,7 +1068,7 @@ export default function Home() {
           </div>
         )}
 
-        {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={() => { setResult(null); result.onContinue(); }} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })}>{result.action ?? "Готово"}<ArrowRight aria-hidden="true" /></button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
+        {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={() => { setResult(null); result.onContinue(); }} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setResult(null); result.onContinue(); })}>{result.action ?? "Готово"}</button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
           onDismissPetRequired={() => setShowPetRequiredPopup(false)}

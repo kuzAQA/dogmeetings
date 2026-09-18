@@ -1,6 +1,34 @@
 import { expect, test } from "@playwright/test";
 import { openNearby } from "./fixtures";
 
+test("mobile sheets use the full available width", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Весь день", exact: true }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Время прогулки" });
+    await expect(dialog).toBeVisible();
+    const bounds = await dialog.evaluate((element) => {
+      const sheet = element.getBoundingClientRect();
+      return { left: sheet.left, right: innerWidth - sheet.right, width: sheet.width, maxWidth: getComputedStyle(element).maxWidth };
+    });
+
+    expect(bounds.left).toBeCloseTo(bounds.right, 1);
+    expect(bounds.width).toBeCloseTo(width - bounds.left - bounds.right, 1);
+    expect(bounds.maxWidth).toBe("none");
+    await page.keyboard.press("Escape");
+  }
+
+  for (const width of [768, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Весь день", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Время прогулки" })).toHaveCSS("max-width", "374px");
+  }
+});
+
 test("reference widths 360, 375 and 430 keep forms and sheets accessible", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const width of [360, 375, 430]) {
@@ -178,7 +206,7 @@ test("place sheet keeps its footer visible, supports top-edge drag, and releases
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
-test("place sheet does not autofocus search and uses library keyboard avoidance", async ({ page }) => {
+test("place sheet does not autofocus search or add keyboard padding to its list", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await openNearby(page);
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
@@ -209,6 +237,90 @@ test("place sheet does not autofocus search and uses library keyboard avoidance"
   expect(searchBounds.input.left).toBeGreaterThan(searchBounds.field.left);
   expect(searchBounds.input.right).toBeLessThanOrEqual(searchBounds.field.right);
 
-  await expect(dialog.locator(".react-modal-sheet-content-scroller")).toHaveAttribute("style", /keyboard-inset-height/);
+  await expect(dialog.locator(".react-modal-sheet-content-scroller")).toHaveCSS("padding-bottom", "0px");
+  await expect(dialog.locator(".react-modal-sheet-content-scroller")).not.toHaveAttribute("style", /padding-bottom/);
+  await expect(dialog.locator(".react-modal-sheet-content-scroller")).toHaveCSS("overflow-y", "clip");
   await expect(dialog.getByRole("button", { name: "Выбрать место" })).toBeVisible();
+});
+
+test.describe("Android place picker", () => {
+  test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+
+  test("keeps results visible and stable while moving focus to a custom place", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 700 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+    await page.getByRole("button", { name: /^Место встречи/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Место встречи" });
+    const search = page.getByLabel("Найти место");
+    const customPlace = page.getByLabel("Или своё место встречи");
+    const results = dialog.locator(".place-picker-list .option-list > button");
+    await expect(results.first()).toBeVisible();
+    const initialResultCount = await results.count();
+    expect(initialResultCount).toBeGreaterThan(0);
+
+    await search.tap();
+    await expect(search).toBeFocused();
+    await page.evaluate(() => {
+      const keyboard = (navigator as Navigator & { virtualKeyboard?: EventTarget }).virtualKeyboard;
+      if (keyboard) {
+        Object.defineProperty(keyboard, "boundingRect", { configurable: true, value: { height: 300 } });
+        keyboard.dispatchEvent(new Event("geometrychange"));
+      } else {
+        Object.defineProperty(window.visualViewport!, "height", { configurable: true, value: innerHeight - 300 });
+        window.visualViewport!.dispatchEvent(new Event("resize"));
+      }
+    });
+    await expect.poll(() => dialog.evaluate((element) => element.style.getPropertyValue("--keyboard-inset-height"))).toMatch(/300px/);
+    await dialog.evaluate((element) => element.style.setProperty("--keyboard-inset-height", "300px"));
+    expect(await dialog.evaluate((element) => Math.round(parseFloat(getComputedStyle(element).bottom)))).toBe(312);
+    await expect(dialog.locator(".react-modal-sheet-content-scroller")).toHaveCSS("padding-bottom", "0px");
+    await expect(dialog.locator(".react-modal-sheet-content-scroller")).not.toHaveAttribute("style", /padding-bottom/);
+    await expect(results.first()).toBeVisible();
+    await customPlace.tap();
+    await expect(customPlace).toBeFocused();
+    expect(await results.count()).toBe(initialResultCount);
+
+    const beforeRepeatTap = await dialog.evaluate((element) => {
+      const form = document.querySelector<HTMLElement>(".announce-form")!.getBoundingClientRect();
+      const sheet = element.getBoundingClientRect();
+      const list = element.querySelector<HTMLElement>(".place-picker-list")!.getBoundingClientRect();
+      return { formTop: form.top, listVisible: list.bottom > sheet.top && list.top < sheet.bottom, scrollY, sheetTop: sheet.top };
+    });
+    expect(beforeRepeatTap.listVisible).toBe(true);
+
+    await customPlace.tap();
+    await expect(customPlace).toBeFocused();
+    expect(await page.evaluate(() => {
+      const formTop = document.querySelector<HTMLElement>(".announce-form")!.getBoundingClientRect().top;
+      return { formTop, scrollY, sheetTop: document.querySelector<HTMLElement>(".sheet--place-picker")!.getBoundingClientRect().top };
+    })).toEqual({ formTop: beforeRepeatTap.formTop, scrollY: beforeRepeatTap.scrollY, sheetTop: beforeRepeatTap.sheetTop });
+
+    await search.fill("Несуществующее место");
+    await expect(results).toHaveCount(0);
+  });
+});
+
+test("backdrop close does not refocus the place picker input", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await page.getByRole("button", { name: /^Место встречи/ }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Место встречи" });
+  const customPlace = page.getByLabel("Или своё место встречи");
+  await customPlace.focus();
+  await page.evaluate(() => {
+    const state = window as Window & { placePickerRefocuses?: number };
+    state.placePickerRefocuses = 0;
+    document.addEventListener("focusin", (event) => {
+      if (event.target === document.querySelector(".place-picker-footer textarea")) state.placePickerRefocuses!++;
+    }, { once: false });
+  });
+
+  await page.locator(".react-modal-sheet-backdrop").click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => (window as Window & { placePickerRefocuses?: number }).placePickerRefocuses)).toBe(0);
 });
