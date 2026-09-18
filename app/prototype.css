@@ -70,6 +70,7 @@ main.with-nav{padding-bottom:138px}
 .location-switch svg:first-child{color:var(--orange);width:18px}
 .location-switch svg:last-child{width:16px}
 .day-heading{display:flex;align-items:flex-start;gap:12px;padding-top:20px}
+.day-divider{height:1px;background:var(--line);margin-top:22px}
 .day-heading h1{font-size:33px;flex:1;margin:0;letter-spacing:-.04em}
 .date-stamp{display:flex;flex-direction:column;align-items:center;border-top:3px solid var(--orange);padding:7px 0 0;min-width:73px;line-height:1.45;font-size:10px;text-align:center}
 .date-stamp strong{font-size:35px;line-height:1.15;letter-spacing:-.04em}

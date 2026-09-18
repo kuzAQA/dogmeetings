@@ -34,6 +34,10 @@ export type ApiWalk = {
   image: string;
 };
 
+export function isWalkScheduledForToday(walk: { scheduleType: ScheduleType }) {
+  return walk.scheduleType === "today" || walk.scheduleType === "always";
+}
+
 export function apiWalkToCard(walk: ApiWalk): Walk {
   const [hours = "0", minutes = "00"] = walk.walkTime.split(":");
   const hour = Number(hours);

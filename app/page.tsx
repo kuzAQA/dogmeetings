@@ -48,7 +48,7 @@ import { HomeDialogs } from "./features/home/components/HomeDialogs";
 import { LocationEditor, LocationRequestForm } from "./features/home/components/LocationFlow";
 import { PetForm } from "./features/home/components/PetForm";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
-import { apiWalkToCard, type ApiWalk, type Period, type Walk } from "../lib/walks";
+import { apiWalkToCard, isWalkScheduledForToday, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
 import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "./components/ui/DogmeetFrame";
 import { animateHeaderExit } from "./components/ui/motion.mjs";
@@ -745,7 +745,7 @@ export default function Home() {
       const belongsToSavedLocation = savedWalk.city === location.city &&
         savedWalk.district === location.district &&
         savedWalk.complex === location.complex;
-      const appearsToday = walkForm.scheduleType === "today" || walkForm.scheduleType === "always";
+      const appearsToday = isWalkScheduledForToday({ scheduleType: walkForm.scheduleType });
       setSavedWalks((current) => {
         const withoutEditedWalk = current.filter((walk) => walk.id !== savedWalk.id);
         return belongsToSavedLocation && appearsToday

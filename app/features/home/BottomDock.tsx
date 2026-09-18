@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarDays, Check, Compass, PawPrint, Plus } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 type BottomDockProps = {
   section: "nearby" | "plans" | "pets" | "walk";
@@ -19,9 +20,72 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
   const addingPet = section === "pets";
   const actionHidden = section === "nearby";
   const actionLabel = addingPet ? "Добавить питомца" : section === "walk" && walkFormDirty && walkFormIsValid ? "Сохранить прогулку" : "Создать прогулку";
+  const dockRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const dock = dockRef.current;
+    const drop = dock?.querySelector<HTMLElement>(".dock-drop-shape");
+    const plus = dock?.querySelector<HTMLElement>(".dock-add");
+    if (!dock || !drop || !plus) return;
+
+    let raf = 0;
+    const clearInlineMotion = () => {
+      cancelAnimationFrame(raf);
+      drop.style.transform = "";
+      plus.style.transform = "";
+      plus.style.opacity = "";
+      plus.style.borderColor = "";
+    };
+
+    if (actionHidden || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      clearInlineMotion();
+      return () => cancelAnimationFrame(raf);
+    }
+
+    const styles = getComputedStyle(dock);
+    const start = Number.parseFloat(styles.getPropertyValue("--dock-size")) + Number.parseFloat(styles.getPropertyValue("--dock-gap"));
+    const end = 0;
+    const distance = Math.abs(end - start);
+    const duration = 980 / 3;
+
+    const setX = (x: number) => {
+      const transform = `translateX(${x}px)`;
+      drop.style.transform = transform;
+      plus.style.transform = transform;
+    };
+
+    const ease = (t: number) => {
+      const smooth = t * t * (3 - 2 * t);
+      const kick = t > 0.72 ? Math.sin((t - 0.72) / 0.28 * Math.PI) * 7 * (1 - t) : 0;
+      return smooth + kick / distance;
+    };
+
+    setX(start);
+    plus.style.opacity = "0";
+    plus.style.borderColor = "transparent";
+    const startTime = performance.now();
+    const frame = (now: number) => {
+      const raw = Math.min(1, (now - startTime) / duration);
+      setX(start + (end - start) * ease(raw));
+      const reveal = Math.max(0, Math.min(1, (raw - 0.42) / 0.35));
+      plus.style.opacity = String(reveal);
+      plus.style.borderColor = `rgba(239, 217, 198, ${reveal})`;
+      if (raw < 1) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      setX(end);
+      plus.style.opacity = "1";
+      plus.style.borderColor = "rgba(239,217,198,1)";
+      clearInlineMotion();
+    };
+
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [actionHidden]);
 
   return (
-    <nav className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
+    <nav ref={dockRef} className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
       <svg className="dock-goo-filter" aria-hidden="true" width="0" height="0">
         <defs>
           <filter id="dock-goo" x="-40%" y="-80%" width="220%" height="260%" colorInterpolationFilters="sRGB">

@@ -69,6 +69,9 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
   const day = today.find((part) => part.type === "day")?.value ?? "";
   const month = today.find((part) => part.type === "month")?.value ?? "";
   const weekday = today.find((part) => part.type === "weekday")?.value ?? "";
+  const hasTodayWalks = savedWalks.length > 0;
+  const showWalkControls = !walksLoaded || Boolean(walksError) || hasTodayWalks;
+  const showAllDayAction = walksLoaded && !walksError && hasTodayWalks;
 
   if (contactOpen) return <div className="screen contact-screen"><DogmeetHeader onBack={onBack} /><h1>Связь с разработчиком</h1>{contactCopied ? <DogmeetState state="success" title="Контакт скопирован" message="Ссылка на Telegram разработчика готова к вставке." onAction={onBack} /> : <><h2>Есть идея<br />или вопрос?</h2><p>Разработчик Dogmeet — в Telegram. Напишите, что можно сделать удобнее.</p><div className="receipt"><strong>@kuznetsoviv</strong><span>t.me/kuznetsoviv</span></div><button className="button" type="button" onClick={async () => { try { await navigator.clipboard.writeText("https://t.me/kuznetsoviv"); setContactCopied(true); } catch { setCopyError("Не удалось скопировать. Выделите контакт и скопируйте вручную."); } }}><Copy />Скопировать контакт</button>{copyError && <p className="field-error" role="alert">{copyError}</p>}</>}</div>;
 
@@ -124,12 +127,15 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
     <div className="screen walks-screen">
       <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} />
       <div className="day-heading"><h1>Кто сегодня<br /><em>на прогулку?</em></h1><span className="date-stamp"><strong>{day}</strong>{month}<br />{weekday}</span></div>
-      <div className="daily-summary">
-        <span className="stacked-faces">{savedWalks.slice(0, 3).map((walk) => <Image key={walk.id} src={walk.image} alt="" width={32} height={32} unoptimized={walk.image.startsWith("/api/")} />)}</span>
-        <p>Знакомьтесь во дворе.<br /><strong>{savedWalks.length ? `У каждого есть время для прогулки.` : "Начните расписание двора."}</strong></p>
-      </div>
-      <div className="section-line"><h2>Сегодня рядом</h2><button className="filter-trigger" type="button" onClick={() => { setTempPeriod(period); setFiltersOpen(true); }}><SlidersHorizontal aria-hidden="true" />{period === "Все" ? "Весь день" : period}</button></div>
-      {!walksLoaded ? <DogmeetState state="loading" /> : walksError ? <DogmeetState state="error" message={walksError} onAction={onRetryWalks} /> : visibleWalks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk}><button className="button quiet" type="button" onClick={() => onPeriodChange("Все")}>Показать весь день</button></DogmeetState> : (
+      {!hasTodayWalks && <div className="day-divider" aria-hidden="true" />}
+      {showWalkControls && <>
+        <div className="daily-summary">
+          <span className="stacked-faces">{savedWalks.slice(0, 3).map((walk) => <Image key={walk.id} src={walk.image} alt="" width={32} height={32} unoptimized={walk.image.startsWith("/api/")} />)}</span>
+          <p>Знакомьтесь во дворе.<br /><strong>У каждого есть время для прогулки.</strong></p>
+        </div>
+        <div className="section-line"><h2>Сегодня рядом</h2><button className="filter-trigger" type="button" onClick={() => { setTempPeriod(period); setFiltersOpen(true); }}><SlidersHorizontal aria-hidden="true" />{period === "Все" ? "Весь день" : period}</button></div>
+      </>}
+      {!walksLoaded ? <DogmeetState state="loading" /> : walksError ? <DogmeetState state="error" message={walksError} onAction={onRetryWalks} /> : visibleWalks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk}>{showAllDayAction && <button className="button quiet" type="button" onClick={() => onPeriodChange("Все")}>Показать весь день</button>}</DogmeetState> : (
         <div className="timeline">{visibleWalks.map((walk) => {
           const owned = ownedWalksById.get(walk.id);
           return <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.time}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary" role="button" tabIndex={0} onClick={() => { onSelectWalk(walk); onOpenDetail(); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectWalk(walk); onOpenDetail(); } }}><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}{owned && <button className="text-link" type="button" onClick={(event) => { event.stopPropagation(); setActionsWalk(walk); }}>Управлять<ChevronRight aria-hidden="true" /></button>}</div></div>;

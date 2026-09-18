@@ -51,6 +51,7 @@ test("centers the nearby menu and keeps the add action stable between plans and 
   await expect.poll(centered).toBeLessThan(1);
 
   await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBeGreaterThan(0);
   await expect(add).toHaveCSS("opacity", "1");
   await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBe(0);
   const plansX = await add.evaluate((element) => element.getBoundingClientRect().x);

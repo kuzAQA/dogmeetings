@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { listMyWalks, listPets, listPlaces, listWalks } from "./api";
 import type { Location, Pet, SharedPlace } from "./model";
 import type { ApiWalk, Walk } from "../../../lib/walks";
-import { apiWalkToCard } from "../../../lib/walks";
+import { apiWalkToCard, isWalkScheduledForToday } from "../../../lib/walks";
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -54,8 +54,9 @@ export function useHomeResources(
     setWalksError("");
     try {
       const walks = await listWalks({ city, district, complex });
-      preloadImages(walks.map((walk) => walk.image));
-      setSavedWalks(walks.map(apiWalkToCard));
+      const todayWalks = walks.filter(isWalkScheduledForToday);
+      preloadImages(todayWalks.map((walk) => walk.image));
+      setSavedWalks(todayWalks.map(apiWalkToCard));
     } catch (error) {
       setWalksError(errorMessage(error, "Не удалось загрузить прогулки."));
     } finally {
@@ -124,8 +125,9 @@ export function useHomeResources(
     listWalks({ city, district, complex })
       .then((walks) => {
         if (!active) return;
-        preloadImages(walks.map((walk) => walk.image));
-        setSavedWalks(walks.map(apiWalkToCard));
+        const todayWalks = walks.filter(isWalkScheduledForToday);
+        preloadImages(todayWalks.map((walk) => walk.image));
+        setSavedWalks(todayWalks.map(apiWalkToCard));
       })
       .catch((error) => { if (active) setWalksError(errorMessage(error, "Не удалось загрузить прогулки.")); })
       .finally(() => { if (active) setWalksLoaded(true); });
