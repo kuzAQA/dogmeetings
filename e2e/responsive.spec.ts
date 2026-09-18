@@ -110,7 +110,7 @@ test.describe("Android header exit", () => {
   });
 });
 
-test("place sheet keeps its footer visible and dismisses from the grip", async ({ page }) => {
+test("place sheet keeps its footer visible, supports top-edge drag, and releases the form", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 700 });
@@ -155,16 +155,60 @@ test("place sheet keeps its footer visible and dismisses from the grip", async (
     return bounds.left - focusRing >= content.left && bounds.right + focusRing <= content.right;
   })).toBe(true);
 
-  await dialog.evaluate(async (element) => {
-    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => {})));
-  });
+  const dragArea = await dialog.locator(".sheet-drag-area").boundingBox();
   const grip = await dialog.locator(".sheet-grip").boundingBox();
-  await page.mouse.move(grip!.x + grip!.width / 2, grip!.y + grip!.height / 2);
+  const sheetBounds = await dialog.boundingBox();
+  expect(grip).toMatchObject({ width: 64, height: 20 });
+  expect(dragArea).toMatchObject({ height: 48 });
+  expect(Math.round(dragArea!.width)).toBe(Math.round(sheetBounds!.width));
+  await page.mouse.move(dragArea!.x + dragArea!.width - 8, dragArea!.y + 4);
   await page.mouse.down();
   expect(errors).toEqual([]);
-  await expect(dialog).toHaveAttribute("data-dragging", "true");
-  await page.mouse.move(grip!.x + grip!.width / 2, grip!.y + grip!.height / 2 + 120, { steps: 6 });
-  await expect.poll(() => dialog.evaluate((element) => element.style.transform)).toContain("translateY");
+  await page.mouse.move(dragArea!.x + dragArea!.width - 8, dragArea!.y + 28, { steps: 3 });
+  await page.mouse.up();
+  await expect(dialog).toBeVisible();
+
+  const sheetHeight = sheetBounds!.height;
+  await page.mouse.move(dragArea!.x + 8, dragArea!.y + dragArea!.height - 4);
+  await page.mouse.down();
+  await page.mouse.move(dragArea!.x + 8, dragArea!.y + dragArea!.height - 4 + sheetHeight * .75, { steps: 8 });
   await page.mouse.up();
   await expect(dialog).toHaveCount(0);
+  await page.getByRole("button", { name: /^Время/ }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("place sheet does not autofocus search and uses library keyboard avoidance", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await openNearby(page);
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+  await page.getByRole("button", { name: /^Место встречи/ }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Место встречи" });
+  const searchField = dialog.locator(".search-field");
+  const search = page.getByLabel("Найти место");
+  const customPlace = page.getByLabel("Или своё место встречи");
+  await expect(search).not.toBeFocused();
+  await expect(search).toHaveAttribute("rows", "1");
+  await expect(search).toHaveAttribute("inputmode", "text");
+  await expect(search).toHaveAttribute("autocomplete", "off");
+  await expect(search).toHaveAttribute("enterkeyhint", "search");
+  await expect(customPlace).toHaveAttribute("rows", "1");
+  await expect(customPlace).toHaveAttribute("autocomplete", "off");
+  await expect(dialog.locator("form.place-picker-footer")).toHaveAttribute("autocomplete", "off");
+  await search.focus();
+  expect(await searchField.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
+  await expect(search).toHaveCSS("outline-style", "none");
+
+  const searchBounds = await searchField.evaluate((element) => {
+    const field = element.getBoundingClientRect();
+    const input = element.querySelector("textarea")!.getBoundingClientRect();
+    return { field, input };
+  });
+  expect(searchBounds.input.left).toBeGreaterThan(searchBounds.field.left);
+  expect(searchBounds.input.right).toBeLessThanOrEqual(searchBounds.field.right);
+
+  await expect(dialog.locator(".react-modal-sheet-content-scroller")).toHaveAttribute("style", /keyboard-inset-height/);
+  await expect(dialog.getByRole("button", { name: "Выбрать место" })).toBeVisible();
 });

@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowLeft, MapPin, MoreHorizontal, PawPrint } from "lucide-react";
-import { type DialogHTMLAttributes, type ReactNode, useEffect, useRef } from "react";
-import { closeSheet } from "./motion.mjs";
+import { type DialogHTMLAttributes, type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Sheet, type SheetProps } from "react-modal-sheet";
 
 export function DogmeetFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -14,128 +14,152 @@ export function DogmeetFrame({ children, className = "" }: { children: ReactNode
   );
 }
 
-type DogmeetDialogProps = DialogHTMLAttributes<HTMLDialogElement> & {
+type SheetAccessibilityProps = Pick<DialogHTMLAttributes<HTMLDialogElement>, "aria-label" | "aria-labelledby" | "role">;
+type SheetRef = { y: { on: (event: "animationComplete", callback: () => void) => () => void } };
+
+type AppBottomSheetProps = SheetAccessibilityProps & {
   children: ReactNode;
   footer?: ReactNode;
-  onDismiss: () => void;
+  open: boolean;
+  onClose: () => void;
   title?: string;
   busy?: boolean;
+  className?: string;
+  snapPoints?: SheetProps["snapPoints"];
+  initialSnap?: SheetProps["initialSnap"];
+  detent?: SheetProps["detent"];
 };
 
-let pageScrollLockCount = 0;
-let pageScrollUnlockTimer: number | null = null;
-let pageScrollLockState: {
-  scrollY: number;
-  htmlOverflow: string;
-  bodyOverflow: string;
-  bodyPosition: string;
-  bodyTop: string;
-  bodyWidth: string;
-  bodyPaddingRight: string;
-} | null = null;
+type DialogDismissHandler = (afterClose?: () => void, force?: boolean) => Promise<void>;
+const dialogDismissers = new WeakMap<HTMLElement, DialogDismissHandler>();
+const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function lockPageScroll() {
-  if (pageScrollUnlockTimer !== null) {
-    window.clearTimeout(pageScrollUnlockTimer);
-    pageScrollUnlockTimer = null;
-  }
-  if (pageScrollLockCount === 0 && !pageScrollLockState) {
-    const html = document.documentElement;
-    const body = document.body;
-    const scrollY = window.scrollY;
-    pageScrollLockState = {
-      scrollY,
-      htmlOverflow: html.style.overflow,
-      bodyOverflow: body.style.overflow,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyWidth: body.style.width,
-      bodyPaddingRight: body.style.paddingRight
-    };
-    html.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-    const scrollbarWidth = window.innerWidth - html.clientWidth;
-    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
-  }
-  pageScrollLockCount += 1;
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    pageScrollLockCount = Math.max(0, pageScrollLockCount - 1);
-    if (pageScrollLockCount > 0 || !pageScrollLockState) return;
-    const state = pageScrollLockState;
-    pageScrollUnlockTimer = window.setTimeout(() => {
-      pageScrollUnlockTimer = null;
-      if (pageScrollLockCount > 0 || pageScrollLockState !== state) return;
-      pageScrollLockState = null;
-      const html = document.documentElement;
-      const body = document.body;
-      html.style.overflow = state.htmlOverflow;
-      body.style.overflow = state.bodyOverflow;
-      body.style.position = state.bodyPosition;
-      body.style.top = state.bodyTop;
-      body.style.width = state.bodyWidth;
-      body.style.paddingRight = state.bodyPaddingRight;
-      window.scrollTo(0, state.scrollY);
-    }, 0);
-  };
+function focusableChildren(element: HTMLElement) {
+  return Array.from(element.querySelectorAll<HTMLElement>(focusableSelector)).filter((child) => !child.hidden && child.getClientRects().length > 0);
 }
 
-type DialogDismissHandler = (afterClose?: () => void, force?: boolean) => Promise<void>;
-const dialogDismissers = new WeakMap<HTMLDialogElement, DialogDismissHandler>();
-
 export function requestDialogClose(target: EventTarget | null, afterClose?: () => void, force = false) {
-  const element = typeof Element !== "undefined" && target instanceof Element ? target.closest("dialog") : null;
+  const element = typeof Element !== "undefined" && target instanceof Element ? target.closest<HTMLElement>("[data-app-bottom-sheet]") : null;
   const dismiss = element && dialogDismissers.get(element);
   if (dismiss) return dismiss(afterClose, force);
   afterClose?.();
   return Promise.resolve();
 }
 
-export function DogmeetDialog({ children, footer, onDismiss, title, busy = false, className = "", ...props }: DogmeetDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const closing = useRef(false);
-  const dismissRef = useRef<DialogDismissHandler>(() => Promise.resolve());
+export function AppBottomSheet({ children, footer, open, onClose, title, busy = false, className = "", snapPoints, initialSnap, detent = "content", ...props }: AppBottomSheetProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<SheetRef>(null);
+  const dragClosePending = useRef(false);
+  const [isOpen, setIsOpen] = useState(open);
+  const [previousOpen, setPreviousOpen] = useState(open);
+  const [closing, setClosing] = useState(false);
+  const afterCloseCallbacks = useRef<(() => void)[]>([]);
+  const closeResolvers = useRef<(() => void)[]>([]);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const isPlacePicker = className.includes("sheet--place-picker");
+  const mountPoint = typeof document === "undefined" ? undefined : document.querySelector(".production") ?? undefined;
 
-  useEffect(() => {
-    dismissRef.current = (afterClose, force) => dismiss(afterClose, force);
-  });
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (!dialog) return;
-    dialog.showModal();
-    const unlockPageScroll = lockPageScroll();
-    dialogDismissers.set(dialog, (afterClose, force) => dismissRef.current(afterClose, force));
-    return () => {
-      dialogDismissers.delete(dialog);
-      if (dialog.open) dialog.close();
-      unlockPageScroll();
-      returnFocus?.focus({ preventScroll: true });
-    };
-  }, []);
-
-  async function dismiss(afterClose?: () => void, force = false) {
-    if ((!force && busy) || closing.current) return;
-    closing.current = true;
-    await closeSheet(dialogRef.current);
-    onDismiss();
-    afterClose?.();
-    dialogRef.current?.getAnimations().forEach((animation) => animation.cancel());
-    dialogRef.current?.classList.remove("is-closing");
-    closing.current = false;
+  if (open !== previousOpen) {
+    setPreviousOpen(open);
+    setIsOpen(open);
+    setClosing(false);
   }
 
-  return <dialog ref={dialogRef} className={`sheet ${className}`} {...props} aria-label={props["aria-label"] ?? title} aria-labelledby={props["aria-labelledby"]} onCancel={(event) => { event.preventDefault(); void dismiss(); }}>
-    <div className="sheet-grip" aria-hidden="true" />
-    <div className="sheet-content">{children}</div>
-    {footer && <div className="sheet-footer">{footer}</div>}
-  </dialog>;
+  const dismiss = useCallback((afterClose?: () => void, force = false) => {
+    if ((!force && busy) || closing || dragClosePending.current) return Promise.resolve();
+    setClosing(true);
+    return new Promise<void>((resolve) => {
+      if (afterClose) afterCloseCallbacks.current.push(afterClose);
+      closeResolvers.current.push(resolve);
+      setIsOpen(false);
+    });
+  }, [busy, closing]);
+
+  const finishDragClose = useCallback(() => {
+    if (!dragClosePending.current) return;
+    dragClosePending.current = false;
+    setIsOpen(false);
+  }, []);
+
+  const beginDragClose = useCallback(() => {
+    if (busy || closing || dragClosePending.current) return;
+    dragClosePending.current = true;
+    setClosing(true);
+  }, [busy, closing]);
+
+  useLayoutEffect(() => sheetRef.current?.y.on("animationComplete", finishDragClose), [finishDragClose]);
+
+  const restoreFocus = useCallback(() => {
+    if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus({ preventScroll: true });
+    returnFocusRef.current = null;
+  }, []);
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !isOpen || closing) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (isPlacePicker) dialog.focus({ preventScroll: true });
+    dialogDismissers.set(dialog, dismiss);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        void dismiss();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = focusableChildren(dialog);
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+      const active = document.activeElement;
+      if (event.shiftKey ? active === focusable[0] || !dialog.contains(active) : active === focusable.at(-1) || !dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? focusable.at(-1) : focusable[0])?.focus({ preventScroll: true });
+      }
+    };
+    const keepFocusInside = (event: FocusEvent) => {
+      if (event.target instanceof Node && dialog.contains(event.target)) return;
+      window.requestAnimationFrame(() => {
+        if (!dialog.contains(document.activeElement)) (focusableChildren(dialog)[0] ?? dialog).focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("focusin", keepFocusInside);
+    return () => {
+      dialogDismissers.delete(dialog);
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("focusin", keepFocusInside);
+    };
+  }, [closing, dismiss, isOpen, isPlacePicker]);
+
+  useLayoutEffect(() => restoreFocus, [restoreFocus]);
+
+  function finishClose() {
+    if (closing) {
+      setClosing(false);
+      onClose();
+      afterCloseCallbacks.current.splice(0).forEach((callback) => callback());
+      closeResolvers.current.splice(0).forEach((resolve) => resolve());
+    }
+    restoreFocus();
+  }
+
+  return <Sheet ref={sheetRef} isOpen={isOpen} onClose={beginDragClose} onCloseEnd={finishClose} avoidKeyboard disableDismiss={busy} detent={detent} snapPoints={snapPoints} initialSnap={initialSnap} mountPoint={mountPoint}>
+    <Sheet.Container ref={dialogRef} data-app-bottom-sheet className={`sheet ${className}`} role={props.role ?? "dialog"} aria-modal="true" aria-label={props["aria-label"] ?? title} aria-labelledby={props["aria-labelledby"]} tabIndex={-1}>
+      <Sheet.Header className="sheet-drag-area" aria-hidden="true"><span className="sheet-grip" /></Sheet.Header>
+      <Sheet.Content className="sheet-content-shell" scrollClassName="sheet-content" disableDrag>{children}</Sheet.Content>
+      {footer && <div className="sheet-footer">{footer}</div>}
+    </Sheet.Container>
+    <Sheet.Backdrop className="sheet-backdrop" aria-label="Закрыть" tabIndex={-1} onTap={() => { void dismiss(); }} />
+  </Sheet>;
+}
+
+type DogmeetDialogProps = Omit<AppBottomSheetProps, "open" | "onClose"> & { onDismiss: () => void };
+
+export function DogmeetDialog({ onDismiss, ...props }: DogmeetDialogProps) {
+  return <AppBottomSheet {...props} open onClose={onDismiss} />;
 }
 
 export function DogmeetBrand({ tagline }: { tagline?: string }) {

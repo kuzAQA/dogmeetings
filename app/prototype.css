@@ -112,9 +112,10 @@ main.with-nav{padding-bottom:138px}
 .field{display:flex;flex-direction:column;gap:8px;margin:22px 0;min-width:0}
 .field>span{font-size:13px;font-weight:700}
 .field>span small{font-weight:400;color:var(--muted);float:right}
-.field input,.field select,.field textarea,.search-field input{width:100%;min-width:0;border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:10px;min-height:54px;padding:13px 14px;font-size:16px}
-.field input::placeholder,.field textarea::placeholder,.search-field input::placeholder{color:#74736e}
-.field textarea{min-height:110px;resize:vertical;line-height:1.6}
+.field input,.field select,.field textarea,.search-field :is(input,textarea){width:100%;min-width:0;border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:10px;min-height:54px;padding:13px 14px;font-size:16px}
+.field input::placeholder,.field textarea::placeholder,.search-field :is(input,textarea)::placeholder{color:#74736e}
+.field textarea:not(.single-line-input){min-height:110px;resize:vertical;line-height:1.6}
+.single-line-input{resize:none;line-height:normal}
 .field input[aria-invalid=true],.field select[aria-invalid=true]{border:2px solid var(--error)}
 .field-error{color:var(--error);font-size:12px;line-height:1.6}
 .counter{align-self:flex-end;color:var(--muted);margin-top:-5px}
@@ -157,7 +158,9 @@ main.with-nav{padding-bottom:138px}
 .option-list>button[aria-pressed=true]{color:var(--orange)}
 .search-field{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding-left:12px;margin:22px 0}
 .search-field>svg{color:var(--muted)}
-.search-field input{border:0;background:transparent;padding-left:0}
+.search-field:focus-within{box-shadow:inset 0 0 0 3px var(--orange)}
+.search-field :is(input,textarea){flex:1;width:auto;border:0;background:transparent;padding-left:0}
+.search-field :is(input,textarea):focus-visible{outline:none}
 .time-picker{display:flex;flex-direction:column;align-items:center;padding:0;gap:12px}
 .time-picker svg{color:var(--orange)}
 .time-picker>svg{width:48px;height:48px}
@@ -247,11 +250,12 @@ blockquote{margin:24px 0;font-size:21px;letter-spacing:-.02em;line-height:1.5}
 .sheet-background{padding:35px 22px;min-height:804px}
 .sheet-background h1{margin-top:45px}
 .background-lines{height:110px;border-bottom:1px solid var(--line);margin-top:25px;background:#eeeae1}
-.sheet{border:0;width:calc(100% - 16px);max-width:374px;max-height:calc(100dvh - 64px);padding:var(--space-2) var(--sheet-inline-padding) calc(var(--space-6) + env(safe-area-inset-bottom,0px));margin:0 auto;top:auto;bottom:8px;border-radius:22px;background:var(--paper);color:var(--ink);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 -12px 60px #17243720}
-.sheet::backdrop{background:#18212f66}
-.sheet-grip{position:relative;width:64px;height:20px;margin:0 auto var(--space-2);touch-action:none;cursor:grab}
+.react-modal-sheet-container.sheet{border:0;width:calc(100% - 16px)!important;max-width:374px!important;max-height:calc(100dvh - 64px)!important;padding:var(--space-2) var(--sheet-inline-padding) calc(var(--space-6) + env(safe-area-inset-bottom,0px));margin:0 auto!important;top:auto!important;right:0!important;bottom:8px!important;left:0!important;border-radius:22px!important;background:var(--paper)!important;color:var(--ink);overflow:hidden!important;overscroll-behavior:contain;box-shadow:0 -12px 60px #17243720!important}
+.sheet-backdrop{background:#18212f66!important}
+.sheet-drag-area{position:relative;width:calc(100% + var(--sheet-inline-padding) + var(--sheet-inline-padding))!important;height:48px;margin:-14px calc(0px - var(--sheet-inline-padding)) calc(var(--space-2) - 14px);display:flex;justify-content:center;touch-action:none;cursor:grab}
+.sheet-grip{position:relative;width:64px;height:20px;margin-top:14px;pointer-events:none}
 .sheet-grip:after{content:'';position:absolute;left:14px;right:14px;top:8px;height:4px;border-radius:4px;background:#c4c3bc}
-.sheet-grip:active{cursor:grabbing}
+.sheet-drag-area:active{cursor:grabbing}
 .sheet-content{padding-top:var(--space-3)}
 .sheet-content > :first-child{margin-top:0}
 .sheet-content > .state-icon:first-child{margin:0 0 var(--space-5)}
@@ -342,7 +346,7 @@ main{min-height:calc(100dvh - 40px)}
 @media(max-height:740px){
  .sheet{max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px));--sheet-inline-padding:16px;padding:var(--space-2) var(--sheet-inline-padding) calc(var(--space-3) + env(safe-area-inset-bottom,0px))}
 
- .sheet-grip{margin:0 auto var(--space-1)}
+ .sheet-drag-area{margin-bottom:calc(var(--space-1) - 14px)}
 
  .sheet-content{padding-top:var(--space-2)}
 
@@ -358,7 +362,7 @@ main{min-height:calc(100dvh - 40px)}
 
  .sheet .field{gap:6px}
 
- .sheet .field input,.sheet .search-field input{min-height:44px;padding-block:9px}
+ .sheet .field input,.sheet .field textarea.single-line-input,.sheet .search-field :is(input,textarea){min-height:44px;padding-block:9px}
 
  .sheet .button{min-height:44px;padding:10px 12px;margin-top:10px}
 
@@ -431,8 +435,6 @@ main{min-height:calc(100dvh - 40px)}
 .bottom-nav .dock-add:hover{background:var(--orange-pale)}
 }
 
-
-html:has(dialog[open]),body:has(dialog[open]){overflow:hidden}
 
 .sheet{overscroll-behavior:contain}
 
@@ -508,21 +510,11 @@ html:has(dialog[open]),body:has(dialog[open]){overflow:hidden}
 .action-icon[data-done=true] svg:last-child{opacity:1;transform:rotate(0) scale(1)}
 
 
-.sheet[open]{transform:translateY(0);opacity:1;transition:transform var(--motion-sheet-in) var(--ease-drawer),opacity var(--motion-fast) var(--ease-out)}
-
-.sheet::backdrop{opacity:1;transition:opacity var(--motion-screen) var(--ease-out)}
-
-.sheet.is-closing::backdrop{opacity:0;transition-duration:var(--motion-fast)}
-
 .toast{opacity:1;transform:translate(-50%,0);transition:opacity var(--motion-screen) var(--ease-out),transform var(--motion-screen) var(--ease-out)}
 
 .state-block{opacity:1;transition:opacity var(--motion-fast) var(--ease-out)}
 
 @starting-style{
- .sheet[open]{transform:translateY(100%);opacity:1}
-
- .sheet[open]::backdrop{opacity:0}
-
  .toast{opacity:0;transform:translate(-50%,8px)}
 
  .state-block{opacity:0}

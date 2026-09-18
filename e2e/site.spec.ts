@@ -107,12 +107,10 @@ test("locks the page scroll while a sheet is open", async ({ page }) => {
   const lock = await page.evaluate(() => ({
     scrollY: window.scrollY,
     htmlOverflow: getComputedStyle(document.documentElement).overflow,
-    bodyPosition: getComputedStyle(document.body).position,
-    bodyTop: document.body.style.top
+    bodyPosition: getComputedStyle(document.body).position
   }));
-  expect(lock).toMatchObject({ scrollY: 0, htmlOverflow: "hidden", bodyPosition: "fixed", bodyTop: `-${scrollBefore}px` });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(lock).toMatchObject({ scrollY: scrollBefore, htmlOverflow: "hidden" });
+  expect(lock.bodyPosition).not.toBe("fixed");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
@@ -124,17 +122,17 @@ test("keeps a sheet mounted during an action close animation", async ({ page }) 
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await expect(dialog).toBeVisible();
   await page.evaluate(() => {
-    const sheet = document.querySelector<HTMLDialogElement>("dialog[open]");
+    const sheet = document.querySelector<HTMLElement>(".react-modal-sheet-root");
     if (!sheet) throw new Error("sheet-not-found");
     const state = window as Window & { sheetCloseObserved?: boolean };
     state.sheetCloseObserved = false;
     const observer = new MutationObserver(() => {
-      if (sheet.isConnected && sheet.classList.contains("is-closing")) {
+      if (sheet.isConnected && sheet.dataset.sheetState === "closing") {
         state.sheetCloseObserved = true;
         observer.disconnect();
       }
     });
-    observer.observe(sheet, { attributes: true, attributeFilter: ["class"] });
+    observer.observe(sheet, { attributes: true, attributeFilter: ["data-sheet-state"] });
   });
   await dialog.getByRole("button", { name: "Показать прогулки" }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { sheetCloseObserved?: boolean }).sheetCloseObserved)).toBe(true);

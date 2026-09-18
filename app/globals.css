@@ -1,5 +1,12 @@
 @import "./prototype.css";
 
+@media (max-width: 899px) {
+  .production .react-modal-sheet-container.sheet {
+    bottom: max(8px, var(--keyboard-inset-height, 0px)) !important;
+    max-height: min(80dvh, calc(100dvh - 16px - env(safe-area-inset-top, 0px))) !important;
+  }
+}
+
 html, body { min-height: 100%; background: #e5e5e2; }
 .production { padding-inline: 0; }
 .production .phone { margin-inline: auto; }
@@ -32,9 +39,9 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .contact-screen .page-header .brand,
 .production .contact-screen .header-back { view-transition-name: none; }
 .production main { view-transition-name: dogmeet-production-page; }
-.production .sheet { max-height: min(80dvh, calc(100dvh - 16px - env(safe-area-inset-top, 0px))); overflow: hidden; }
-.production .sheet[open] { display: flex; flex-direction: column; }
-.production .sheet-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.production .sheet { overflow: hidden; }
+.production .sheet-content-shell { flex: 1 1 auto; min-height: 0; }
+.production .sheet-content { min-height: 0; overscroll-behavior: contain; }
 .production .sheet-footer { flex: none; }
 .production .sheet-footer > .button { margin-top: 0; }
 .production .sheet-footer > p { margin: 0; }

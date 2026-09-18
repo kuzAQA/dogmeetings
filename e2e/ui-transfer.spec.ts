@@ -4,7 +4,7 @@ import { location, mockApp, openNearby, pet, walk } from "./fixtures";
 async function capture(page: Page, info: TestInfo, name: string) {
   await page.evaluate(() => document.fonts.ready);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-  const dialog = page.locator("dialog[open]");
+  const dialog = page.locator("[data-app-bottom-sheet]");
   if (await dialog.count()) {
     const bounds = await dialog.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
