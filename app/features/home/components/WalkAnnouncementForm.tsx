@@ -2,12 +2,28 @@
 
 import { ArrowRight, Check, ChevronDown, ChevronRight, Clock3, MapPin, Plus, Search } from "lucide-react";
 import Image from "next/image";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type MouseEvent, useState } from "react";
+import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
 import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import type { Pet, SharedPlace } from "../model";
 import { MAX_WALK_COMMENT_LENGTH, MAX_WALK_PLACE_LENGTH } from "../model";
 import { getMinimumWalkTime, type WalkFormState } from "../use-walk-form";
+
+const hourOptions = Array.from({ length: 24 }, (_, hour) => {
+  const value = String(hour).padStart(2, "0");
+  return { value, label: value };
+});
+
+const minuteOptions = Array.from({ length: 12 }, (_, index) => {
+  const value = String(index * 5).padStart(2, "0");
+  return { value, label: value };
+});
+
+function normalizePickerTime(hour: string, minute: string, minimum: string) {
+  const value = `${hour}:${minute}`;
+  return value < minimum ? minimum : value;
+}
 
 type Props = {
   inDock?: boolean;
@@ -27,12 +43,43 @@ type Props = {
 };
 
 export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, locationName, onAddPet, placesLoaded, placesError = "", onRetryPlaces, walkForm, walkSaving, editing, onSubmit, onBack }: Props) {
-  const { dockFormRef, touchedFields, submitError, placeInput, scheduleType, selectedPetId, walkTime, walkComment, placeIsValid, timeIsValid, touchField, changeScheduleType, selectPet, updatePlaceInput, chooseSharedPlace, changeWalkTime, changeWalkComment } = walkForm;
+  const { dockFormRef, touchedFields, submitError, placeInput, scheduleType, selectedPetId, walkTime, walkComment, placeIsValid, timeIsValid, changeScheduleType, selectPet, updatePlaceInput, chooseSharedPlace, changeWalkTime, changeWalkComment } = walkForm;
   const [picker, setPicker] = useState<"pet" | "place" | "time" | null>(null);
+  const [timeDraft, setTimeDraft] = useState("");
+  const [timePickerError, setTimePickerError] = useState("");
   const [query, setQuery] = useState("");
   const [customPlace, setCustomPlace] = useState("");
   const selectedPet = savedPets.find((pet) => pet.id === selectedPetId);
   const matchingPlaces = sharedPlaces.filter((place) => place.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru")));
+  const minimumTime = scheduleType === "today" ? getMinimumWalkTime() : "00:00";
+  const [draftHour = "00", draftMinute = "00"] = timeDraft.split(":");
+  const hourOptionsForPicker = hourOptions.map((option) => ({ ...option, disabled: scheduleType === "today" && option.value < minimumTime.slice(0, 2) }));
+  const minuteOptionsForPicker = minuteOptions.map((option) => ({ ...option, disabled: scheduleType === "today" && draftHour === minimumTime.slice(0, 2) && option.value < minimumTime.slice(3) }));
+  const minutePickerInfinite = scheduleType !== "today" || !minuteOptionsForPicker.some((option) => option.disabled);
+
+  function openTimePicker() {
+    setTimePickerError("");
+    setTimeDraft(walkTime && walkTime >= minimumTime ? walkTime : minimumTime);
+    setPicker("time");
+  }
+
+  function changeTimeDraft(part: "hour" | "minute", value: string) {
+    const nextHour = part === "hour" ? value : draftHour;
+    const nextMinute = part === "minute" ? value : draftMinute;
+    setTimePickerError("");
+    setTimeDraft(normalizePickerTime(nextHour, nextMinute, minimumTime));
+  }
+
+  function applyTimeDraft(event: MouseEvent<HTMLButtonElement>) {
+    const currentMinimumTime = scheduleType === "today" ? getMinimumWalkTime() : "00:00";
+    if (scheduleType === "today" && timeDraft < currentMinimumTime) {
+      setTimeDraft(currentMinimumTime);
+      setTimePickerError("Укажите время позже текущего.");
+      return;
+    }
+    changeWalkTime(timeDraft, inDock);
+    void requestDialogClose(event.currentTarget);
+  }
   return (
     <>
       {!inDock && onBack && <DogmeetHeader onBack={onBack} />}
@@ -54,7 +101,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         <div className="field"><span>Когда</span></div><div className="segmented schedule-buttons" role="group" aria-label="Когда">{[["today", "Сегодня"], ["tomorrow", "Завтра"], ["always", "Ежедневно"]].map(([value, label]) => <button key={value} type="button" aria-pressed={scheduleType === value} onClick={() => changeScheduleType(value as "today" | "tomorrow" | "always", inDock)}>{label}</button>)}</div>
 
         <div className="walk-settings">
-          <button type="button" className="menu-row" onClick={() => setPicker("time")}><Clock3 aria-hidden="true" /><span><strong>Время</strong><small>{walkTime || "Выберите время"}</small></span><ChevronRight aria-hidden="true" /></button>
+          <button type="button" className="menu-row" onClick={openTimePicker}><Clock3 aria-hidden="true" /><span><strong>Время</strong><small>{walkTime || "Выберите время"}</small></span><ChevronRight aria-hidden="true" /></button>
           <button type="button" className="menu-row" onClick={() => { setQuery(""); setCustomPlace(""); setPicker("place"); }}><MapPin aria-hidden="true" /><span><strong>Место встречи</strong><small>{placeInput || "Выберите место"}</small></span><ChevronRight aria-hidden="true" /></button>
         </div>
         {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
@@ -68,8 +115,19 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
       {picker === "pet" && <DogmeetDialog title="С кем гуляем" onDismiss={() => setPicker(null)} footer={<button type="button" className="button quiet" onClick={(event) => requestDialogClose(event.currentTarget, onAddPet)}><Plus />Добавить питомца</button>}>
         <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={(event) => { selectPet(pet.id, inDock); requestDialogClose(event.currentTarget); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{pet.id === selectedPetId ? <Check /> : <ChevronRight />}</button>)}</div>
       </DogmeetDialog>}
-      {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)} footer={<button type="button" className="button" disabled={!timeIsValid} onClick={(event) => requestDialogClose(event.currentTarget)}>Готово<Check /></button>}>
-        <div className="time-picker"><Clock3 /><span>Время прогулки</span><div className="time-input"><span className={walkTime ? "time-input-value" : "time-input-placeholder"} aria-hidden="true">{walkTime || "Выберите время"}</span><input type="time" name="walkTime" min={scheduleType === "today" ? getMinimumWalkTime() : undefined} step={300} aria-label="Время прогулки" value={walkTime} aria-invalid={Boolean(touchedFields["walk-time"] && !timeIsValid)} onChange={(event) => changeWalkTime(event.target.value, inDock)} onBlur={() => touchField("walk-time")} /></div></div>
+      {picker === "time" && <DogmeetDialog title={scheduleType === "always" ? "Встречаемся каждый день" : scheduleType === "tomorrow" ? "Встречаемся завтра" : "Встречаемся сегодня"} onDismiss={() => setPicker(null)} footer={<button type="button" className="button" onClick={applyTimeDraft}>Готово<Check /></button>}>
+        <div className="time-picker">
+          <Clock3 aria-hidden="true" />
+          <span>Время прогулки</span>
+          <div className="time-picker-group" role="group" aria-label="Время прогулки">
+            <WheelPickerWrapper className="time-picker-wheels">
+              <div className="time-wheel"><span className="visually-hidden">Часы</span><WheelPicker value={draftHour} options={hourOptionsForPicker} onValueChange={(value) => changeTimeDraft("hour", value)} infinite={scheduleType !== "today"} visibleCount={8} optionItemHeight={42} /></div>
+              <span className="time-picker-separator" aria-hidden="true">:</span>
+              <div className="time-wheel"><span className="visually-hidden">Минуты</span><WheelPicker value={draftMinute} options={minuteOptionsForPicker} onValueChange={(value) => changeTimeDraft("minute", value)} infinite={minutePickerInfinite} visibleCount={8} optionItemHeight={42} /></div>
+            </WheelPickerWrapper>
+            {timePickerError && <p className="field-error" role="alert">{timePickerError}</p>}
+          </div>
+        </div>
       </DogmeetDialog>}
       {picker === "place" && <DogmeetDialog className="sheet--place-picker" title="Место встречи" onDismiss={() => setPicker(null)} footer={<>
         {placesError && <button className="button" type="button" onClick={onRetryPlaces}>Повторить</button>}
