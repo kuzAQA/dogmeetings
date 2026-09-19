@@ -101,6 +101,7 @@ export const locationRequests = pgTable(
     city: varchar("city", { length: 80 }).notNull(),
     district: varchar("district", { length: 80 }).notNull(),
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
+    telegramNotified: boolean("telegram_notified").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [

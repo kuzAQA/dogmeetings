@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T17:36:37.738819+00:00",
+  "generated_at": "2026-09-18T19:29:13.518844+00:00",
   "nodes": {
     "app_api_pet_photo_route": {
       "code_fingerprint": "0133916ba9a85248c7a403a205edc4d63342b27d202add3eb0b918da34d1cd20",
@@ -12,16 +12,21 @@
           "q": "При клике на меню или плюс и возврате назад накладываются логотипы; все данные и фото должны загружаться при первом заходе."
         }
       ],
-      "score": 0.999666844,
+      "score": 0.931038596,
       "source_file": "app/api/pet-photo/route.ts",
       "status": "tentative",
       "uses": 1
     },
     "app_page_home": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "Home()",
-      "last": "2026-09-15T17:15:51.704901+00:00",
+      "last": "2026-09-15T17:43:43.404979+00:00",
       "provenance": [
+        {
+          "date": "2026-09-15T17:43:43.404979+00:00",
+          "outcome": "useful",
+          "q": "удали с экрана Рядом кнопку +; показывай её при переходе на Мои планы или Питомцы и возвращай в меню при возврате"
+        },
         {
           "date": "2026-09-15T17:15:51.704901+00:00",
           "outcome": "useful",
@@ -33,13 +38,13 @@
           "q": "Убрать краткий loader при открытии Питомцев и загрузку аватаров при быстром переходе Рядом → Мои планы"
         }
       ],
-      "score": 1.99896561,
+      "score": 2.793189286,
       "source_file": "app/page.tsx",
       "status": "preferred",
-      "uses": 2
+      "uses": 3
     },
     "app_page_home_opencollectionscreen": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "openCollectionScreen()",
       "last": "2026-09-15T16:52:54.579857+00:00",
       "provenance": [
@@ -54,13 +59,13 @@
           "q": "Исправить повторную анимацию нижнего меню и исключить шапку из перехода"
         }
       ],
-      "score": 1.996890747,
+      "score": 1.859801962,
       "source_file": "app/page.tsx",
       "status": "preferred",
       "uses": 2
     },
     "app_page_home_openformscreen": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "openFormScreen()",
       "last": "2026-09-15T17:15:51.704901+00:00",
       "provenance": [
@@ -70,13 +75,13 @@
           "q": "При клике на меню или плюс и возврате назад накладываются логотипы; все данные и фото должны загружаться при первом заходе."
         }
       ],
-      "score": 0.999666844,
+      "score": 0.931038596,
       "source_file": "app/page.tsx",
       "status": "tentative",
       "uses": 1
     },
     "app_page_home_openmenu": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "openMenu()",
       "last": "2026-09-15T17:15:51.704901+00:00",
       "provenance": [
@@ -86,42 +91,52 @@
           "q": "При клике на меню или плюс и возврате назад накладываются логотипы; все данные и фото должны загружаться при первом заходе."
         }
       ],
-      "score": 0.999666844,
+      "score": 0.931038596,
       "source_file": "app/page.tsx",
       "status": "tentative",
       "uses": 1
     },
     "app_page_home_renderbottomdock": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "renderBottomDock()",
-      "last": "2026-09-15T15:06:22.174744+00:00",
+      "last": "2026-09-15T17:43:43.404979+00:00",
       "provenance": [
+        {
+          "date": "2026-09-15T17:43:43.404979+00:00",
+          "outcome": "useful",
+          "q": "удали с экрана Рядом кнопку +; показывай её при переходе на Мои планы или Питомцы и возвращай в меню при возврате"
+        },
         {
           "date": "2026-09-15T15:06:22.174744+00:00",
           "outcome": "useful",
           "q": "Исправить повторную анимацию нижнего меню и исключить шапку из перехода"
         }
       ],
-      "score": 0.997591981,
+      "score": 1.860561077,
       "source_file": "app/page.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "app_page_home_selectdocksection": {
-      "code_fingerprint": "9db1680f95e462ca88bcbe3925d4c67f567505bcc92f1a73fe1fbc5c09036f14",
+      "code_fingerprint": "1758c6dbd6f36c3244128b6c48eb8bc0d08e5e471fd4a0831db65d25810ad1f4",
       "label": "selectDockSection()",
-      "last": "2026-09-15T15:06:22.174744+00:00",
+      "last": "2026-09-15T17:43:43.404979+00:00",
       "provenance": [
+        {
+          "date": "2026-09-15T17:43:43.404979+00:00",
+          "outcome": "useful",
+          "q": "удали с экрана Рядом кнопку +; показывай её при переходе на Мои планы или Питомцы и возвращай в меню при возврате"
+        },
         {
           "date": "2026-09-15T15:06:22.174744+00:00",
           "outcome": "useful",
           "q": "Исправить повторную анимацию нижнего меню и исключить шапку из перехода"
         }
       ],
-      "score": 0.997591981,
+      "score": 1.860561077,
       "source_file": "app/page.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     }
   },
   "version": 1

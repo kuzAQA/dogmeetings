@@ -1,0 +1,24 @@
+- main [ref=e4]:
+  - region "Сервис совместных прогулок" [ref=e60]:
+    - navigation "Основная навигация" [ref=e119]:
+      - generic [ref=e120]:
+        - button "Рядом" [ref=e121] [cursor=pointer]
+        - button "Мои планы" [ref=e127] [cursor=pointer]
+        - button "Питомцы" [ref=e132] [cursor=pointer]
+      - button [disabled] [aria-hidden]
+    - generic [ref=e140]:
+      - generic [ref=e141]:
+        - generic [ref=e142]: dogmeet
+        - button "Дзен-кварталы" [ref=e148] [cursor=pointer]
+        - button "Мой район и настройки" [ref=e153] [cursor=pointer]
+      - generic [ref=e158]:
+        - heading [active] [level=1] [ref=e159]:
+          - text: Кто сегодня
+          - emphasis [ref=e160]: на прогулку?
+        - generic [ref=e161]:
+          - strong [ref=e162]: "18"
+          - text: сентябряпятница
+      - generic [ref=e164]:
+        - heading "Здесь пока тихо" [level=2] [ref=e170]
+        - paragraph [ref=e171]: Сообщите, когда пойдёте гулять. Компания начинается с вас.
+        - button "Сообщить о прогулке" [ref=e172] [cursor=pointer]

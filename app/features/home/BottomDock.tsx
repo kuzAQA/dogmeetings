@@ -25,16 +25,12 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
   useEffect(() => {
     const dock = dockRef.current;
     const drop = dock?.querySelector<HTMLElement>(".dock-drop-shape");
-    const plus = dock?.querySelector<HTMLElement>(".dock-add");
-    if (!dock || !drop || !plus) return;
+    if (!dock || !drop) return;
 
     let raf = 0;
     const clearInlineMotion = () => {
       cancelAnimationFrame(raf);
       drop.style.transform = "";
-      plus.style.transform = "";
-      plus.style.opacity = "";
-      plus.style.borderColor = "";
     };
 
     if (actionHidden || matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -51,7 +47,6 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
     const setX = (x: number) => {
       const transform = `translateX(${x}px)`;
       drop.style.transform = transform;
-      plus.style.transform = transform;
     };
 
     const ease = (t: number) => {
@@ -61,22 +56,15 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
     };
 
     setX(start);
-    plus.style.opacity = "0";
-    plus.style.borderColor = "transparent";
     const startTime = performance.now();
     const frame = (now: number) => {
       const raw = Math.min(1, (now - startTime) / duration);
       setX(start + (end - start) * ease(raw));
-      const reveal = Math.max(0, Math.min(1, (raw - 0.42) / 0.35));
-      plus.style.opacity = String(reveal);
-      plus.style.borderColor = `rgba(239, 217, 198, ${reveal})`;
       if (raw < 1) {
         raf = requestAnimationFrame(frame);
         return;
       }
       setX(end);
-      plus.style.opacity = "1";
-      plus.style.borderColor = "rgba(239,217,198,1)";
       clearInlineMotion();
     };
 

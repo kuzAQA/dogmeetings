@@ -1,0 +1,37 @@
+- main [ref=e4]:
+  - region "Сервис совместных прогулок" [ref=e60]:
+    - generic [ref=e173]:
+      - generic [ref=e174]:
+        - button "Назад" [ref=e175] [cursor=pointer]
+        - generic [ref=e178]: dogmeet
+      - heading "Сообщить о прогулке" [active] [level=1] [ref=e184]
+      - paragraph [ref=e185]: Расскажите соседям, где вас найти.
+      - generic [ref=e186]:
+        - button "Питомец" [ref=e187] [cursor=pointer]:
+          - img "Фыв" [ref=e188]
+          - generic [ref=e189]:
+            - generic [ref=e190]: Иду гулять с
+            - strong [ref=e191]: Фыв
+        - generic [ref=e194]: Когда
+        - group "Когда" [ref=e196]:
+          - button "Сегодня" [pressed] [ref=e197] [cursor=pointer]
+          - button "Завтра" [ref=e198] [cursor=pointer]
+          - button "Ежедневно" [ref=e199] [cursor=pointer]
+        - generic [ref=e200]:
+          - button "Время Выберите время" [ref=e201] [cursor=pointer]:
+            - generic [ref=e205]:
+              - strong [ref=e206]: Время
+              - generic [ref=e207]: Выберите время
+          - button "Место встречи Выберите место" [ref=e210] [cursor=pointer]:
+            - generic [ref=e214]:
+              - strong [ref=e215]: Место встречи
+              - generic [ref=e216]: Выберите место
+        - generic [ref=e219]:
+          - generic [ref=e220]:
+            - text: Комментарий
+            - generic [ref=e221]: необязательно
+          - textbox "Комментарий необязательно 0/40" [ref=e222]:
+            - /placeholder: Например, возьмём мячик
+          - generic [ref=e223]: 0/40
+        - generic [ref=e224]: Прогулка появится в районе Дзен-кварталы.
+        - button "Сообщить о прогулке" [ref=e228] [cursor=pointer]

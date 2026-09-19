@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { locationRequests } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
@@ -58,13 +59,22 @@ export async function POST(request: Request) {
         createdAt: locationRequests.createdAt
       }));
 
-    await sendTelegramLocationRequestNotification({
+    const telegramNotified = await sendTelegramLocationRequestNotification({
       id: savedRequest.id,
-      clientId: session.clientId,
       city,
       district,
       residentialComplex
     });
+    if (telegramNotified) {
+      try {
+        await withDb((db) => db
+          .update(locationRequests)
+          .set({ telegramNotified: true })
+          .where(eq(locationRequests.id, savedRequest.id)));
+      } catch (error) {
+        console.error("[telegram] Уведомление отправлено, но не удалось отметить заявку в базе.", error);
+      }
+    }
 
     return privateJson({
       request: {

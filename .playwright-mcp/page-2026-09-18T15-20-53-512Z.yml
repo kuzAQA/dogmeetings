@@ -1,0 +1,25 @@
+- main [ref=e4]:
+  - region "Сервис совместных прогулок" [ref=e6]:
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - button "Назад" [ref=e29] [cursor=pointer]
+        - generic [ref=e32]: dogmeet
+      - heading "Мой район" [active] [level=1] [ref=e38]
+      - paragraph [ref=e39]: Компания начинаетсярядом с домом.
+      - generic [ref=e40]:
+        - strong [ref=e44]: Ваш жилой комплекс
+        - generic [ref=e45]: Выберите город · Район
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - generic [ref=e48]: Город
+          - combobox "Город" [ref=e49]:
+            - option "Москва"
+            - option "Омск"
+        - generic [ref=e50]:
+          - generic [ref=e51]: Район
+          - combobox "Район" [disabled] [ref=e52]
+        - generic [ref=e53]:
+          - generic [ref=e54]: Жилой комплекс
+          - combobox "Жилой комплекс" [disabled] [ref=e55]
+        - button "Продолжить" [disabled] [ref=e56]
+        - button "Предложить новую локацию" [ref=e59] [cursor=pointer]

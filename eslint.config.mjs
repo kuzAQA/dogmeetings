@@ -8,7 +8,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores([".next/**", "dist/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "**/dist/**", "out/**", "build/**", "next-env.d.ts"]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   react.configs.flat.recommended,

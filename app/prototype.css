@@ -430,7 +430,7 @@ main{min-height:calc(100dvh - 40px)}
 
 .bottom-nav .nav-tabs button svg{width:21px;height:21px}
 
-.bottom-nav button.dock-add{flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:2px solid #efd9c6;border-radius:50%;background:transparent;color:var(--ink);box-shadow:0 8px 28px #222a3926}
+.bottom-nav button.dock-add{flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:2px solid #efd9c6;border-radius:50%;background:transparent;color:#64666b;box-shadow:0 8px 28px #222a3926}
 
 .bottom-nav .dock-add svg{width:25px;height:25px}
 @media(min-width:361px) and (max-width:374px){.bottom-nav,.floating-nav .bottom-nav{--dock-size:61px}}
@@ -614,7 +614,7 @@ main{min-height:844px}
 
 .capture main{min-height:100dvh}
 
-.dock-add .action-icon{margin-left:0}
+.dock-add .action-icon{margin:0;place-items:center}
 
 .nearby-toolbar{view-transition-name:dogmeet-header}
 

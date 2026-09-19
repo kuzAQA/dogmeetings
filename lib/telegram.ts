@@ -1,42 +1,67 @@
 type LocationRequestNotification = {
   id: string;
-  clientId: string;
-  city: string;
-  district: string;
-  residentialComplex: string;
+  city?: string | null;
+  district?: string | null;
+  residentialComplex?: string | null;
 };
 
 function telegramConfiguration() {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim();
   if (!token || !chatId) return null;
   return { token, chatId };
+}
+
+function locationValue(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "—";
+}
+
+export function telegramLocationRequestMessage(location: LocationRequestNotification) {
+  return [
+    "🆕 Новая заявка на локацию",
+    "",
+    `🏙 <b>Город:</b> ${locationValue(location.city)}`,
+    `📍 <b>Район:</b> ${locationValue(location.district)}`,
+    `🏢 <b>Жилой комплекс:</b> ${locationValue(location.residentialComplex)}`,
+    "",
+    "🔗 Панель: <a href=\"https://dogmeet.ru/dogsfather\">https://dogmeet.ru/dogsfather</a>"
+  ].join("\n");
+}
+
+export async function telegramBotRequest(method: string, body: Record<string, unknown>, fetcher: typeof fetch = fetch) {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (!token) return false;
+
+  try {
+    const response = await fetcher(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5_000)
+    });
+    const payload = await response.json() as { ok?: boolean; description?: string };
+    if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
+    return true;
+  } catch (error) {
+    console.error(`[telegram] Не удалось вызвать ${method}.`, error);
+    return false;
+  }
 }
 
 export async function sendTelegramLocationRequestNotification(location: LocationRequestNotification, fetcher: typeof fetch = fetch) {
   const configuration = telegramConfiguration();
   if (!configuration) return false;
 
-  const text = [
-    "Новая заявка на локацию",
-    `Локация: ${location.residentialComplex}`,
-    `Адрес: ${location.city}, ${location.district}`,
-    `Автор: ${location.clientId}`,
-    `ID заявки: ${location.id}`,
-    "Панель: https://dogmeet.ru/dogsfather"
-  ].join("\n");
-
-  try {
-    const response = await fetcher(`https://api.telegram.org/bot${configuration.token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: configuration.chatId, text }),
-      signal: AbortSignal.timeout(5_000)
-    });
-    if (!response.ok) throw new Error(`Telegram API returned ${response.status}`);
-    return true;
-  } catch (error) {
-    console.error("[telegram] Не удалось отправить уведомление о новой заявке на локацию.", error);
-    return false;
-  }
+  return telegramBotRequest("sendMessage", {
+    chat_id: configuration.chatId,
+    text: telegramLocationRequestMessage(location),
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [[
+        { text: "✅ Одобрить", callback_data: `location-request:approve:${location.id}` },
+        { text: "❌ Отклонить", callback_data: `location-request:reject:${location.id}` }
+      ]]
+    }
+  }, fetcher);
 }
