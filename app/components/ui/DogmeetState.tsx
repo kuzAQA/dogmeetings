@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, CircleAlert, PawPrint, RefreshCw } from "lucide-react";
+import { CheckCircle2, CircleAlert, PawPrint } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 
 export function DogmeetState({ state, title, message, action, onAction, children, onBack }: {
@@ -18,7 +18,7 @@ export function DogmeetState({ state, title, message, action, onAction, children
     <p>{message ?? (state === "loading" ? "Подождите, это займёт несколько секунд." : state === "error" ? "Проверьте соединение и попробуйте ещё раз. Ваши изменения не потеряны." : state === "empty" ? "Сообщите, когда пойдёте гулять. Компания начинается с вас." : "Изменения сохранены.")}</p>
     {state === "loading" && <><div className="skeleton" /><div className="skeleton short" /></>}
     {state !== "empty" && children}
-    {onAction && <button className="button" type="button" onClick={onAction}>{state === "error" && <RefreshCw />}{action ?? (state === "error" ? "Повторить" : "Готово")}{state === "success" && <ArrowRight />}</button>}
+    {onAction && <button className="button" type="button" onClick={onAction}>{action ?? (state === "error" ? "Повторить" : "Готово")}</button>}
     {onBack && <button className="button quiet" type="button" onClick={onBack}>{state === "loading" ? "Вернуться" : "Назад"}</button>}
     {state === "empty" && children}
   </div>;

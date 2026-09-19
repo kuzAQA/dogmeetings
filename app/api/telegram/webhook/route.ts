@@ -1,4 +1,4 @@
-import { createAdminSessionCookie } from "../../../../lib/admin-auth";
+import { createAdminSessionCookie, revokeAdminSession } from "../../../../lib/admin-auth";
 import { telegramBotRequest } from "../../../../lib/telegram";
 import { DELETE, PATCH } from "../../dogsfather/location-requests/route";
 
@@ -52,8 +52,12 @@ async function applyAction(request: Request, id: string, action: Action) {
     },
     body: JSON.stringify({ id })
   });
-  const response = action === "approve" ? await PATCH(adminRequest) : await DELETE(adminRequest);
-  return response.ok ? "" : actionError(response);
+  try {
+    const response = action === "approve" ? await PATCH(adminRequest) : await DELETE(adminRequest);
+    return response.ok ? "" : actionError(response);
+  } finally {
+    await revokeAdminSession(adminRequest);
+  }
 }
 
 export async function POST(request: Request) {

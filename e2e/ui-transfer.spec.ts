@@ -304,6 +304,7 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await page.route("**/api/dogsfather/pets", (route) => route.fulfill({ json: { pets: [pet] } }));
   await page.goto("/dogsfather");
   await expect(page.getByRole("heading", { name: "Управление", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Заявки жителей", exact: false }).locator(".count")).toHaveText("1");
   await capture(page, info, "admin");
   await page.getByRole("button", { name: "Заявки жителей", exact: false }).click();
   await expect(page.getByRole("heading", { name: "Скандинавия", exact: true })).toBeVisible();
@@ -332,6 +333,58 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await expect(page.getByRole("button", { name: "Уведомления", exact: false })).toHaveCount(0);
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await capture(page, info, "admin-logout");
+});
+
+test("admin manages nested locations and confirms cascading deletion with a password proof", async ({ page }) => {
+  let rows = [
+    { city: "Москва", district: "Коммунарка", complex: "Скандинавия" },
+    { city: "Москва", district: "Коммунарка", complex: "Москвичка" }
+  ];
+  let renamePayload: Record<string, unknown> | undefined;
+  let deletePayload: Record<string, unknown> | undefined;
+  await page.route("**/api/dogsfather/session", (route) => route.fulfill({ json: { authenticated: true } }));
+  await page.route("**/api/dogsfather/location-requests", (route) => route.fulfill({ json: { requests: [] } }));
+  await page.route("**/api/dogsfather/challenge", (route) => route.fulfill({ json: { challenge: "a".repeat(43), salt: "c2FsdA", iterations: 1 } }));
+  await page.route("**/api/dogsfather/locations", async (route) => {
+    const method = route.request().method();
+    if (method === "GET") return route.fulfill({ json: { locations: rows } });
+    const payload = route.request().postDataJSON() as { level: "city" | "district" | "complex"; city: string; district: string; complex: string; name?: string; proof?: string };
+    if (method === "PATCH") {
+      renamePayload = payload;
+      rows = rows.map((row) => payload.level === "district" && row.city === payload.city && row.district === payload.district
+        ? { ...row, district: payload.name! }
+        : row);
+      return route.fulfill({ json: { updated: true } });
+    }
+    deletePayload = payload;
+    rows = rows.filter((row) => row.city !== payload.city);
+    return route.fulfill({ json: { deleted: true } });
+  });
+
+  await page.goto("/dogsfather");
+  await page.getByRole("button", { name: "Локации", exact: false }).click();
+  await expect(page.getByRole("heading", { name: "Города", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Открыть Москва" }).click();
+  await expect(page.getByRole("heading", { name: "Районы", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Редактировать Коммунарка" }).click();
+  await page.getByLabel("Новое название").fill("Новая Коммунарка");
+  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Изменения сохранены", exact: true })).toBeVisible();
+  expect(renamePayload).toMatchObject({ level: "district", city: "Москва", district: "Коммунарка", name: "Новая Коммунарка" });
+  await page.getByRole("button", { name: "Готово", exact: true }).click();
+  await page.getByRole("button", { name: "Открыть Новая Коммунарка" }).click();
+  await expect(page.getByRole("heading", { name: "Жилые комплексы", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Редактировать Скандинавия" })).toBeVisible();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("button", { name: "Удалить Москва" }).click();
+  await expect(page.getByText("Удалится 1 районов и 2 ЖК.")).toBeVisible();
+  await page.getByLabel("Пароль администратора").fill("secret");
+  await page.getByRole("button", { name: "Удалить город", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Локация удалена", exact: true })).toBeVisible();
+  expect(deletePayload).toMatchObject({ level: "city", city: "Москва" });
+  expect(JSON.stringify(deletePayload)).not.toContain("secret");
+  expect(deletePayload?.proof).toMatch(/^[A-Za-z0-9_-]{43}$/);
 });
 
 test("share invitation, already added, expired and accepted states", async ({ page }, info) => {

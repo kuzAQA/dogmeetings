@@ -303,6 +303,46 @@ test.describe("Android place picker", () => {
   });
 });
 
+test.describe("Android walk form", () => {
+  test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+
+  test("scrolls to the natural form end without keyboard padding", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 700 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+
+    const naturalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.evaluate(() => {
+      const nativeScrollTo = window.scrollTo.bind(window);
+      Object.defineProperty(window, "scrollTo", {
+        configurable: true,
+        value: (options: ScrollToOptions) => {
+          (window as Window & { scrollCalls?: ScrollToOptions[] }).scrollCalls ??= [];
+          (window as Window & { scrollCalls: ScrollToOptions[] }).scrollCalls.push(options);
+          nativeScrollTo(options);
+        }
+      });
+    });
+    await page.getByLabel("Комментарий", { exact: false }).tap();
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport!, "height", { configurable: true, value: 420 });
+      window.visualViewport!.dispatchEvent(new Event("resize"));
+    });
+
+    await expect.poll(() => page.evaluate(() => (window as Window & { scrollCalls?: ScrollToOptions[] }).scrollCalls?.at(-1))).toMatchObject({ top: naturalHeight, behavior: "smooth" });
+    await expect(page.locator(".announce-form")).not.toHaveAttribute("style");
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(naturalHeight);
+
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport!, "height", { configurable: true, value: innerHeight });
+      window.visualViewport!.dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator(".announce-form")).not.toHaveAttribute("style");
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(naturalHeight);
+  });
+});
+
 test("backdrop close does not refocus the place picker input", async ({ page }) => {
   await openNearby(page);
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();

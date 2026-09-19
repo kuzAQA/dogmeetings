@@ -7,6 +7,7 @@ import {
   clearAdminSessionCookie,
   createAdminSessionCookie,
   hasValidAdminSession,
+  revokeAdminSession,
   verifyAdminLoginProof
 } from "../../../../lib/admin-auth";
 import { isSameOriginRequest, privateJson } from "../../../../lib/session";
@@ -92,5 +93,11 @@ export async function DELETE(request: Request) {
   if (!isSameOriginRequest(request)) {
     return privateJson({ error: "Запрос отклонён." }, { status: 403 });
   }
-  return privateJson({ authenticated: false }, {}, clearAdminSessionCookie(request));
+  const clearSessionCookie = clearAdminSessionCookie(request);
+  try {
+    await revokeAdminSession(request);
+  } catch {
+    return privateJson({ error: "Не удалось завершить сессию." }, { status: 500 }, clearSessionCookie);
+  }
+  return privateJson({ authenticated: false }, {}, clearSessionCookie);
 }

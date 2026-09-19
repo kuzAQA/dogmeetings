@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Compass, EllipsisVertical, Share2 } from "lucide-react";
+import { Compass, EllipsisVertical, Share2 } from "lucide-react";
 import { DogmeetHeader } from "./DogmeetFrame";
 
 export type BrowserGuidePlatform = "ios" | "android";
@@ -30,7 +30,7 @@ export function BrowserGuide({ platform, onPlatformChange, onContinue, onBack }:
       <div className="instruction"><span>1</span><div><strong>{platform === "ios" ? "Нажмите значок компаса" : "Нажмите три точки"}</strong><p>{platform === "ios" ? "Внизу окна Telegram выберите открытие в Safari." : "В правом верхнем углу откройте меню."}</p></div></div>
       <div className="instruction"><span>2</span><div><strong>{platform === "ios" ? "Откройте в Safari" : "Выберите «Открыть в браузере»"}</strong><p>{platform === "ios" ? "Сайт продолжит работу в обычной вкладке." : "Продолжите в Chrome или другом браузере."}</p></div></div>
       <div className="note"><Share2 aria-hidden="true" />Если сайт уже открыт в Safari или Chrome, просто продолжите.</div>
-      <button className="button" type="button" onClick={onContinue}>Продолжить<ArrowRight aria-hidden="true" /></button>
+      <button className="button" type="button" onClick={onContinue}>Продолжить</button>
     </div>
   );
 }

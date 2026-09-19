@@ -1,8 +1,5 @@
 "use client";
 
-import {
-  ArrowRight,
-} from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "./components/ui/DogmeetState";
 import { ChangeEvent, FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -899,7 +896,7 @@ export default function Home() {
               <span className="photo-caption"><span>Знакомые места.</span><strong>Новые друзья.</strong></span>
             </div>
             <p>Узнайте, кто гуляет рядом, и расскажите соседям о своих планах.</p>
-            <button className="button" type="button" onClick={openBrowserGuide}>Найти компанию<ArrowRight aria-hidden="true" /></button>
+            <button className="button" type="button" onClick={openBrowserGuide}>Найти компанию</button>
             <small className="center-note">Без регистрации. Начнём с вашего района.</small>
           </div>
         )}

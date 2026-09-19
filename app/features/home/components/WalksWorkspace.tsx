@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, ExternalLink, MapPin, MessageCircle, PawPrint, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, PawPrint, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { type FormEvent, type RefObject, useMemo, useState } from "react";
@@ -70,7 +70,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
   const hasTodayWalks = savedWalks.length > 0;
   const showWalkControls = !walksLoaded || Boolean(walksError) || hasTodayWalks;
 
-  if (contactOpen) return <div className="screen contact-screen"><DogmeetHeader onBack={onBack} /><h1>Связь с разработчиком</h1>{contactCopied ? <DogmeetState state="success" title="Контакт скопирован" message="Ссылка на Telegram разработчика готова к вставке." onAction={onBack} /> : <><h2>Есть идея<br />или вопрос?</h2><p>Разработчик Dogmeet — в Telegram. Напишите, что можно сделать удобнее.</p><div className="receipt"><strong>@kuznetsoviv</strong><span>t.me/kuznetsoviv</span></div><button className="button" type="button" onClick={async () => { try { await navigator.clipboard.writeText("https://t.me/kuznetsoviv"); setContactCopied(true); } catch { setCopyError("Не удалось скопировать. Выделите контакт и скопируйте вручную."); } }}><Copy />Скопировать контакт</button>{copyError && <p className="field-error" role="alert">{copyError}</p>}</>}</div>;
+  if (contactOpen) return <div className="screen contact-screen"><DogmeetHeader onBack={onBack} /><h1>Связь с разработчиком</h1>{contactCopied ? <DogmeetState state="success" title="Контакт скопирован" message="Ссылка на Telegram разработчика готова к вставке." onAction={onBack} /> : <><h2>Есть идея<br />или вопрос?</h2><p>Разработчик Dogmeet — в Telegram. Напишите, что можно сделать удобнее.</p><div className="receipt"><strong>@kuznetsoviv</strong><span>t.me/kuznetsoviv</span></div><button className="button" type="button" onClick={async () => { try { await navigator.clipboard.writeText("https://t.me/kuznetsoviv"); setContactCopied(true); } catch { setCopyError("Не удалось скопировать. Выделите контакт и скопируйте вручную."); } }}>Скопировать контакт</button>{copyError && <p className="field-error" role="alert">{copyError}</p>}</>}</div>;
 
   if (active === "walk") {
     return (
@@ -90,7 +90,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <MapPin aria-hidden="true" />
           <h2>{location.complex}</h2>
           <p>{location.city} · {location.district}</p>
-          <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию<ChevronRight aria-hidden="true" /></button>
+          <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
         <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>
@@ -112,7 +112,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
         <div className="place-detail"><MapPin /><div><h3>{selectedWalk.point}</h3><p>{location.complex}<br />{location.city}, {location.district}</p></div></div>
         <blockquote>«{selectedWalk.comment || "Приходите гулять вместе"}»</blockquote>
         <div className="note">Узнаете друг друга по питомцу. Встречайтесь в указанном месте.</div>
-        <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}<ArrowRight /></button>
+        <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}</button>
       </div>
     );
   }

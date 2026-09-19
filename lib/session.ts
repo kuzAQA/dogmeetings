@@ -1,6 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { withDb } from "../db";
 import { clientSessions } from "../db/schema";
+import { PUBLIC_ORIGIN } from "../server/infrastructure/public-origin";
 
 export const SESSION_COOKIE_NAME = "dogmeet_session";
 export const SESSION_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
@@ -227,12 +228,13 @@ export function isSameOriginRequest(request: Request) {
   if (fetchSite === "cross-site") return false;
 
   const origin = request.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return false;
 
   try {
-    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-    const host = forwardedHost || request.headers.get("host") || new URL(request.url).host;
-    return new URL(origin).host === host;
+    const expectedOrigin = process.env.NODE_ENV === "production"
+      ? PUBLIC_ORIGIN
+      : new URL(request.url).origin;
+    return new URL(origin).origin === expectedOrigin;
   } catch {
     return false;
   }

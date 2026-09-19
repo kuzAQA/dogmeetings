@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight, Check, ChevronDown, ChevronRight, Clock3, MapPin, Search } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clock3, MapPin, Search } from "lucide-react";
 import Image from "next/image";
-import { type FormEvent, type MouseEvent, type PointerEvent, useState } from "react";
+import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useState } from "react";
 import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
 import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
@@ -86,6 +86,22 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
     if (document.activeElement !== event.currentTarget) event.currentTarget.focus({ preventScroll: true });
   }
 
+  function scrollWalkFormAfterKeyboard(event: FocusEvent<HTMLTextAreaElement>) {
+    const viewport = window.visualViewport;
+    if (editing || !viewport || !window.matchMedia("(max-width: 899px)").matches) return;
+    const controller = new AbortController();
+    const viewportHeight = viewport.height;
+    const scrollToFormEnd = () => {
+      if (viewport.height >= viewportHeight) return;
+      requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
+    };
+    event.currentTarget.addEventListener("blur", () => {
+      controller.abort();
+    }, { once: true });
+    viewport.addEventListener("resize", scrollToFormEnd, { signal: controller.signal });
+    requestAnimationFrame(scrollToFormEnd);
+  }
+
   function applyPlace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (selectedPlace) chooseSharedPlace(selectedPlace, inDock);
@@ -120,10 +136,10 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
         {touchedFields["walk-place"] && !placeIsValid && <p className="field-error">Укажите место прогулки</p>}
 
-        <label className="field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
+        <label className="field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onFocus={scrollWalkFormAfterKeyboard} onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
         <div className="note"><MapPin aria-hidden="true" />Прогулка появится в районе {locationName}.</div>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
-        <button className="button" type="submit" disabled={walkSaving}>{walkSaving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Сообщить о прогулке"}<ArrowRight aria-hidden="true" /></button>
+        <button className="button" type="submit" disabled={walkSaving}>{walkSaving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Сообщить о прогулке"}</button>
       </form>
       <DogmeetDialog open={picker === "pet"} title="С кем гуляем" onDismiss={() => setPicker(null)} onDismissStart={() => setPicker(null)} footer={<button type="button" className="button quiet" onClick={(event) => requestDialogClose(event.currentTarget, onAddPet)}>Добавить питомца</button>}>
         <div className="pet-rows">{savedPets.map((pet) => <button type="button" className="pet-row" key={pet.id} onClick={(event) => { selectPet(pet.id, inDock); requestDialogClose(event.currentTarget); }}><Image className="pet-face" src={pet.photoUrl} alt={pet.name} width={55} height={55} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span></button>)}</div>

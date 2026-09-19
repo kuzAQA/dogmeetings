@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Check, ChevronRight, Pencil, Share2, Trash2 } from "lucide-react";
+import { Camera, ChevronRight, Pencil, Share2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
@@ -65,7 +65,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
       <form className="pet-form" hidden={saving || Boolean(submitError)} onSubmit={onSubmit} aria-busy={saving} noValidate>
         {photoOpen && <Image className="photo-preview" src={preview} alt="Предпросмотр фотографии" width={346} height={346} unoptimized />}
         <label className="upload" hidden={!photoOpen}><Camera /><strong>Выбрать файл</strong><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} /></label>
-        {photoOpen && <><p>JPG, PNG или WebP до 10 МБ. Выберите снимок, на котором хорошо видно питомца.</p>{photoError && <p className="field-error" role="alert">{photoError}</p>}<button className="button" type="button" disabled={Boolean(photoError)} onClick={() => setPhotoOpen(false)}>Использовать фото<Check /></button></>}
+        {photoOpen && <><p>JPG, PNG или WebP до 10 МБ. Выберите снимок, на котором хорошо видно питомца.</p>{photoError && <p className="field-error" role="alert">{photoError}</p>}<button className="button" type="button" disabled={Boolean(photoError)} onClick={() => setPhotoOpen(false)}>Использовать фото</button></>}
         <div hidden={photoOpen}>
         <button type="button" className="photo-editor" onClick={() => setPhotoOpen(true)}>
           <Image src={preview} alt="Фотография" width={86} height={86} unoptimized />
@@ -76,7 +76,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
         <label className="field"><span>Имя хозяина</span><input name="ownerName" value={ownerName} required maxLength={60} placeholder="Например, Анна" aria-invalid={Boolean(touchedFields["owner-name"] && !ownerNameValid)} onBlur={() => onTouch("owner-name")} onChange={(event) => onOwnerNameChange(event.target.value)} />{touchedFields["owner-name"] && !ownerNameValid && <small className="field-error">Введите имя хозяина</small>}</label>
         <label className="field"><span>Порода</span><input name="breed" value={breed} required maxLength={MAX_BREED_LENGTH} placeholder="Например, корги" aria-invalid={Boolean(touchedFields["pet-breed"] && !breedValid)} onBlur={() => onTouch("pet-breed")} onChange={(event) => onBreedChange(event.target.value)} />{touchedFields["pet-breed"] && !breedValid && <small className="field-error">Введите породу</small>}</label>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
-        <button className="button" type="submit" disabled={!formValid || Boolean(photoError) || saving}>{saving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Добавить питомца"}<Check aria-hidden="true" /></button>
+        <button className="button" type="submit" disabled={!formValid || Boolean(photoError) || saving}>{saving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Добавить питомца"}</button>
         </div>
       </form>
     </div>

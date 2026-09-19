@@ -18,15 +18,10 @@ export function base64UrlBytes(value: string) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-export async function createLoginProof(
-  username: string,
+export async function createPasswordProof(
   password: string,
   challenge: Required<Pick<LoginChallenge, "challenge" | "iterations" | "salt">>
-): Promise<LoginProof> {
-  const accountHash = new Uint8Array(await crypto.subtle.digest(
-    "SHA-256",
-    loginEncoder.encode(username.normalize("NFKC").trim())
-  ));
+): Promise<string> {
   const passwordKey = await crypto.subtle.importKey(
     "raw",
     loginEncoder.encode(password),
@@ -58,5 +53,18 @@ export async function createLoginProof(
   ));
 
   verifier.fill(0);
-  return { accountHash: base64Url(accountHash), proof: base64Url(proof) };
+  return base64Url(proof);
+}
+
+export async function createLoginProof(
+  username: string,
+  password: string,
+  challenge: Required<Pick<LoginChallenge, "challenge" | "iterations" | "salt">>
+): Promise<LoginProof> {
+  const accountHash = new Uint8Array(await crypto.subtle.digest(
+    "SHA-256",
+    loginEncoder.encode(username.normalize("NFKC").trim())
+  ));
+  const proof = await createPasswordProof(password, challenge);
+  return { accountHash: base64Url(accountHash), proof };
 }

@@ -49,9 +49,6 @@ main.with-nav{padding-bottom:138px}
 @media(hover:hover) and (pointer:fine){.button.quiet:hover{background:#eae7df}
 }
 .button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.button.light{background:var(--white);color:var(--navy)}
-.button.danger{background:var(--error)}
-.danger-text{color:var(--error)!important}
 .lead{font-size:22px;line-height:1.4;color:var(--ink);letter-spacing:-.02em}
 .brand{display:flex;align-items:center;gap:9px;font-size:25px;letter-spacing:-.04em;font-weight:800}
 .brand svg{color:var(--orange);width:28px;height:28px}
@@ -66,6 +63,8 @@ main.with-nav{padding-bottom:138px}
 .center-note{display:block;text-align:center;color:var(--muted);margin:14px 0}
 .location-screen .center-note{margin-bottom:8px}
 .location-screen .center-note + .button{margin-top:8px}
+.location-request-divider{border:0;border-top:1px solid var(--line);margin:var(--space-6) 32px var(--space-3)}
+.location-request-divider + .button{margin-top:0}
 .location-switch{display:flex;align-items:center;gap:8px;font-weight:700;min-height:44px;border:0;background:transparent;padding:12px 0;margin:15px 0 18px;font-size:13px}
 .location-switch svg:first-child{color:var(--orange);width:18px}
 .location-switch svg:last-child{width:16px}
@@ -388,7 +387,6 @@ main{min-height:calc(100dvh - 40px)}
 .sheet--pet-required p{margin:0 0 var(--space-6)}
 .sheet--pet-required .button{margin-top:0}
 .sheet--pet-required .button.quiet{margin-top:var(--space-3)}
-
 .floating-nav .bottom-nav button{min-height:56px;border-radius:28px;gap:3px}
 
 .floating-nav .bottom-nav button[aria-current]{background:var(--orange-pale)}

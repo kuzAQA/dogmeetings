@@ -32,3 +32,15 @@ export type PendingRequestAction = {
   request: LocationRequest;
   type: "approve" | "reject";
 };
+
+export type AdminLocation = {
+  city: string;
+  district: string;
+  complex: string;
+};
+
+export type AdminLocationLevel = "city" | "district" | "complex";
+
+export type AdminLocationTarget = AdminLocation & {
+  level: AdminLocationLevel;
+};

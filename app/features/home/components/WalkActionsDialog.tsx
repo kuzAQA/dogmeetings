@@ -1,6 +1,5 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
 import { DogmeetDialog, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import type { ApiWalk, Walk } from "../../../../lib/walks";
 
@@ -29,3 +28,4 @@ export function WalkActionsDialog({ walk, owned, onClose, onEdit, onDelete }: Pr
     </DogmeetDialog>
   );
 }
+import { Pencil, Trash2 } from "lucide-react";

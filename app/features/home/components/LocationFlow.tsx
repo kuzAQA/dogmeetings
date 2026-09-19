@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Clock3, MapPin } from "lucide-react";
+import { Clock3, MapPin } from "lucide-react";
 import type { FormEvent } from "react";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
@@ -46,8 +46,9 @@ export function LocationEditor({ location, cityOptions, districtOptions, complex
         <SelectField label="Жилой комплекс" id="location-complex" value={location.complex} options={complexOptions} loaded={locationsLoaded} touched={Boolean(touchedFields["location-complex"])} onTouch={() => onTouch("location-complex")} onChange={onComplexChange} />
         {(locationsError || submitError) && <p className="field-error" role="alert">{locationsError || submitError}</p>}
         {!locationsLoaded && <div className="resource-loading" role="status" aria-label="Загружаем локации"><span /><span /><span /></div>}
-        <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Продолжить"}<ArrowRight aria-hidden="true" /></button>
-        <button className="button secondary" type="button" onClick={onRequestLocation}>Предложить новую локацию</button>
+        <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Сохраняем…" : hasLocation ? "Сохранить" : "Продолжить"}</button>
+        <hr className="location-request-divider" />
+        <button className="button quiet" type="button" onClick={onRequestLocation}>Предложить новую локацию</button>
       </form>
     </div>
   );
@@ -80,7 +81,7 @@ export function LocationRequestForm({ location, touchedFields, cityValid, distri
         {fields.map(([field, label, isValid, touchKey]) => <label className="field" key={field}><span>{label}</span><input value={location[field]} required maxLength={field === "complex" ? 120 : 80} placeholder={field === "complex" ? "Например, Скандинавия" : field === "district" ? "Например, Коммунарка" : "Например, Москва"} aria-invalid={Boolean(touchedFields[touchKey] && !isValid)} onBlur={() => onTouch(touchKey)} onChange={(event) => onChange(field, event.target.value)} />{touchedFields[touchKey] && !isValid && <small className="field-error">Заполните это поле</small>}</label>)}
         <div className="note"><Clock3 aria-hidden="true" />Пока заявка на рассмотрении, можно выбрать соседний район.</div>
         {error && <p className="field-error" role="alert">{error}</p>}
-        <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Отправляем…" : "Отправить заявку"}<ArrowRight aria-hidden="true" /></button>
+        <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Отправляем…" : "Отправить заявку"}</button>
       </form>
     </div>
   );

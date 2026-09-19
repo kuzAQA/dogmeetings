@@ -1,3 +1,7 @@
+import { and, eq, gt, lte } from "drizzle-orm";
+import { withDb } from "../db";
+import { adminSessions } from "../db/schema";
+
 const encoder = new TextEncoder();
 
 const ADMIN_SESSION_LIFETIME_SECONDS = 8 * 60 * 60;
@@ -177,11 +181,19 @@ export async function verifyAdminLoginProof(request: Request, accountHash: strin
   return accountMatches && timingSafeEqual(expectedProof, fromBase64Url(proof));
 }
 
+export async function verifyAdminPasswordProof(request: Request, proof: string) {
+  return verifyAdminLoginProof(request, passwordVerifier().usernameHash, proof);
+}
+
 export async function createAdminSessionCookie(request: Request) {
   const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_SESSION_LIFETIME_SECONDS;
   const nonce = toBase64Url(crypto.getRandomValues(new Uint8Array(18)));
   const payload = `v1.${expiresAt}.${nonce}`;
   const signature = toBase64Url(await hmac(payload));
+  await withDb((db) => db.transaction(async (tx) => {
+    await tx.delete(adminSessions).where(lte(adminSessions.expiresAt, new Date()));
+    await tx.insert(adminSessions).values({ nonce, expiresAt: new Date(expiresAt * 1000) });
+  }));
   const parts = [
     `${cookieName(request)}=${payload}.${signature}`,
     "Path=/",
@@ -204,7 +216,7 @@ export function clearAdminSessionCookie(request: Request) {
   return parts.join("; ");
 }
 
-export async function hasValidAdminSession(request: Request) {
+async function validAdminSession(request: Request) {
   const value = readCookie(request, cookieName(request));
   const [version, expiresAtText, nonce, signatureText, ...extra] = value.split(".");
   if (
@@ -214,13 +226,30 @@ export async function hasValidAdminSession(request: Request) {
     || !/^[A-Za-z0-9_-]{24}$/.test(nonce ?? "")
     || !/^[A-Za-z0-9_-]{43}$/.test(signatureText ?? "")
   ) {
-    return false;
+    return null;
   }
   const expiresAt = Number(expiresAtText);
-  if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return false;
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return null;
 
   const payload = `${version}.${expiresAtText}.${nonce}`;
-  return timingSafeEqual(await hmac(payload), fromBase64Url(signatureText));
+  return timingSafeEqual(await hmac(payload), fromBase64Url(signatureText)) ? { nonce: nonce! } : null;
+}
+
+export async function hasValidAdminSession(request: Request) {
+  const session = await validAdminSession(request);
+  if (!session) return false;
+  const [active] = await withDb((db) => db
+    .select({ nonce: adminSessions.nonce })
+    .from(adminSessions)
+    .where(and(eq(adminSessions.nonce, session.nonce), gt(adminSessions.expiresAt, new Date())))
+    .limit(1));
+  return Boolean(active);
+}
+
+export async function revokeAdminSession(request: Request) {
+  const session = await validAdminSession(request);
+  if (!session) return;
+  await withDb((db) => db.delete(adminSessions).where(eq(adminSessions.nonce, session.nonce)));
 }
 
 export async function adminRateLimitKey(request: Request) {
