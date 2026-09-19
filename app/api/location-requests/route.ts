@@ -1,8 +1,8 @@
 import { withDb } from "../../../db";
 import { locationRequests } from "../../../db/schema";
-import { sendAdminLocationRequestNotification } from "../../../lib/admin-push";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
+import { sendTelegramLocationRequestNotification } from "../../../lib/telegram";
 import { readJsonRecord } from "../../../server/transport/request-json";
 
 const containsLetter = /\p{L}/u;
@@ -58,7 +58,13 @@ export async function POST(request: Request) {
         createdAt: locationRequests.createdAt
       }));
 
-    await sendAdminLocationRequestNotification().catch(() => undefined);
+    await sendTelegramLocationRequestNotification({
+      id: savedRequest.id,
+      clientId: session.clientId,
+      city,
+      district,
+      residentialComplex
+    });
 
     return privateJson({
       request: {

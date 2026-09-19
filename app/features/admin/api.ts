@@ -47,33 +47,6 @@ export async function logoutAdmin() {
   });
 }
 
-export async function getPushPublicKey() {
-  const data = await requestJson<{ publicKey?: string }>("/api/dogsfather/push-subscriptions", {
-    cache: "no-store",
-    credentials: "same-origin"
-  });
-  if (!data.publicKey) throw new Error("Уведомления ещё не настроены на сервере.");
-  return data.publicKey;
-}
-
-export async function savePushSubscription(subscription: PushSubscription) {
-  await requestJson<{ subscribed?: boolean }>("/api/dogsfather/push-subscriptions", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(subscription.toJSON())
-  });
-}
-
-export async function deletePushSubscription(endpoint: string) {
-  await requestJson<{ subscribed?: boolean }>("/api/dogsfather/push-subscriptions", {
-    method: "DELETE",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint })
-  });
-}
-
 export async function approveLocationRequest(id: string) {
   await requestJson("/api/dogsfather/location-requests", {
     method: "PATCH",

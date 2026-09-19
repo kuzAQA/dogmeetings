@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Bell,
   Camera,
   Check,
   ChevronRight,
@@ -22,31 +21,27 @@ import { ApiRequestError } from "../features/api/client";
 import {
   approveLocationRequest,
   deleteAdminPet,
-  deletePushSubscription,
   getAdminSession,
   getLoginChallenge,
-  getPushPublicKey,
   loadAdminPets,
   loadLocationRequests,
   logoutAdmin,
   rejectLocationRequest,
   saveAdminPet as saveAdminPetRequest,
-  savePushSubscription as savePushSubscriptionRequest,
   submitLogin
 } from "../features/admin/api";
 import {
   type AdminPet,
   type LocationRequest,
-  type PendingRequestAction,
-  type NotificationStatus
+  type PendingRequestAction
 } from "../features/admin/model";
-import { base64UrlBytes, createLoginProof } from "../features/admin/login-proof";
+import { createLoginProof } from "../features/admin/login-proof";
 import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../features/shared/validation";
 import { compressPetPhoto } from "../../lib/pet-photo";
 import { DogmeetState } from "../components/ui/DogmeetState";
 import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 
-type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "notifications";
+type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet";
 
 function formatRequestDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -76,8 +71,6 @@ export default function AdminPage() {
   const [petPhoto, setPetPhoto] = useState<File | null>(null);
   const [petPhotoPreview, setPetPhotoPreview] = useState("");
   const [petPhotoObjectUrl, setPetPhotoObjectUrl] = useState("");
-  const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>("checking");
-  const [notificationHint, setNotificationHint] = useState("");
   const [signOutPending, setSignOutPending] = useState(false);
   const [query, setQuery] = useState("");
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -137,41 +130,6 @@ export default function AdminPage() {
     return () => { active = false; };
   }, []);
 
-  const savePushSubscription = useCallback(async (subscription: PushSubscription) => {
-    await savePushSubscriptionRequest(subscription);
-  }, []);
-
-  useEffect(() => {
-    if (phase === "checking" || phase === "login") return;
-    let active = true;
-    async function syncNotificationSubscription() {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-        setNotificationStatus("unsupported");
-        return;
-      }
-      if (Notification.permission === "denied") {
-        setNotificationStatus("denied");
-        return;
-      }
-      try {
-        await navigator.serviceWorker.register("/admin-push-sw.js", { scope: "/" });
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-        if (!active) return;
-        if (!subscription) {
-          setNotificationStatus("off");
-          return;
-        }
-        await savePushSubscription(subscription);
-        if (active) setNotificationStatus("on");
-      } catch {
-        if (active) setNotificationStatus("off");
-      }
-    }
-    void syncNotificationSubscription();
-    return () => { active = false; };
-  }, [phase, savePushSubscription]);
-
   useEffect(() => () => {
     if (petPhotoObjectUrl) URL.revokeObjectURL(petPhotoObjectUrl);
   }, [petPhotoObjectUrl]);
@@ -209,7 +167,6 @@ export default function AdminPage() {
 
   async function signOut(event: MouseEvent<HTMLButtonElement>) {
     const dialogTrigger = event.currentTarget;
-    await disableNotifications().catch(() => undefined);
     await logoutAdmin();
     setRequests([]);
     setPets([]);
@@ -220,56 +177,6 @@ export default function AdminPage() {
       setPhase("login");
       setResult({ title: "Вы вышли", message: "Сессия администратора завершена.", heading: "Выход" });
     }, true);
-  }
-
-  async function disableNotifications() {
-    if (!("serviceWorker" in navigator)) return;
-    const registration = await navigator.serviceWorker.getRegistration("/");
-    const subscription = await registration?.pushManager.getSubscription();
-    if (!subscription) {
-      setNotificationStatus("off");
-      return;
-    }
-    await deletePushSubscription(subscription.endpoint);
-    await subscription.unsubscribe();
-    setNotificationStatus("off");
-  }
-
-  async function toggleNotifications() {
-    if (notificationStatus === "busy" || notificationStatus === "checking") return;
-    setNotificationHint("");
-    setNotificationStatus("busy");
-    try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-        setNotificationStatus("unsupported");
-        setNotificationHint("Этот браузер не поддерживает push-уведомления.");
-        return;
-      }
-      if (notificationStatus === "on") {
-        await disableNotifications();
-        return;
-      }
-      const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-      if (permission !== "granted") {
-        setNotificationStatus(permission === "denied" ? "denied" : "off");
-        setNotificationHint("Разрешите уведомления в настройках браузера. На iPhone сайт должен быть добавлен на экран «Домой».");
-        return;
-      }
-      const publicKey = await getPushPublicKey();
-      await navigator.serviceWorker.register("/admin-push-sw.js", { scope: "/" });
-      const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
-      const subscription = existing ?? await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlBytes(publicKey)
-      });
-      await savePushSubscription(subscription);
-      setNotificationStatus("on");
-      setNotificationHint("Уведомления о новых заявках включены.");
-    } catch (notificationError) {
-      setNotificationStatus("off");
-      setNotificationHint(notificationError instanceof Error ? notificationError.message : "Не удалось включить уведомления.");
-    }
   }
 
   function openRequests() {
@@ -449,16 +356,9 @@ export default function AdminPage() {
       <nav aria-label="Разделы панели администратора">
         <button className="menu-row" type="button" onClick={openRequests}><MapPin /><span><strong>Заявки жителей</strong><small>Добавление новых локаций</small></span><span className="count">{requests.length}</span></button>
         <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawPrint /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
-        <button className="menu-row" type="button" onClick={() => setPhase("notifications")}><Bell /><span><strong>Уведомления</strong><small>{notificationStatus === "on" ? "Включены" : "Отключены"}</small></span><ChevronRight /></button>
         <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
         <button className="menu-row" type="button" onClick={() => setSignOutPending(true)}><LogOut /><span><strong>Выйти</strong></span><ChevronRight /></button>
       </nav>
-    </>}
-    {phase === "notifications" && <>
-      {sectionHeading("Уведомления", "")}<Bell className="state-icon" /><h2>Не пропускайте<br />новые заявки</h2><p>Получайте уведомление, когда житель предлагает добавить новую локацию.</p>
-      {notificationStatus === "denied" || notificationStatus === "unsupported" ? <div className="note">{notificationStatus === "denied" ? "Браузер запретил уведомления. Разрешите их в настройках сайта, затем повторите." : "Этот браузер не поддерживает уведомления. Проверяйте заявки в панели управления."}</div> : <button className="toggle-row" type="button" role="switch" aria-checked={notificationStatus === "on"} disabled={notificationStatus === "busy" || notificationStatus === "checking"} onClick={toggleNotifications}><span><strong>Новые заявки</strong><small>{notificationStatus === "on" ? "Уведомления включены" : "Уведомления отключены"}</small></span><i className={notificationStatus === "on" ? "on" : ""} /></button>}
-      <button className="button" type="button" disabled={notificationStatus === "busy" || notificationStatus === "checking"} onClick={toggleNotifications}>{notificationStatus === "denied" || notificationStatus === "unsupported" ? "Проверить ещё раз" : notificationStatus === "on" ? "Отключить уведомления" : "Включить уведомления"}</button>
-      {notificationHint && <p className="small-note" role="status">{notificationHint}</p>}
     </>}
     {phase === "requests" && <>
       {sectionHeading("Заявки жителей", "Жители предлагают новые места для совместных прогулок.")}

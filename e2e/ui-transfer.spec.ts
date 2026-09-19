@@ -329,9 +329,7 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await page.getByRole("button", { name: "Оставить" }).click();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await page.getByRole("button", { name: "Уведомления", exact: false }).click();
-  await capture(page, info, "notifications");
-  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Уведомления", exact: false })).toHaveCount(0);
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await capture(page, info, "admin-logout");
 });

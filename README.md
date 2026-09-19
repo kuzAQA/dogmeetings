@@ -137,6 +137,8 @@ cd /opt/dogmeet
 | Переменная | Назначение |
 | --- | --- |
 | `DATABASE_URL` | Строка подключения к PostgreSQL |
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота, заданный только в окружении |
+| `TELEGRAM_ADMIN_CHAT_ID` | Chat ID получателя уведомлений о заявках на локации |
 
 Файлы `.env*`, кроме безопасного примера `.env.example`, исключены из Git.
 

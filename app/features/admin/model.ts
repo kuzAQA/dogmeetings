@@ -32,5 +32,3 @@ export type PendingRequestAction = {
   request: LocationRequest;
   type: "approve" | "reject";
 };
-
-export type NotificationStatus = "checking" | "off" | "on" | "denied" | "unsupported" | "busy";
