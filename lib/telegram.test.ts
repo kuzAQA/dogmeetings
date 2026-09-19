@@ -50,6 +50,10 @@ test("location request uses Telegram instead of admin push", async () => {
   const webhookRoute = await readFile(new URL("../app/api/telegram/webhook/route.ts", import.meta.url), "utf8");
   assert.match(webhookRoute, /telegramBotRequest\("deleteMessage", \{[\s\S]*chat_id: chatId/);
   assert.doesNotMatch(webhookRoute, /editMessageText/);
+  const scheduler = await readFile(new URL("../scripts/cleanup-expired-walks.mjs", import.meta.url), "utf8");
+  assert.match(scheduler, /telegramBotRequest\(configuration\.token, "deleteWebhook"/);
+  assert.match(scheduler, /telegramBotRequest\(configuration\.token, "getUpdates"/);
+  assert.match(scheduler, /http:\/\/app:3000\/api\/telegram\/webhook/);
 });
 
 test("Telegram API rejection does not throw", async () => {

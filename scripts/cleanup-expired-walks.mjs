@@ -7,10 +7,14 @@ const MOSCOW_RUN_HOUR = 6;
 const MOSCOW_RUN_UTC_HOUR = 3;
 const RETRY_DELAY_MS = 5 * 60 * 1000;
 const NOTIFICATION_RETRY_DELAY_MS = 60 * 1000;
+const CALLBACK_POLL_RETRY_DELAY_MS = 1_000;
 const runOnce = process.argv.includes("--run-once");
 
 let timer;
 let notificationTimer;
+let callbackTimer;
+let telegramUpdateOffset = 0;
+let telegramCallbackPollingReady = false;
 
 function connectionString() {
   const value = process.env.DATABASE_URL?.trim();
@@ -84,6 +88,24 @@ function telegramConfiguration() {
   return token && chatId ? { token, chatId } : null;
 }
 
+function telegramCallbackConfiguration() {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  return token && secret ? { token, secret } : null;
+}
+
+async function telegramBotRequest(token, method, body, timeoutMs = 5_000) {
+  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
+  return payload.result;
+}
+
 function locationValue(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return trimmed ? trimmed.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "—";
@@ -121,24 +143,17 @@ async function retryLocationRequestNotifications() {
     `);
     for (const request of rows) {
       try {
-        const response = await fetch(`https://api.telegram.org/bot${configuration.token}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: configuration.chatId,
-            text: locationRequestMessage(request),
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[
-                { text: "✅ Одобрить", callback_data: `location-request:approve:${request.id}` },
-                { text: "❌ Отклонить", callback_data: `location-request:reject:${request.id}` }
-              ]]
-            }
-          }),
-          signal: AbortSignal.timeout(5_000)
+        await telegramBotRequest(configuration.token, "sendMessage", {
+          chat_id: configuration.chatId,
+          text: locationRequestMessage(request),
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [[
+              { text: "✅ Одобрить", callback_data: `location-request:approve:${request.id}` },
+              { text: "❌ Отклонить", callback_data: `location-request:reject:${request.id}` }
+            ]]
+          }
         });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
         await client.query("UPDATE location_requests SET telegram_notified = true WHERE id = $1", [request.id]);
         console.info(`[location-request-notifications] Заявка ${request.id} отправлена в Telegram.`);
       } catch (error) {
@@ -147,6 +162,39 @@ async function retryLocationRequestNotifications() {
     }
   } finally {
     await client.end();
+  }
+}
+
+async function pollTelegramCallbacks() {
+  const configuration = telegramCallbackConfiguration();
+  if (!configuration) return;
+
+  if (!telegramCallbackPollingReady) {
+    await telegramBotRequest(configuration.token, "deleteWebhook", { drop_pending_updates: false });
+    telegramCallbackPollingReady = true;
+  }
+
+  const updates = await telegramBotRequest(configuration.token, "getUpdates", {
+    offset: telegramUpdateOffset,
+    timeout: 50,
+    allowed_updates: ["callback_query"]
+  }, 55_000);
+  if (!Array.isArray(updates)) return;
+
+  for (const update of updates) {
+    const updateId = update?.update_id;
+    if (!Number.isSafeInteger(updateId)) continue;
+    const response = await fetch("http://app:3000/api/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-telegram-bot-api-secret-token": configuration.secret
+      },
+      body: JSON.stringify(update),
+      signal: AbortSignal.timeout(5_000)
+    });
+    if (!response.ok) throw new Error(`Callback handler returned ${response.status}`);
+    telegramUpdateOffset = updateId + 1;
   }
 }
 
@@ -178,9 +226,20 @@ async function runNotificationRetry() {
   }
 }
 
+async function runTelegramCallbackPolling() {
+  try {
+    await pollTelegramCallbacks();
+  } catch (error) {
+    console.error("[telegram-callbacks] Не удалось получить callback из Telegram.", error);
+  } finally {
+    callbackTimer = setTimeout(runTelegramCallbackPolling, CALLBACK_POLL_RETRY_DELAY_MS);
+  }
+}
+
 function shutdown(signal) {
   if (timer) clearTimeout(timer);
   if (notificationTimer) clearTimeout(notificationTimer);
+  if (callbackTimer) clearTimeout(callbackTimer);
   console.info(`[walk-cleanup] Получен ${signal}, планировщик остановлен.`);
   process.exit(0);
 }
@@ -199,4 +258,7 @@ if (runOnce) {
   scheduleNextRun();
 }
 
-if (!runOnce) void runNotificationRetry();
+if (!runOnce) {
+  void runNotificationRetry();
+  void runTelegramCallbackPolling();
+}
