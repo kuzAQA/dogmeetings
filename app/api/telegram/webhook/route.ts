@@ -1,20 +1,10 @@
-import { createAdminSessionCookie, revokeAdminSession } from "../../../../lib/admin-auth";
-import { telegramBotRequest } from "../../../../lib/telegram";
+import { isTelegramWebhookRequest, telegramBotRequest } from "../../../../lib/telegram";
 import { DELETE, PATCH } from "../../dogsfather/location-requests/route";
 
 type Action = "approve" | "reject";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
-}
-
-function sameSecret(value: string | null, secret: string) {
-  const candidate = value ?? "";
-  let difference = candidate.length ^ secret.length;
-  for (let index = 0; index < Math.max(candidate.length, secret.length); index += 1) {
-    difference |= (candidate.charCodeAt(index) || 0) ^ (secret.charCodeAt(index) || 0);
-  }
-  return difference === 0;
 }
 
 function callbackAction(data: unknown) {
@@ -42,27 +32,20 @@ async function actionError(response: Response) {
 
 async function applyAction(request: Request, id: string, action: Action) {
   const url = new URL("/api/dogsfather/location-requests", request.url);
-  const cookie = (await createAdminSessionCookie(request)).split(";", 1)[0];
   const adminRequest = new Request(url, {
     method: action === "approve" ? "PATCH" : "DELETE",
     headers: {
       "Content-Type": "application/json",
-      Cookie: cookie,
-      Origin: url.origin
+      "x-telegram-bot-api-secret-token": request.headers.get("x-telegram-bot-api-secret-token") ?? ""
     },
     body: JSON.stringify({ id })
   });
-  try {
-    const response = action === "approve" ? await PATCH(adminRequest) : await DELETE(adminRequest);
-    return response.ok ? "" : actionError(response);
-  } finally {
-    await revokeAdminSession(adminRequest);
-  }
+  const response = action === "approve" ? await PATCH(adminRequest) : await DELETE(adminRequest);
+  return response.ok ? "" : actionError(response);
 }
 
 export async function POST(request: Request) {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
-  if (!secret || !/^[A-Za-z0-9_-]{32,256}$/.test(secret) || !sameSecret(request.headers.get("x-telegram-bot-api-secret-token"), secret)) {
+  if (!isTelegramWebhookRequest(request)) {
     return Response.json({ ok: false }, { status: 401 });
   }
 

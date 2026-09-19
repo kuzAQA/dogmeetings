@@ -5,6 +5,18 @@ type LocationRequestNotification = {
   residentialComplex?: string | null;
 };
 
+export function isTelegramWebhookRequest(request: Request) {
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  if (!secret || !/^[A-Za-z0-9_-]{32,256}$/.test(secret)) return false;
+
+  const candidate = request.headers.get("x-telegram-bot-api-secret-token") ?? "";
+  let difference = candidate.length ^ secret.length;
+  for (let index = 0; index < Math.max(candidate.length, secret.length); index += 1) {
+    difference |= (candidate.charCodeAt(index) || 0) ^ (secret.charCodeAt(index) || 0);
+  }
+  return difference === 0;
+}
+
 function telegramConfiguration() {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim();

@@ -36,7 +36,7 @@ async function requestId(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const id = await requestId(request);
     if (!id) return privateJson({ error: "Некорректная заявка." }, { status: 400 });
 
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!await authorizeAdminRequest(request, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
+    if (!await authorizeAdminRequest(request, true, true)) return privateJson({ error: "Требуется вход." }, { status: 401 });
     const id = await requestId(request);
     if (!id) return privateJson({ error: "Некорректная заявка." }, { status: 400 });
     const removed = await withDb((db) => db
