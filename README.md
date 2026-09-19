@@ -140,6 +140,7 @@ cd /opt/dogmeet
 | `DATABASE_URL` | Строка подключения к PostgreSQL |
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота, заданный только в окружении |
 | `TELEGRAM_ADMIN_CHAT_ID` | Chat ID получателя уведомлений о заявках на локации |
+| `TELEGRAM_PROXY_URL` | Секретный URL HTTP(S)-proxy для Telegram Bot API |
 | `TELEGRAM_WEBHOOK_SECRET` | Секрет длиной не менее 32 символов для callback-запросов Telegram |
 
 Файлы `.env*`, кроме безопасного примера `.env.example`, исключены из Git.

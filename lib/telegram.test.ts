@@ -47,6 +47,9 @@ test("location request uses Telegram instead of admin push", async () => {
   assert.match(route, /sendTelegramLocationRequestNotification/);
   assert.match(route, /if \(telegramNotified\)[\s\S]*set\(\{ telegramNotified: true \}\)/);
   assert.doesNotMatch(route, /admin-push|sendAdminLocationRequestNotification/);
+  const webhookRoute = await readFile(new URL("../app/api/telegram/webhook/route.ts", import.meta.url), "utf8");
+  assert.match(webhookRoute, /telegramBotRequest\("deleteMessage", \{[\s\S]*chat_id: chatId/);
+  assert.doesNotMatch(webhookRoute, /editMessageText/);
 });
 
 test("Telegram API rejection does not throw", async () => {

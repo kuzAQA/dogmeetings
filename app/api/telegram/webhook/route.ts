@@ -91,16 +91,11 @@ export async function POST(request: Request) {
     }
 
     const result = requested.action === "approve" ? "✅ Заявка одобрена" : "❌ Заявка отклонена";
-    const text = typeof message.text === "string" ? message.text : "🆕 Новая заявка на локацию";
-    const edit = {
+    const deleted = await telegramBotRequest("deleteMessage", {
       chat_id: chatId,
-      message_id: messageId,
-      text: `${text}\n\n${result}`,
-      reply_markup: { inline_keyboard: [] }
-    } as Record<string, unknown>;
-    if (Array.isArray(message.entities)) edit.entities = message.entities;
-    const updated = await telegramBotRequest("editMessageText", edit);
-    await callbackAnswer(callbackId, updated ? result : "Заявка обработана, но сообщение не обновлено.", !updated);
+      message_id: messageId
+    });
+    await callbackAnswer(callbackId, deleted ? result : "Заявка обработана, но сообщение не удалено.", !deleted);
   } catch (error) {
     console.error("[telegram] Не удалось обработать callback заявки на локацию.", error);
     await callbackAnswer(callbackId, "Не удалось обработать заявку. Повторите попытку.", true);
