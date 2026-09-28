@@ -25,7 +25,8 @@ export default defineConfig([
       }
     },
     settings: {
-      react: { version: "detect" }
+      react: { version: "detect" },
+      "jsx-a11y": { components: { SingleLineInput: "input" } }
     }
   }
 ]);

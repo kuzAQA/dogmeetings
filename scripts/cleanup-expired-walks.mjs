@@ -73,9 +73,13 @@ async function cleanupExpiredData() {
       DELETE FROM client_sessions
       WHERE expires_at < CURRENT_TIMESTAMP
     `);
+    const intentsResult = await client.query(`
+      DELETE FROM telegram_subscription_intents
+      WHERE expires_at < CURRENT_TIMESTAMP
+    `);
 
     console.info(
-      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${walksResult.rowCount ?? 0}, истёкших сессий — ${sessionsResult.rowCount ?? 0}`
+      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${walksResult.rowCount ?? 0}, истёкших сессий — ${sessionsResult.rowCount ?? 0}, истёкших ссылок Telegram — ${intentsResult.rowCount ?? 0}`
     );
   } finally {
     await client.end();
@@ -88,10 +92,19 @@ function telegramConfiguration() {
   return token && chatId ? { token, chatId } : null;
 }
 
+function telegramTokenConfiguration() {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  return token ? { token } : null;
+}
+
 function telegramCallbackConfiguration() {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
   return token && secret ? { token, secret } : null;
+}
+
+function telegramUpdateHandlerUrl() {
+  return process.env.TELEGRAM_UPDATE_HANDLER_URL?.trim() || "http://app:3000/api/telegram/webhook";
 }
 
 async function telegramBotRequest(token, method, body, timeoutMs = 5_000) {
@@ -101,8 +114,12 @@ async function telegramBotRequest(token, method, body, timeoutMs = 5_000) {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs)
   });
-  const payload = await response.json();
-  if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) {
+    const error = new Error(payload.description || `Telegram API returned ${response.status}`);
+    error.telegramStatus = response.status;
+    throw error;
+  }
   return payload.result;
 }
 
@@ -165,6 +182,124 @@ async function retryLocationRequestNotifications() {
   }
 }
 
+function escapeTelegramHtml(value) {
+  return String(value ?? "").trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") || "—";
+}
+
+function walkScheduleLabel(notification) {
+  if (notification.schedule_type === "always") return "каждый день";
+  if (notification.schedule_type === "tomorrow") return "завтра";
+  return "сегодня";
+}
+
+function walkNotificationMessage(notification) {
+  return [
+    `🐾 <b>Новая прогулка в ЖК «${escapeTelegramHtml(notification.residential_complex)}»</b>`,
+    "",
+    `<b>Кто гуляет:</b> ${escapeTelegramHtml(notification.pet_name)} · ${escapeTelegramHtml(notification.owner_name)}`,
+    `<b>Где:</b> ${escapeTelegramHtml(notification.place)}`,
+    `<b>Во сколько:</b> ${escapeTelegramHtml(String(notification.walk_time).slice(0, 5))} · ${walkScheduleLabel(notification)}`
+  ].join("\n");
+}
+
+function blockedByTelegram(error) {
+  return error?.telegramStatus === 403 && /bot was blocked by the user|user is deactivated/i.test(String(error.message));
+}
+
+function notificationError(error) {
+  return String(error instanceof Error ? error.message : error).slice(0, 250);
+}
+
+async function retryWalkTelegramNotifications() {
+  const configuration = telegramTokenConfiguration();
+  if (!configuration) {
+    console.error("[walk-telegram-notifications] Не задан TELEGRAM_BOT_TOKEN.");
+    return;
+  }
+
+  const client = new Client({ connectionString: connectionString(), connectionTimeoutMillis: 5000 });
+  await client.connect();
+
+  try {
+    while (true) {
+      await client.query("BEGIN");
+      try {
+        const { rows } = await client.query(`
+          SELECT
+            notification.id AS notification_id,
+            subscription.id AS subscription_id,
+            subscription.telegram_chat_id,
+            walk.residential_complex,
+            walk.place,
+            walk.walk_time,
+            walk.schedule_type,
+            pet.name AS pet_name,
+            pet.owner_name
+          FROM telegram_walk_notifications AS notification
+          INNER JOIN telegram_complex_subscriptions AS subscription ON subscription.id = notification.subscription_id
+          INNER JOIN walks AS walk ON walk.id = notification.walk_id
+          INNER JOIN pets AS pet ON pet.id = walk.pet_id
+          WHERE notification.sent_at IS NULL
+            AND notification.failed_at IS NULL
+            AND notification.next_attempt_at <= CURRENT_TIMESTAMP
+            AND subscription.active = true
+          ORDER BY notification.created_at ASC
+          FOR UPDATE OF notification, subscription SKIP LOCKED
+          LIMIT 1
+        `);
+        const notification = rows[0];
+        if (!notification) {
+          await client.query("COMMIT");
+          return;
+        }
+
+        try {
+          await telegramBotRequest(configuration.token, "sendMessage", {
+            chat_id: notification.telegram_chat_id,
+            text: walkNotificationMessage(notification),
+            parse_mode: "HTML"
+          });
+          await client.query(`
+            UPDATE telegram_walk_notifications
+            SET sent_at = CURRENT_TIMESTAMP, last_error = NULL
+            WHERE id = $1
+          `, [notification.notification_id]);
+          console.info(`[walk-telegram-notifications] Прогулка ${notification.notification_id} отправлена в Telegram.`);
+        } catch (error) {
+          if (blockedByTelegram(error)) {
+            await client.query(`
+              UPDATE telegram_complex_subscriptions
+              SET active = false, deactivated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $1
+            `, [notification.subscription_id]);
+            await client.query(`
+              UPDATE telegram_walk_notifications
+              SET failed_at = CURRENT_TIMESTAMP, last_error = $2
+              WHERE id = $1
+            `, [notification.notification_id, notificationError(error)]);
+            console.info(`[walk-telegram-notifications] Подписка ${notification.subscription_id} отключена: бот заблокирован.`);
+          } else {
+            await client.query(`
+              UPDATE telegram_walk_notifications
+              SET attempt_count = attempt_count + 1,
+                  next_attempt_at = CURRENT_TIMESTAMP + INTERVAL '1 minute',
+                  last_error = $2
+              WHERE id = $1
+            `, [notification.notification_id, notificationError(error)]);
+            console.error(`[walk-telegram-notifications] Не удалось отправить уведомление ${notification.notification_id}.`, error);
+          }
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
+    }
+  } finally {
+    await client.end();
+  }
+}
+
 async function pollTelegramCallbacks() {
   const configuration = telegramCallbackConfiguration();
   if (!configuration) return;
@@ -177,14 +312,14 @@ async function pollTelegramCallbacks() {
   const updates = await telegramBotRequest(configuration.token, "getUpdates", {
     offset: telegramUpdateOffset,
     timeout: 50,
-    allowed_updates: ["callback_query"]
+    allowed_updates: ["callback_query", "message"]
   }, 55_000);
   if (!Array.isArray(updates)) return;
 
   for (const update of updates) {
     const updateId = update?.update_id;
     if (!Number.isSafeInteger(updateId)) continue;
-    const response = await fetch("http://app:3000/api/telegram/webhook", {
+    const response = await fetch(telegramUpdateHandlerUrl(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -221,6 +356,11 @@ async function runNotificationRetry() {
     await retryLocationRequestNotifications();
   } catch (error) {
     console.error("[location-request-notifications] Не удалось обработать повторные отправки.", error);
+  }
+  try {
+    await retryWalkTelegramNotifications();
+  } catch (error) {
+    console.error("[walk-telegram-notifications] Не удалось обработать повторные отправки.", error);
   } finally {
     notificationTimer = setTimeout(runNotificationRetry, NOTIFICATION_RETRY_DELAY_MS);
   }

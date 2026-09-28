@@ -15,7 +15,54 @@ async function capture(page: Page, info: TestInfo, name: string) {
   await page.screenshot({ path: `.impeccable/review/transfer/${info.project.name}-${name}.png`, fullPage: !(await dialog.count()), animations: "disabled" });
 }
 
+async function expectSingleLineInputs(page: Page, labels: string[]) {
+  for (const label of labels) {
+    const field = page.getByLabel(label, { exact: true }).and(page.locator("input"));
+    expect(await field.evaluate((element) => element.tagName)).toBe("INPUT");
+    await expect(field).toHaveClass("single-line-input");
+    await expect(field).toHaveAttribute("autocomplete", "new-password");
+  }
+}
+
 test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: "reduce" }); });
+
+test.describe("mobile single-line fields", () => {
+  test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+
+  test("moves to the next field and submits the final field", async ({ page }) => {
+    await openNearby(page);
+    await page.getByRole("button", { name: "Питомцы", exact: true }).click();
+    await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
+    await page.route("**/api/pets", (route) => route.request().method() === "POST" ? route.fulfill({ json: { pet: { ...pet, name: "Боня", ownerName: "Анна", breed: "Корги" } } }) : route.fallback());
+
+    const name = page.getByLabel("Имя питомца", { exact: true });
+    const owner = page.getByLabel("Имя хозяина", { exact: true });
+    const breed = page.getByLabel("Порода", { exact: true });
+    await expect(name).toHaveAttribute("enterkeyhint", "next");
+    await expect(breed).toHaveAttribute("enterkeyhint", "done");
+    await name.fill("Боня");
+    await name.press("Enter");
+    await expect(owner).toBeFocused();
+    await owner.fill("Анна");
+    await owner.press("Enter");
+    await expect(breed).toBeFocused();
+    await breed.fill("Корги");
+    await breed.press("Enter");
+    await expect(page.getByRole("heading", { name: "Рады знакомству!" })).toBeVisible();
+  });
+});
+
+test("keeps the comment field multiline", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+
+  const comment = page.getByLabel("Комментарий", { exact: false });
+  expect(await comment.evaluate((element) => element.tagName)).toBe("TEXTAREA");
+  await expect(comment).not.toHaveClass("single-line-input");
+  await comment.fill("Первая строка\nВторая строка");
+  await expect(comment).toHaveValue("Первая строка\nВторая строка");
+});
 
 test("place picker confirms only its selected shared place", async ({ page }) => {
   await mockApp(page);
@@ -66,6 +113,7 @@ test("location request fields, loading, error, retry and success", async ({ page
   await openNearby(page);
   await page.getByRole("button", { name: location.complex, exact: true }).click();
   await page.getByRole("button", { name: "Предложить новую локацию" }).click();
+  await expectSingleLineInputs(page, ["Город", "Район", "Жилой комплекс"]);
   await page.getByLabel("Город", { exact: true }).fill("Москва");
   await page.getByLabel("Район", { exact: true }).fill("Коммунарка");
   await page.getByLabel("Жилой комплекс", { exact: true }).fill("Скандинавия");
@@ -85,6 +133,7 @@ test("pet form retains upload, validation, multipart data and success", async ({
   await openNearby(page);
   await page.getByRole("button", { name: "Питомцы", exact: true }).click();
   await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
+  await expectSingleLineInputs(page, ["Имя питомца", "Имя хозяина", "Порода"]);
   await capture(page, info, "new-pet");
   await page.getByLabel("Имя питомца").focus();
   await page.getByLabel("Имя хозяина").focus();
@@ -319,11 +368,13 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await page.getByRole("button", { name: "Все питомцы", exact: false }).click();
   await expect(page.getByRole("button", { name: /Собака Луна/ })).toBeVisible();
   await capture(page, info, "admin-pets");
+  await expectSingleLineInputs(page, ["Найти питомца"]);
   await page.getByLabel("Найти питомца").fill("Нет такого");
   await expect(page.getByRole("status")).toContainText("Никого не нашли");
   await capture(page, info, "admin-pets-search-empty");
   await page.getByLabel("Найти питомца").fill("");
   await page.getByRole("button", { name: /Собака Луна/ }).click();
+  await expectSingleLineInputs(page, ["Имя питомца", "Имя хозяина", "Порода"]);
   await capture(page, info, "admin-edit");
   await page.getByRole("button", { name: "Удалить питомца", exact: true }).click();
   await capture(page, info, "admin-delete");
@@ -333,6 +384,17 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await expect(page.getByRole("button", { name: "Уведомления", exact: false })).toHaveCount(0);
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await capture(page, info, "admin-logout");
+});
+
+test("admin text fields use the existing keyboard-safe control", async ({ page }) => {
+  await page.route("**/api/dogsfather/session", (route) => route.fulfill({ json: { authenticated: true } }));
+  await page.route("**/api/dogsfather/location-requests", (route) => route.fulfill({ json: { requests: [] } }));
+  await page.route("**/api/dogsfather/pets", (route) => route.fulfill({ json: { pets: [pet] } }));
+  await page.goto("/dogsfather");
+  await page.getByRole("button", { name: "Все питомцы", exact: false }).click();
+  await expectSingleLineInputs(page, ["Найти питомца"]);
+  await page.getByRole("button", { name: /Собака Луна/ }).click();
+  await expectSingleLineInputs(page, ["Имя питомца", "Имя хозяина", "Порода"]);
 });
 
 test("admin manages nested locations and confirms cascading deletion with a password proof", async ({ page }) => {
@@ -367,6 +429,7 @@ test("admin manages nested locations and confirms cascading deletion with a pass
   await page.getByRole("button", { name: "Открыть Москва" }).click();
   await expect(page.getByRole("heading", { name: "Районы", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Редактировать Коммунарка" }).click();
+  await expectSingleLineInputs(page, ["Новое название"]);
   await page.getByLabel("Новое название").fill("Новая Коммунарка");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Изменения сохранены", exact: true })).toBeVisible();

@@ -117,7 +117,7 @@ main.with-nav{padding-bottom:138px}
 .field input::placeholder,.field textarea::placeholder,.search-field :is(input,textarea)::placeholder{color:#74736e}
 .field textarea:not(.single-line-input){min-height:110px;resize:vertical;line-height:1.6}
 .single-line-input{resize:none;line-height:normal}
-.field input[aria-invalid=true],.field select[aria-invalid=true]{border:2px solid var(--error)}
+.field input[aria-invalid=true],.field select[aria-invalid=true],.field textarea[aria-invalid=true]{border:2px solid var(--error)}
 .field-error{color:var(--error);font-size:12px;line-height:1.6}
 .counter{align-self:flex-end;color:var(--muted);margin-top:-5px}
 .note{display:flex;gap:10px;align-items:center;background:#eeece5;padding:15px;border-radius:10px;font-size:12px;line-height:1.7;color:var(--muted);margin:20px 0}
@@ -428,7 +428,7 @@ main{min-height:calc(100dvh - 40px)}
 
 .bottom-nav .nav-tabs button svg{width:21px;height:21px}
 
-.bottom-nav button.dock-add{flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:2px solid #efd9c6;border-radius:50%;background:transparent;color:#64666b;box-shadow:0 8px 28px #222a3926}
+.bottom-nav button.dock-add{display:grid;place-items:center;flex:0 0 var(--dock-size);width:var(--dock-size);height:var(--dock-size);min-height:var(--dock-size);padding:0;border:2px solid #efd9c6;border-radius:50%;background:transparent;color:#64666b;box-shadow:0 8px 28px #222a3926}
 
 .bottom-nav .dock-add svg{width:25px;height:25px}
 @media(min-width:361px) and (max-width:374px){.bottom-nav,.floating-nav .bottom-nav{--dock-size:61px}}

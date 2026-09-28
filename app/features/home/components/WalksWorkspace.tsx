@@ -44,6 +44,7 @@ type Props = {
   onRetryPlaces: () => void;
   profileHeadingRef: RefObject<HTMLHeadingElement | null>;
   onOpenLocationEditor: () => void;
+  onOpenTelegramSubscription: () => Promise<string>;
   onOpenMyWalks: () => void;
   onOpenMyPets: () => void;
   onOpenProfile: () => void;
@@ -56,12 +57,14 @@ type Props = {
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenTelegramSubscription, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
   const [contactCopied, setContactCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
   const [actionsWalk, setActionsWalk] = useState<Walk | null>(null);
+  const [telegramOpening, setTelegramOpening] = useState(false);
+  const [telegramError, setTelegramError] = useState("");
   const active = dockSection === "profile" ? "profile" : dockSection === "walk" ? "walk" : "nearby";
   const today = useMemo(() => new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).formatToParts(new Date()), []);
   const day = today.find((part) => part.type === "day")?.value ?? "";
@@ -92,6 +95,8 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
+        <button className="menu-row" type="button" disabled={telegramOpening} onClick={async () => { setTelegramOpening(true); setTelegramError(""); try { window.location.assign(await onOpenTelegramSubscription()); } catch (error) { setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram."); setTelegramOpening(false); } }}><ExternalLink aria-hidden="true" /><span><strong>{telegramOpening ? "Открываем Telegram…" : "Получать уведомления в Telegram"}</strong><small>Новые прогулки в ЖК «{location.complex}»</small></span><ChevronRight aria-hidden="true" /></button>
+        {telegramError && <p className="field-error" role="alert">{telegramError}</p>}
         <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>

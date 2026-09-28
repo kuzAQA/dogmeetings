@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
-import { walks } from "../../../db/schema";
+import { telegramComplexSubscriptions, telegramWalkNotifications, walks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 import { parseWalkMutation } from "../../../server/application/walk-input";
@@ -142,6 +142,28 @@ export async function POST(request: Request) {
           residentialComplex: walks.residentialComplex,
           updatedAt: walks.updatedAt
         });
+
+      const subscriptions = await tx
+        .select({ id: telegramComplexSubscriptions.id })
+        .from(telegramComplexSubscriptions)
+        .where(and(
+          eq(telegramComplexSubscriptions.active, true),
+          eq(telegramComplexSubscriptions.city, city),
+          eq(telegramComplexSubscriptions.district, district),
+          eq(telegramComplexSubscriptions.residentialComplex, residentialComplex)
+        ));
+      if (subscriptions.length > 0) {
+        await tx
+          .insert(telegramWalkNotifications)
+          .values(subscriptions.map((subscription) => ({
+            id: crypto.randomUUID(),
+            walkId: walk.id,
+            subscriptionId: subscription.id
+          })))
+          .onConflictDoNothing({
+            target: [telegramWalkNotifications.walkId, telegramWalkNotifications.subscriptionId]
+          });
+      }
 
       return { pet, walk };
     }));

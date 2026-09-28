@@ -1,4 +1,14 @@
 import { isTelegramWebhookRequest, telegramBotRequest } from "../../../../lib/telegram";
+import {
+  activateTelegramComplexSubscription,
+  deactivateTelegramComplexSubscription
+} from "../../../../lib/telegram-subscriptions";
+import {
+  telegramStartToken,
+  telegramUnsubscribeButtonText,
+  telegramUnsubscribeCallbackData,
+  telegramUnsubscribeSubscriptionId
+} from "../../../../lib/telegram-subscription-protocol";
 import { DELETE, PATCH } from "../../dogsfather/location-requests/route";
 
 type Action = "approve" | "reject";
@@ -44,6 +54,54 @@ async function applyAction(request: Request, id: string, action: Action) {
   return response.ok ? "" : actionError(response);
 }
 
+function telegramChatId(chat: Record<string, unknown> | null) {
+  const id = chat?.id;
+  if (typeof id === "number" && Number.isSafeInteger(id)) return String(id);
+  return typeof id === "string" && /^-?\d{1,20}$/.test(id) ? id : null;
+}
+
+async function handleTelegramStart(message: Record<string, unknown>) {
+  const chat = isRecord(message.chat) ? message.chat : null;
+  const chatId = telegramChatId(chat);
+  const token = telegramStartToken(message.text);
+  if (!chatId || !token) return false;
+
+  const result = await activateTelegramComplexSubscription(token, chatId);
+  if (result.status === "expired") {
+    await telegramBotRequest("sendMessage", {
+      chat_id: chatId,
+      text: "Ссылка для настройки уведомлений недействительна или уже использована. Откройте новую ссылку из приложения."
+    });
+    return true;
+  }
+
+  const callbackData = telegramUnsubscribeCallbackData(result.subscriptionId);
+  if (!callbackData) throw new Error("Не удалось подготовить кнопку отписки.");
+  const active = result.status === "active";
+  await telegramBotRequest("sendMessage", {
+    chat_id: chatId,
+    text: active
+      ? `Подписка на уведомления ЖК «${result.complex}» уже активна.`
+      : `Подписка на уведомления ЖК «${result.complex}» успешно оформлена.`,
+    reply_markup: {
+      inline_keyboard: [[{
+        text: telegramUnsubscribeButtonText(result.complex),
+        callback_data: callbackData
+      }]]
+    }
+  });
+  return true;
+}
+
+async function handleTelegramUnsubscribeCallback(callbackId: string, chatId: string, subscriptionId: string) {
+  const result = await deactivateTelegramComplexSubscription(subscriptionId, chatId);
+  const text = result.status === "unsubscribed"
+    ? "Уведомления этого ЖК отключены."
+    : "Подписка на уведомления этого ЖК уже отключена.";
+  await telegramBotRequest("sendMessage", { chat_id: chatId, text });
+  await callbackAnswer(callbackId, result.status === "unsubscribed" ? "Подписка отключена." : "Подписка уже отключена.");
+}
+
 export async function POST(request: Request) {
   if (!isTelegramWebhookRequest(request)) {
     return Response.json({ ok: false }, { status: 401 });
@@ -56,6 +114,16 @@ export async function POST(request: Request) {
     return Response.json({ ok: false }, { status: 400 });
   }
 
+  const startMessage = isRecord(update) && isRecord(update.message) ? update.message : null;
+  if (startMessage) {
+    try {
+      await handleTelegramStart(startMessage);
+    } catch (error) {
+      console.error("[telegram] Не удалось обработать /start для подписки ЖК.", error);
+    }
+    return Response.json({ ok: true });
+  }
+
   const callback = isRecord(update) && isRecord(update.callback_query) ? update.callback_query : null;
   const callbackId = callback?.id;
   if (!callback || typeof callbackId !== "string" || !callbackId) return Response.json({ ok: true });
@@ -63,9 +131,25 @@ export async function POST(request: Request) {
   const requested = callbackAction(callback.data);
   const message = isRecord(callback.message) ? callback.message : null;
   const chat = message && isRecord(message.chat) ? message.chat : null;
-  const chatId = chat?.id;
+  const chatId = telegramChatId(chat);
   const messageId = message?.message_id;
-  if (!requested || !message || !chat || (typeof chatId !== "string" && typeof chatId !== "number") || !Number.isSafeInteger(messageId)) {
+  if (!message || !chat || !chatId || !Number.isSafeInteger(messageId)) {
+    await callbackAnswer(callbackId, "Неизвестное действие.", true);
+    return Response.json({ ok: true });
+  }
+
+  const subscriptionId = telegramUnsubscribeSubscriptionId(callback.data);
+  if (subscriptionId) {
+    try {
+      await handleTelegramUnsubscribeCallback(callbackId, chatId, subscriptionId);
+    } catch (error) {
+      console.error("[telegram] Не удалось обработать подписку ЖК.", error);
+      await callbackAnswer(callbackId, "Не удалось обработать подписку. Повторите попытку.", true);
+    }
+    return Response.json({ ok: true });
+  }
+
+  if (!requested) {
     await callbackAnswer(callbackId, "Неизвестное действие.", true);
     return Response.json({ ok: true });
   }

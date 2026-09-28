@@ -5,6 +5,8 @@ type LocationRequestNotification = {
   residentialComplex?: string | null;
 };
 
+let cachedBotUsername: string | undefined;
+
 export function isTelegramWebhookRequest(request: Request) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
   if (!secret || !/^[A-Za-z0-9_-]{32,256}$/.test(secret)) return false;
@@ -59,6 +61,33 @@ export async function telegramBotRequest(method: string, body: Record<string, un
     console.error(`[telegram] Не удалось вызвать ${method}.`, error);
     return false;
   }
+}
+
+export async function telegramBotUsername(fetcher: typeof fetch = fetch) {
+  if (cachedBotUsername) return cachedBotUsername;
+
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (!token) return null;
+
+  try {
+    const response = await fetcher(`https://api.telegram.org/bot${token}/getMe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(5_000)
+    });
+    const payload = await response.json() as { ok?: boolean; result?: { username?: unknown } };
+    const username = typeof payload.result?.username === "string" ? payload.result.username.trim() : "";
+    if (!response.ok || !payload.ok || !/^[A-Za-z0-9_]{5,32}$/.test(username)) {
+      throw new Error("Telegram не вернул корректное имя бота.");
+    }
+    cachedBotUsername = username;
+  } catch (error) {
+    console.error("[telegram] Не удалось получить имя бота.", error);
+    return null;
+  }
+
+  return cachedBotUsername ?? null;
 }
 
 export async function sendTelegramLocationRequestNotification(location: LocationRequestNotification, fetcher: typeof fetch = fetch) {

@@ -69,6 +69,12 @@ export async function requestPetShareLink(petId: string, rotate = false) {
   return data.link;
 }
 
+export async function requestTelegramSubscriptionLink() {
+  const data = await requestJson<{ link?: string }>("/api/telegram/subscription-link", { method: "POST" });
+  if (!data.link) throw new Error("Не удалось подготовить ссылку Telegram.");
+  return data.link;
+}
+
 export async function savePet(formData: FormData, editing: boolean) {
   const data = await requestJson<{ pet?: Pet }>("/api/pets", {
     method: editing ? "PATCH" : "POST",

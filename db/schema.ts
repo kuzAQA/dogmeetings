@@ -78,6 +78,50 @@ export const clientSessions = pgTable(
   ]
 );
 
+export const telegramSubscriptionIntents = pgTable(
+  "telegram_subscription_intents",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    city: varchar("city", { length: 80 }).notNull(),
+    district: varchar("district", { length: 80 }).notNull(),
+    residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
+    usedByChatId: varchar("used_by_chat_id", { length: 20 }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("telegram_subscription_intents_expires_at_idx").on(table.expiresAt)]
+);
+
+export const telegramComplexSubscriptions = pgTable(
+  "telegram_complex_subscriptions",
+  {
+    id: uuid("id").primaryKey(),
+    telegramChatId: varchar("telegram_chat_id", { length: 20 }).notNull(),
+    city: varchar("city", { length: 80 }).notNull(),
+    district: varchar("district", { length: 80 }).notNull(),
+    residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
+    active: boolean("active").notNull().default(true),
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("telegram_complex_subscriptions_chat_location_unique").on(
+      table.telegramChatId,
+      table.city,
+      table.district,
+      table.residentialComplex
+    ),
+    index("telegram_complex_subscriptions_active_location_idx").on(
+      table.active,
+      table.city,
+      table.district,
+      table.residentialComplex
+    )
+  ]
+);
+
 export const locations = pgTable(
   "locations",
   {
@@ -192,5 +236,24 @@ export const walks = pgTable(
     index("walks_updated_at_idx").on(table.updatedAt),
     index("walks_schedule_idx").on(table.scheduleType, table.walkDate, table.walkTime),
     index("walks_location_idx").on(table.city, table.district, table.residentialComplex)
+  ]
+);
+
+export const telegramWalkNotifications = pgTable(
+  "telegram_walk_notifications",
+  {
+    id: uuid("id").primaryKey(),
+    walkId: uuid("walk_id").notNull().references(() => walks.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id").notNull().references(() => telegramComplexSubscriptions.id, { onDelete: "cascade" }),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    lastError: varchar("last_error", { length: 250 }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("telegram_walk_notifications_walk_subscription_unique").on(table.walkId, table.subscriptionId),
+    index("telegram_walk_notifications_pending_idx").on(table.nextAttemptAt)
   ]
 );

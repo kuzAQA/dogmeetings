@@ -63,9 +63,16 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
   const afterCloseCallbacks = useRef<(() => void)[]>([]);
   const closeResolvers = useRef<(() => void)[]>([]);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const busyRef = useRef(busy);
+  const onCloseStartRef = useRef(onCloseStart);
   const isPlacePicker = className.includes("sheet--place-picker");
   const mountPoint = typeof document === "undefined" ? undefined : document.querySelector(".production") ?? undefined;
   useVirtualKeyboard({ containerRef: dialogRef, isEnabled: isOpen && isPlacePicker });
+
+  useLayoutEffect(() => {
+    busyRef.current = busy;
+    onCloseStartRef.current = onCloseStart;
+  }, [busy, onCloseStart]);
 
   if (open !== previousOpen) {
     setPreviousOpen(open);
@@ -83,16 +90,16 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
   }, [open]);
 
   const dismiss = useCallback((afterClose?: () => void, force = false) => {
-    if ((!force && busy) || closingRef.current || dragClosePending.current) return Promise.resolve();
+    if ((!force && busyRef.current) || closingRef.current || dragClosePending.current) return Promise.resolve();
     closingRef.current = true;
     setClosing(true);
-    onCloseStart?.();
+    onCloseStartRef.current?.();
     return new Promise<void>((resolve) => {
       if (afterClose) afterCloseCallbacks.current.push(afterClose);
       closeResolvers.current.push(resolve);
       setIsOpen(false);
     });
-  }, [busy, onCloseStart]);
+  }, []);
 
   const finishDragClose = useCallback(() => {
     if (!dragClosePending.current) return;
@@ -101,12 +108,12 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
   }, []);
 
   const beginDragClose = useCallback(() => {
-    if (busy || closingRef.current || dragClosePending.current) return;
+    if (busyRef.current || closingRef.current || dragClosePending.current) return;
     dragClosePending.current = true;
     closingRef.current = true;
     setClosing(true);
-    onCloseStart?.();
-  }, [busy, onCloseStart]);
+    onCloseStartRef.current?.();
+  }, []);
 
   useLayoutEffect(() => sheetRef.current?.y.on("animationComplete", finishDragClose), [finishDragClose]);
 

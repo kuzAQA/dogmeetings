@@ -10,6 +10,7 @@ import {
   listLocations,
   listWalks,
   requestPetShareLink as requestPetShareLinkRequest,
+  requestTelegramSubscriptionLink,
   savePet as savePetRequest,
   saveSessionLocation,
   saveWalk as saveWalkRequest
@@ -990,6 +991,7 @@ export default function Home() {
             onStartWalk={startWalkAnnouncement}
             profileHeadingRef={profileHeadingRef}
             onOpenLocationEditor={openLocationEditor}
+            onOpenTelegramSubscription={requestTelegramSubscriptionLink}
             onOpenMyWalks={() => openCollectionScreen("my-walks")}
             onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
             onOpenProfile={() => selectDockSection("profile")}

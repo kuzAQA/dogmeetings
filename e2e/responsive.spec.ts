@@ -218,12 +218,12 @@ test("place sheet does not autofocus search or add keyboard padding to its list"
   const search = page.getByLabel("Найти место");
   const customPlace = page.getByLabel("Или своё место встречи");
   await expect(search).not.toBeFocused();
-  await expect(search).toHaveAttribute("rows", "1");
+  expect(await search.evaluate((element) => element.tagName)).toBe("INPUT");
   await expect(search).toHaveAttribute("inputmode", "text");
-  await expect(search).toHaveAttribute("autocomplete", "off");
+  await expect(search).toHaveAttribute("autocomplete", "new-password");
   await expect(search).toHaveAttribute("enterkeyhint", "search");
-  await expect(customPlace).toHaveAttribute("rows", "1");
-  await expect(customPlace).toHaveAttribute("autocomplete", "off");
+  expect(await customPlace.evaluate((element) => element.tagName)).toBe("INPUT");
+  await expect(customPlace).toHaveAttribute("autocomplete", "new-password");
   await expect(dialog.locator("form.place-picker-footer")).toHaveAttribute("autocomplete", "off");
   await search.focus();
   expect(await searchField.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
@@ -231,7 +231,7 @@ test("place sheet does not autofocus search or add keyboard padding to its list"
 
   const searchBounds = await searchField.evaluate((element) => {
     const field = element.getBoundingClientRect();
-    const input = element.querySelector("textarea")!.getBoundingClientRect();
+    const input = element.querySelector("input")!.getBoundingClientRect();
     return { field, input };
   });
   expect(searchBounds.input.left).toBeGreaterThan(searchBounds.field.left);
@@ -301,45 +301,105 @@ test.describe("Android place picker", () => {
     await search.fill("Несуществующее место");
     await expect(results).toHaveCount(0);
   });
+
+  test("keeps place inputs focused while their values change", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 700 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+    await page.getByRole("button", { name: /^Место встречи/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Место встречи" });
+    const search = page.getByLabel("Найти место");
+    const customPlace = page.getByLabel("Или своё место встречи");
+    await search.tap();
+    await expect(search).toBeFocused();
+    await page.keyboard.insertText("сквер");
+    await expect(search).toBeFocused();
+    await expect(dialog).toBeVisible();
+
+    await customPlace.tap();
+    await page.keyboard.insertText("у входа");
+    await page.keyboard.press("Backspace");
+    await expect(customPlace).toBeFocused();
+    await expect(dialog).toBeVisible();
+  });
 });
 
 test.describe("Android walk form", () => {
   test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
 
-  test("scrolls to the natural form end without keyboard padding", async ({ page }) => {
+  test("keeps the walk action visible after comment focus and keyboard resize", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 390, height: 700 });
     await openNearby(page);
     await page.getByRole("button", { name: "Мои планы", exact: true }).click();
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
 
-    const naturalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.evaluate(() => {
-      const nativeScrollTo = window.scrollTo.bind(window);
-      Object.defineProperty(window, "scrollTo", {
-        configurable: true,
-        value: (options: ScrollToOptions) => {
-          (window as Window & { scrollCalls?: ScrollToOptions[] }).scrollCalls ??= [];
-          (window as Window & { scrollCalls: ScrollToOptions[] }).scrollCalls.push(options);
-          nativeScrollTo(options);
-        }
-      });
-    });
-    await page.getByLabel("Комментарий", { exact: false }).tap();
-    await page.evaluate(() => {
-      Object.defineProperty(window.visualViewport!, "height", { configurable: true, value: 420 });
-      window.visualViewport!.dispatchEvent(new Event("resize"));
+    const comment = page.getByLabel("Комментарий", { exact: false });
+    const submit = page.getByRole("button", { name: "Сообщить о прогулке", exact: true });
+    const isFullyVisible = () => submit.evaluate((button) => {
+      const bounds = button.getBoundingClientRect();
+      const viewportHeight = window.visualViewport?.height ?? innerHeight;
+      return bounds.top >= 0 && bounds.bottom <= viewportHeight - 11;
     });
 
-    await expect.poll(() => page.evaluate(() => (window as Window & { scrollCalls?: ScrollToOptions[] }).scrollCalls?.at(-1))).toMatchObject({ top: naturalHeight, behavior: "smooth" });
-    await expect(page.locator(".announce-form")).not.toHaveAttribute("style");
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(naturalHeight);
+    for (const position of [0, .5, 1]) {
+      await page.setViewportSize({ width: 390, height: 700 });
+      await page.evaluate((ratio) => window.scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) * ratio, behavior: "auto" }), position);
+      await comment.evaluate((input) => (input as HTMLTextAreaElement).focus({ preventScroll: true }));
+      await page.setViewportSize({ width: 390, height: 420 });
+      await page.evaluate(() => window.visualViewport?.dispatchEvent(new Event("resize")));
+      await expect.poll(isFullyVisible).toBe(true);
+      await comment.evaluate((input) => input.blur());
+    }
 
     await page.evaluate(() => {
-      Object.defineProperty(window.visualViewport!, "height", { configurable: true, value: innerHeight });
-      window.visualViewport!.dispatchEvent(new Event("resize"));
+      const comment = document.querySelector<HTMLTextAreaElement>("#walk-comment")!;
+      window.scrollBy({ top: comment.getBoundingClientRect().top - 200, behavior: "auto" });
     });
-    await expect(page.locator(".announce-form")).not.toHaveAttribute("style");
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(naturalHeight);
+    expect(await isFullyVisible()).toBe(false);
+    await comment.evaluate((input) => (input as HTMLTextAreaElement).focus({ preventScroll: true }));
+    await expect.poll(isFullyVisible).toBe(true);
+
+    const scrollY = await page.evaluate(() => window.scrollY);
+    await comment.evaluate((input) => input.blur());
+    await comment.evaluate((input) => (input as HTMLTextAreaElement).focus({ preventScroll: true }));
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new PointerEvent("pointerdown"));
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+});
+
+test.describe("Android location request", () => {
+  test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
+
+  test("keeps the request action visible after focusing complex", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 390, height: 700 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Москвичка", exact: true }).click();
+    await page.getByRole("button", { name: "Предложить новую локацию", exact: true }).click();
+
+    const city = page.getByLabel("Город", { exact: true });
+    const district = page.getByLabel("Район", { exact: true });
+    const complex = page.getByLabel("Жилой комплекс", { exact: true });
+    const submit = page.getByRole("button", { name: "Отправить заявку", exact: true });
+    await city.evaluate((input) => input.focus({ preventScroll: true }));
+    await page.setViewportSize({ width: 390, height: 420 });
+    await page.evaluate(() => window.visualViewport?.dispatchEvent(new Event("resize")));
+    await district.evaluate((input) => input.focus({ preventScroll: true }));
+    await complex.evaluate((input) => input.focus({ preventScroll: true }));
+    await expect.poll(() => submit.evaluate((button) => {
+      const bounds = button.getBoundingClientRect();
+      return bounds.top >= 0 && bounds.bottom <= (window.visualViewport?.height ?? innerHeight) - 11;
+    })).toBe(true);
   });
 });
 
@@ -356,7 +416,7 @@ test("backdrop close does not refocus the place picker input", async ({ page }) 
     const state = window as Window & { placePickerRefocuses?: number };
     state.placePickerRefocuses = 0;
     document.addEventListener("focusin", (event) => {
-      if (event.target === document.querySelector(".place-picker-footer textarea")) state.placePickerRefocuses!++;
+      if (event.target === document.querySelector(".place-picker-footer input")) state.placePickerRefocuses!++;
     }, { once: false });
   });
 

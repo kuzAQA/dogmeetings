@@ -1,9 +1,11 @@
 "use client";
 
 import { Clock3, MapPin } from "lucide-react";
-import type { FormEvent } from "react";
+import { type FormEvent, useRef } from "react";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
+import { keepActionVisibleAfterFocus } from "../../../components/ui/keyboard-scroll";
+import { SingleLineInput } from "../../../components/ui/SingleLineInput";
 import type { Location } from "../model";
 import type { SelectOption } from "../selectors";
 
@@ -70,6 +72,7 @@ type LocationRequestFormProps = {
 };
 
 export function LocationRequestForm({ location, touchedFields, cityValid, districtValid, complexValid, valid, saving, error, onSubmit, onTouch, onChange, onBack }: LocationRequestFormProps) {
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const fields: Array<[keyof Location, string, boolean, string]> = [["city", "Город", cityValid, "request-city"], ["district", "Район", districtValid, "request-district"], ["complex", "Жилой комплекс", complexValid, "request-complex"]];
   return (
     <div className="screen form-screen location-request-screen">
@@ -77,11 +80,11 @@ export function LocationRequestForm({ location, touchedFields, cityValid, distri
       <h1>Новая локация</h1>
       <p>Расскажите, где хотите гулять. Администратор рассмотрит заявку и добавит новую локацию.</p>
       {saving && <DogmeetState state="loading" title="Сохраняем…" />}
-      <form onSubmit={onSubmit} hidden={saving} aria-busy={saving} noValidate>
-        {fields.map(([field, label, isValid, touchKey]) => <label className="field" key={field}><span>{label}</span><input value={location[field]} required maxLength={field === "complex" ? 120 : 80} placeholder={field === "complex" ? "Например, Скандинавия" : field === "district" ? "Например, Коммунарка" : "Например, Москва"} aria-invalid={Boolean(touchedFields[touchKey] && !isValid)} onBlur={() => onTouch(touchKey)} onChange={(event) => onChange(field, event.target.value)} />{touchedFields[touchKey] && !isValid && <small className="field-error">Заполните это поле</small>}</label>)}
+      <form autoComplete="off" onSubmit={onSubmit} hidden={saving} aria-busy={saving} noValidate>
+        {fields.map(([field, label, isValid, touchKey]) => <label className="field" key={field}><span>{label}</span><SingleLineInput autoComplete="off" aria-label={label} value={location[field]} required maxLength={field === "complex" ? 120 : 80} placeholder={field === "complex" ? "Например, Скандинавия" : field === "district" ? "Например, Коммунарка" : "Например, Москва"} aria-invalid={Boolean(touchedFields[touchKey] && !isValid)} onBlur={() => onTouch(touchKey)} onFocus={field === "complex" ? (event) => keepActionVisibleAfterFocus(event.currentTarget, submitButtonRef.current) : undefined} onChange={(event) => onChange(field, event.target.value)} />{touchedFields[touchKey] && !isValid && <small className="field-error">Заполните это поле</small>}</label>)}
         <div className="note"><Clock3 aria-hidden="true" />Пока заявка на рассмотрении, можно выбрать соседний район.</div>
         {error && <p className="field-error" role="alert">{error}</p>}
-        <button className="button" type="submit" disabled={!valid || saving}>{saving ? "Отправляем…" : "Отправить заявку"}</button>
+        <button ref={submitButtonRef} className="button" type="submit" disabled={!valid || saving}>{saving ? "Отправляем…" : "Отправить заявку"}</button>
       </form>
     </div>
   );
