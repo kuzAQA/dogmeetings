@@ -82,7 +82,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
     void requestDialogClose(event.currentTarget);
   }
 
-  function focusCustomPlace(event: PointerEvent<HTMLTextAreaElement>) {
+  function focusCustomPlace(event: PointerEvent<HTMLInputElement>) {
     if (document.activeElement !== event.currentTarget) event.currentTarget.focus({ preventScroll: true });
   }
 
@@ -161,11 +161,11 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
       <DogmeetDialog open={picker === "place"} className="sheet--place-picker" title="Место встречи" onDismiss={() => setPicker(null)} onDismissStart={() => setPicker(null)} footer={<>
         {placesError && <button className="button" type="button" onClick={onRetryPlaces}>Повторить</button>}
         <form className="place-picker-footer" autoComplete="off" onSubmit={applyPlace}>
-          <label className="field"><span>Или своё место встречи</span><textarea className="single-line-input" rows={1} autoComplete="off" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onPointerDown={focusCustomPlace} onChange={(event) => { setSelectedPlace(null); setCustomPlace(event.target.value); }} /></label>
+          <label className="field"><span>Или своё место встречи</span><input className="single-line-input" autoComplete="off" enterKeyHint="done" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onPointerDown={focusCustomPlace} onChange={(event) => { setSelectedPlace(null); setCustomPlace(event.target.value); }} /></label>
           <button className="button" type="submit" disabled={!selectedPlace && !/[\p{L}]/u.test(customPlace.trim())}>Выбрать место</button>
         </form>
       </>}>
-        <label className="search-field"><Search /><textarea className="single-line-input" rows={1} inputMode="text" autoComplete="off" enterKeyHint="search" aria-label="Найти место" placeholder="Название места" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <label className="search-field"><Search /><input className="single-line-input" inputMode="text" autoComplete="off" enterKeyHint="search" aria-label="Найти место" placeholder="Название места" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <div className="place-picker-list">{!placesLoaded ? <p role="status">Загружаем места…</p> : placesError ? <div role="alert"><p className="field-error">{placesError}</p></div> : <div className="option-list">{matchingPlaces.map((place) => <button key={place.id} type="button" aria-pressed={selectedPlace?.id === place.id} onClick={() => { setCustomPlace(""); setSelectedPlace(place); }}><span>{place.name}</span>{selectedPlace?.id === place.id && <Check aria-hidden="true" />}</button>)}</div>}
         {placesLoaded && !placesError && !matchingPlaces.length && <p>Совпадений нет. Укажите своё место.</p>}</div>
       </DogmeetDialog>

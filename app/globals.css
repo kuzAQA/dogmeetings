@@ -54,6 +54,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 
 .production .sheet--place-picker .sheet-content { display: flex; flex-direction: column; overflow: clip; }
 .production .sheet--place-picker .search-field { flex: none; margin-block: 0 var(--space-2); }
+.production .sheet--place-picker .search-field input { padding-block: 0; }
 .production .place-picker-list { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .production .sheet--place-picker .option-list { margin-block: 0; }
 .production .sheet--place-picker .option-list > button { min-height: 60px; padding-block: 14px; }
