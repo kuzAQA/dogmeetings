@@ -18,7 +18,9 @@ function preloadImages(sources: string[]) {
 
 export function useHomeResources(
   sessionReady: boolean,
-  { city, district, complex }: Location
+  { city, district, complex }: Location,
+  loadPets: boolean,
+  loadMyWalks: boolean
 ) {
   const [savedPets, setSavedPets] = useState<Pet[]>([]);
   const [petsLoaded, setPetsLoaded] = useState(false);
@@ -92,7 +94,7 @@ export function useHomeResources(
   }, []);
 
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || !loadPets || petsLoaded) return;
     let active = true;
     listPets()
       .then((pets) => {
@@ -103,10 +105,10 @@ export function useHomeResources(
       .catch((error) => { if (active) setPetsError(errorMessage(error, "Не удалось загрузить питомцев.")); })
       .finally(() => { if (active) setPetsLoaded(true); });
     return () => { active = false; };
-  }, [sessionReady]);
+  }, [loadPets, petsLoaded, sessionReady]);
 
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || !loadMyWalks) return;
     let active = true;
     listMyWalks()
       .then((walks) => {
@@ -117,7 +119,7 @@ export function useHomeResources(
       .catch((error) => { if (active) setMyWalksError(errorMessage(error, "Не удалось загрузить прогулки.")); })
       .finally(() => { if (active) setMyWalksLoaded(true); });
     return () => { active = false; };
-  }, [sessionReady]);
+  }, [loadMyWalks, sessionReady]);
 
   useEffect(() => {
     if (!sessionReady || !city || !district || !complex) return;

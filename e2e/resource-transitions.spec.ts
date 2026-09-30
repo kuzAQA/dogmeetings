@@ -2,6 +2,55 @@ import { expect, test } from "@playwright/test";
 import { mockApp, openNearby, pet, walk } from "./fixtures";
 import { petPhotoUrl } from "../server/domain/pet";
 
+test("renders the first screen in HTML before session bootstrap", async ({ request, page }) => {
+  const html = await (await request.get("/")).text();
+  expect(html).toContain("Хорошая прогулка");
+  expect(html).toContain("welcome-screen");
+  expect(html).toContain("walk-hero-screen.webp");
+
+  await mockApp(page, { hasLocation: false });
+  let sessionPending = false;
+  let releaseSession = async () => {};
+  await page.route("**/api/session", (route) => {
+    sessionPending = true;
+    releaseSession = () => route.fulfill({ json: { hasLocation: false, location: null } });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect.poll(() => sessionPending).toBe(true);
+  await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Найти компанию" })).toBeDisabled();
+  await releaseSession();
+  await expect(page.getByRole("button", { name: "Найти компанию" })).toBeEnabled();
+});
+
+test("loads optional resources when first opening location", async ({ page }) => {
+  await mockApp(page, { hasLocation: false });
+  const requests = { pets: 0, locations: 0, myWalks: 0 };
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/pets" && request.method() === "GET") requests.pets += 1;
+    if (url.pathname === "/api/locations") requests.locations += 1;
+    if (url.pathname === "/api/walks" && url.searchParams.get("scope") === "mine") requests.myWalks += 1;
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
+  expect(requests).toEqual({ pets: 0, locations: 0, myWalks: 0 });
+
+  await page.getByRole("button", { name: "Найти компанию" }).click();
+  await expect(page.getByRole("heading", { name: "Мой район" })).toBeVisible();
+  await expect.poll(() => requests.pets).toBe(1);
+  await expect.poll(() => requests.locations).toBe(1);
+  await expect(page.getByRole("combobox", { name: "Город" })).toBeEnabled();
+  expect(requests.myWalks).toBe(0);
+
+  await page.getByRole("button", { name: "Назад" }).click();
+  await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
+  await page.getByRole("button", { name: "Найти компанию" }).click();
+  await expect(page.getByRole("heading", { name: "Мой район" })).toBeVisible();
+  expect(requests).toEqual({ pets: 1, locations: 1, myWalks: 0 });
+});
+
 test("opens pets from the data already loaded on entry", async ({ page }) => {
   await openNearby(page);
 

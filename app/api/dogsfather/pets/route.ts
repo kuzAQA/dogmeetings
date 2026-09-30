@@ -1,10 +1,10 @@
 import { desc, eq } from "drizzle-orm";
-import { Buffer } from "node:buffer";
 import { withDb } from "../../../../db";
 import { pets } from "../../../../db/schema";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { privateJson } from "../../../../lib/session";
-import { allowedPhotoTypes, containsLetter, MAX_BREED_LENGTH, MAX_PHOTO_SIZE, normalizeName, petPhotoUrl, uuidPattern } from "../../../../server/domain/pet";
+import { containsLetter, MAX_BREED_LENGTH, normalizeName, petPhotoUrl, uuidPattern } from "../../../../server/domain/pet";
+import { AVIF_TYPE, encodePetPhotoFile, PetPhotoError } from "../../../../server/pet-photo.mjs";
 import { readJsonRecord } from "../../../../server/transport/request-json";
 
 type PetSummary = Pick<typeof pets.$inferSelect, "id" | "name" | "breed" | "ownerName" | "photoType" | "createdAt" | "updatedAt">;
@@ -71,18 +71,11 @@ export async function PATCH(request: Request) {
     }
 
     const hasPhoto = photo instanceof File && photo.size > 0;
-    if (hasPhoto && !allowedPhotoTypes.has(photo.type)) {
-      return adminError("Поддерживаются фотографии JPEG, PNG и WebP.", 400);
-    }
-    if (hasPhoto && photo.size > MAX_PHOTO_SIZE) {
-      return adminError("Фотография после сжатия должна быть меньше 1 МБ.", 400);
-    }
-
     const updatedAt = new Date();
     const values: Partial<typeof pets.$inferInsert> = { name, ownerName, breed, updatedAt };
     if (hasPhoto) {
-      values.photo = Buffer.from(await photo.arrayBuffer());
-      values.photoType = photo.type;
+      values.photo = await encodePetPhotoFile(photo);
+      values.photoType = AVIF_TYPE;
     }
 
     const [pet] = await withDb((db) => db
@@ -101,7 +94,8 @@ export async function PATCH(request: Request) {
 
     if (!pet) return adminError("Питомец не найден.", 404);
     return privateJson({ pet: publicPet(pet) });
-  } catch {
+  } catch (error) {
+    if (error instanceof PetPhotoError) return adminError(error.message, 400);
     return adminError("Не удалось сохранить питомца.", 500);
   }
 }

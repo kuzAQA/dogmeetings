@@ -292,6 +292,30 @@ test("blocks a walk until a pet is added", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Добавить питомца", exact: true })).toBeVisible();
 });
 
+test("shows first-time location fields without a preview", async ({ page }) => {
+  await mockApp(page, { hasLocation: false });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Найти компанию", exact: true }).click();
+
+  await expect(page.getByRole("heading", { name: "Мой район" })).toBeVisible();
+  await expect(page.getByText("Компания начинается")).toBeVisible();
+  await expect(page.locator(".location-preview")).toHaveCount(0);
+  for (const label of ["Город", "Район", "Жилой комплекс"]) {
+    await expect(page.getByRole("combobox", { name: label })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "Продолжить" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Предложить новую локацию" })).toBeVisible();
+  for (const [height, shouldScroll] of [[667, false], [640, true]] as const) {
+    await page.setViewportSize({ width: 390, height });
+    const { scrollHeight, lastButtonBottom } = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      lastButtonBottom: document.querySelector(".location-screen .button.quiet")!.getBoundingClientRect().bottom,
+    }));
+    expect(lastButtonBottom > height).toBe(shouldScroll);
+    expect(scrollHeight > height).toBe(shouldScroll);
+  }
+});
+
 test("shows the browser guide only inside an in-app browser", async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, "userAgent", { configurable: true, get: () => "Telegram Android WebView" }));
   await mockApp(page, { hasLocation: false, pets: [], nearby: [], mine: [] });

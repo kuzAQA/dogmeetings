@@ -1,4 +1,3 @@
-export const MAX_PHOTO_SIZE = 1024 * 1024;
 export const MAX_BREED_LENGTH = 20;
 export const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

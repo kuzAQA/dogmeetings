@@ -40,7 +40,7 @@ export function LocationEditor({ location, cityOptions, districtOptions, complex
       <DogmeetHeader onBack={onBack} />
       <h1>Мой район</h1>
       <p className="lead">Компания начинается<br />рядом с домом.</p>
-      <div className="location-preview"><MapPin aria-hidden="true" /><strong>{location.complex || "Ваш жилой комплекс"}</strong><span>{location.city || "Выберите город"} · {location.district || "Район"}</span></div>
+      {hasLocation && <div className="location-preview"><MapPin aria-hidden="true" /><strong>{location.complex || "Ваш жилой комплекс"}</strong><span>{location.city || "Выберите город"} · {location.district || "Район"}</span></div>}
       {saving && <DogmeetState state="loading" title="Сохраняем…" />}
       <form onSubmit={onSubmit} hidden={saving} noValidate>
         <SelectField label="Город" id="location-city" value={location.city} options={cityOptions} loaded={locationsLoaded} touched={Boolean(touchedFields["location-city"])} onTouch={() => onTouch("location-city")} onChange={onCityChange} />

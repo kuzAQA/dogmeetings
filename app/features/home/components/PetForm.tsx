@@ -55,7 +55,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
 
   const editing = Boolean(petBeingEdited);
   const formValid = nameValid && ownerNameValid && breedValid;
-  const preview = photoUrl || petBeingEdited?.photoUrl || "/dog-placeholder.webp";
+  const preview = photoUrl || petBeingEdited?.photoUrl || "/dog-placeholder.avif";
   return (
     <div className="screen form-screen pet-screen">
       <DogmeetHeader onBack={photoOpen ? () => setPhotoOpen(false) : onBack} />

@@ -9,6 +9,7 @@ import {
   telegramUnsubscribeCallbackData,
   telegramUnsubscribeSubscriptionId
 } from "../../../../lib/telegram-subscription-protocol";
+import { PUBLIC_ORIGIN } from "../../../../server/infrastructure/public-origin";
 import { DELETE, PATCH } from "../../dogsfather/location-requests/route";
 
 type Action = "approve" | "reject";
@@ -64,7 +65,16 @@ async function handleTelegramStart(message: Record<string, unknown>) {
   const chat = isRecord(message.chat) ? message.chat : null;
   const chatId = telegramChatId(chat);
   const token = telegramStartToken(message.text);
-  if (!chatId || !token) return false;
+  if (!chatId) return false;
+  if (!token) {
+    if (typeof message.text !== "string" || !/^\/start(?:@[A-Za-z0-9_]{5,32})?\s*$/.test(message.text)) return false;
+    await telegramBotRequest("sendMessage", {
+      chat_id: chatId,
+      text: "Получайте уведомления о прогулках в вашем ЖК. Перейдите на сайт, выберите свой жилой комплекс, затем включите уведомления в Telegram.",
+      reply_markup: { inline_keyboard: [[{ text: "Открыть Dogmeet.ru", url: `${PUBLIC_ORIGIN}/?telegram=notifications` }]] }
+    });
+    return true;
+  }
 
   const result = await activateTelegramComplexSubscription(token, chatId);
   if (result.status === "expired") {

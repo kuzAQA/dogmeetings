@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
-import { telegramComplexSubscriptions, telegramWalkNotifications, walks } from "../../../db/schema";
+import { pets, telegramComplexSubscriptions, telegramWalkNotifications, walks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
+import { telegramBotRequest, telegramWalkChangeMessage } from "../../../lib/telegram";
 import { parseWalkMutation } from "../../../server/application/walk-input";
 import { getSavedLocation } from "../../../server/domain/location";
 import {
@@ -210,12 +211,22 @@ export async function PATCH(request: Request) {
     const walkDate = moscowDate(scheduleType === "tomorrow" ? 1 : 0);
     const startsAt = new Date(`${walkDate}T${walkTime}:00+03:00`);
     const result = await withDb((db) => db.transaction(async (tx) => {
-      const [ownedWalk] = await tx
-        .select({ id: walks.id })
+      const [previous] = await tx
+        .select({
+          id: walks.id,
+          petId: walks.petId,
+          petName: pets.name,
+          place: walks.place,
+          walkTime: walks.walkTime,
+          walkDate: walks.walkDate,
+          scheduleType: walks.scheduleType
+        })
         .from(walks)
+        .innerJoin(pets, eq(walks.petId, pets.id))
         .where(and(eq(walks.id, walkId), eq(walks.clientId, session.clientId)))
+        .for("update", { of: walks })
         .limit(1);
-      if (!ownedWalk) return null;
+      if (!previous) return null;
 
       const pet = await findWalkPetForClient(tx, petId, session.clientId);
       if (!pet) return null;
@@ -257,11 +268,40 @@ export async function PATCH(request: Request) {
           updatedAt: walks.updatedAt
         });
 
-      return { pet, walk };
+      return { previous, pet, walk };
     }));
 
     if (!result) {
       return privateError("Прогулка не найдена.", 404);
+    }
+
+    try {
+      const message = telegramWalkChangeMessage(result.previous, {
+        petId: result.pet.id,
+        petName: result.pet.name,
+        place: result.walk.place,
+        walkTime: result.walk.walkTime,
+        walkDate: result.walk.walkDate,
+        scheduleType: result.walk.scheduleType
+      });
+      if (message) {
+        const subscriptions = await withDb((db) => db
+          .select({ chatId: telegramComplexSubscriptions.telegramChatId })
+          .from(telegramComplexSubscriptions)
+          .where(and(
+            eq(telegramComplexSubscriptions.active, true),
+            eq(telegramComplexSubscriptions.city, result.walk.city),
+            eq(telegramComplexSubscriptions.district, result.walk.district),
+            eq(telegramComplexSubscriptions.residentialComplex, result.walk.residentialComplex)
+          )));
+        await Promise.all(subscriptions.map(({ chatId }) => telegramBotRequest("sendMessage", {
+          chat_id: chatId,
+          text: message,
+          parse_mode: "HTML"
+        })));
+      }
+    } catch (error) {
+      console.error("[walk-telegram-notifications] Не удалось отправить изменение прогулки.", error);
     }
 
     return privateJson({

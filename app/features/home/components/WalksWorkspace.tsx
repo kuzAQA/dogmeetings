@@ -45,6 +45,7 @@ type Props = {
   profileHeadingRef: RefObject<HTMLHeadingElement | null>;
   onOpenLocationEditor: () => void;
   onOpenTelegramSubscription: () => Promise<string>;
+  highlightTelegram: boolean;
   onOpenMyWalks: () => void;
   onOpenMyPets: () => void;
   onOpenProfile: () => void;
@@ -57,7 +58,7 @@ type Props = {
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenTelegramSubscription, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenTelegramSubscription, highlightTelegram, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
   const [contactCopied, setContactCopied] = useState(false);
@@ -86,7 +87,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
 
   if (active === "profile") {
     return (
-      <div className="screen profile-screen">
+      <div className={`screen profile-screen${highlightTelegram ? " telegram-spotlight" : ""}`}>
         <DogmeetHeader onBack={onBack} />
         <h1 id="menu-title" ref={profileHeadingRef} tabIndex={-1}>Мой район<br />и настройки</h1>
         <div className="profile-banner">
@@ -95,7 +96,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
-        <button className="menu-row" type="button" disabled={telegramOpening} onClick={async () => { setTelegramOpening(true); setTelegramError(""); try { window.location.assign(await onOpenTelegramSubscription()); } catch (error) { setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram."); setTelegramOpening(false); } }}><ExternalLink aria-hidden="true" /><span><strong>{telegramOpening ? "Открываем Telegram…" : "Получать уведомления в Telegram"}</strong><small>Новые прогулки в ЖК «{location.complex}»</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row telegram-subscribe" type="button" disabled={telegramOpening} onClick={async () => { setTelegramOpening(true); setTelegramError(""); try { window.location.assign(await onOpenTelegramSubscription()); } catch (error) { setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram."); setTelegramOpening(false); } }}><ExternalLink aria-hidden="true" /><span><strong>{telegramOpening ? "Открываем Telegram…" : "Получать уведомления в Telegram"}</strong><small>Новые прогулки в ЖК «{location.complex}»</small></span><ChevronRight aria-hidden="true" /></button>
         {telegramError && <p className="field-error" role="alert">{telegramError}</p>}
         <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>

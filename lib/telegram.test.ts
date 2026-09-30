@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { isTelegramWebhookRequest, sendTelegramLocationRequestNotification } from "./telegram.ts";
+import { isTelegramWebhookRequest, sendTelegramLocationRequestNotification, telegramWalkChangeMessage } from "./telegram.ts";
 
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -17,6 +17,31 @@ function restoreEnvironment() {
 }
 
 test.afterEach(restoreEnvironment);
+
+test("walk edit message includes only changed fields and escapes Telegram HTML", () => {
+  const previous = {
+    petId: "old-pet", petName: "Шарик <&>", place: "Старое <место>",
+    walkTime: "18:00:00", walkDate: "2026-09-30", scheduleType: "today"
+  };
+  const current = {
+    petId: "new-pet", petName: "Рекс & друзья", place: "Новое место",
+    walkTime: "19:00:00", walkDate: "2026-10-01", scheduleType: "tomorrow"
+  };
+
+  assert.equal(telegramWalkChangeMessage(previous, current), [
+    "Прогулка изменена:",
+    "Питомец: <s>Шарик &lt;&amp;&gt;</s> → Рекс &amp; друзья",
+    "Место: <s>Старое &lt;место&gt;</s> → Новое место",
+    "Время: <s>18:00 · 30.09.2026</s> → 19:00 · 01.10.2026"
+  ].join("\n"));
+  assert.equal(telegramWalkChangeMessage(previous, { ...previous, place: "Новый парк" }),
+    "Прогулка изменена:\nМесто: <s>Старое &lt;место&gt;</s> → Новый парк");
+  assert.equal(telegramWalkChangeMessage(previous, { ...previous, walkDate: "2026-10-01" }),
+    "Прогулка изменена:\nВремя: <s>18:00 · 30.09.2026</s> → 18:00 · 01.10.2026");
+  assert.equal(telegramWalkChangeMessage(previous, previous), null);
+  assert.equal(telegramWalkChangeMessage({ ...previous, scheduleType: "always" },
+    { ...previous, scheduleType: "always", walkDate: "2026-10-01" }), null);
+});
 
 test("location request uses Telegram instead of admin push", async () => {
   process.env.TELEGRAM_BOT_TOKEN = "test-token";

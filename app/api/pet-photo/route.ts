@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       return new Response(null, {
         status: 302,
         headers: {
-          "Location": new URL("/dog-placeholder.webp", request.url).toString(),
+          "Location": new URL("/dog-placeholder.avif", request.url).toString(),
           "Cache-Control": IMMUTABLE_PHOTO_CACHE
         }
       });

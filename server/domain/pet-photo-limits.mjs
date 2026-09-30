@@ -1,0 +1,3 @@
+export const MAX_SOURCE_PHOTO_SIZE = 10 * 1024 * 1024;
+export const MAX_STORED_PHOTO_SIZE = 1024 * 1024;
+export const MAX_PET_PHOTO_PIXELS = 20_000_000;

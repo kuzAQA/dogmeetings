@@ -40,7 +40,6 @@ import {
 import { useHomeSession } from "./features/home/use-home-session";
 import { filterWalksByPeriod, locationOptions, walksById } from "./features/home/selectors";
 import { useWalkForm } from "./features/home/use-walk-form";
-import { compressPetPhoto } from "../lib/pet-photo";
 import { WalkAnnouncementForm } from "./features/home/components/WalkAnnouncementForm";
 import { PetCollection, WalkCollection } from "./features/home/components/Collections";
 import { HomeDialogs } from "./features/home/components/HomeDialogs";
@@ -70,6 +69,7 @@ export default function Home() {
   const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [locationsError, setLocationsError] = useState("");
   const [hasLocation, setHasLocation] = useState(false);
+  const [highlightTelegram, setHighlightTelegram] = useState(false);
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSubmitError, setLocationSubmitError] = useState("");
   const [locationRequestDraft, setLocationRequestDraft] = useState<Location>(defaultLocation);
@@ -123,11 +123,18 @@ export default function Home() {
     returnThroughHistory
   } = useHomeNavigation(hasLocation);
   const initializeSession = useCallback((data: { hasLocation: boolean; location: Location | null }, sharedPetNavigation: { sharedPetId: string; sharedPetAlreadyAddedId: string }) => {
+    const url = new URL(window.location.href);
+    const fromTelegram = url.searchParams.get("telegram") === "notifications";
+    if (fromTelegram) {
+      url.searchParams.delete("telegram");
+      window.history.replaceState(window.history.state, "", url);
+    }
     const restoredLocation = data.hasLocation && data.location ? data.location : defaultLocation;
     const initialScreen: Screen = sharedPetNavigation.sharedPetId || sharedPetNavigation.sharedPetAlreadyAddedId
       ? "my-pets"
       : data.hasLocation && data.location ? "walks" : "welcome";
-    const initialNavigation = createNavigationState(initialScreen);
+    const showTelegramMenu = fromTelegram && initialScreen === "walks";
+    const initialNavigation = createNavigationState(initialScreen, { menuOpen: showTelegramMenu });
 
     setHighlightedPetId("");
     setPendingSharedPetHighlightId(sharedPetNavigation.sharedPetId);
@@ -135,6 +142,7 @@ export default function Home() {
     setLocation(restoredLocation);
     setLocationDraft((current) => data.hasLocation && data.location ? restoredLocation : current);
     setHasLocation(Boolean(data.hasLocation && data.location));
+    setHighlightTelegram(showTelegramMenu);
 
     if (sharedPetNavigation.sharedPetId || sharedPetNavigation.sharedPetAlreadyAddedId) {
       initializeNavigation(initialNavigation, createNavigationState(data.hasLocation && data.location ? "walks" : "welcome"));
@@ -166,7 +174,7 @@ export default function Home() {
     retryWalks,
     retryPlaces,
     retryMyWalks
-  } = useHomeResources(sessionReady, location);
+  } = useHomeResources(sessionReady, location, hasLocation || screen === "location" || screen === "my-pets", hasLocation);
   const walkForm = useWalkForm(savedPets, sharedPlaces, placesLoaded);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
@@ -194,6 +202,7 @@ export default function Home() {
   }
 
   useEffect(() => {
+    if (screen !== "location" || locationsLoaded) return;
     let active = true;
 
     listLocations()
@@ -209,7 +218,7 @@ export default function Home() {
       .finally(() => { if (active) setLocationsLoaded(true); });
 
     return () => { active = false; };
-  }, []);
+  }, [locationsLoaded, screen]);
 
   useEffect(() => {
     if (!pendingSharedPetHighlightId || !petsLoaded) return;
@@ -678,10 +687,7 @@ export default function Home() {
 
     try {
       const photo = formData.get("photo");
-      if (photo instanceof File && photo.size > 0) {
-        const compressedPhoto = await compressPetPhoto(photo);
-        formData.set("photo", compressedPhoto, compressedPhoto.name);
-      } else {
+      if (!(photo instanceof File) || photo.size === 0) {
         formData.delete("photo");
       }
       if (editedPet) formData.set("petId", editedPet.id);
@@ -757,6 +763,7 @@ export default function Home() {
         : [...current, { id: savedWalk.placeId, name: savedWalk.point }]
           .sort((left, right) => left.name.localeCompare(right.name, "ru")));
       setMyWalks((current) => [savedWalk, ...current.filter((walk) => walk.id !== savedWalk.id)]);
+      if (editedWalk) await retryWalks();
       setWalkSaving(false);
       setGuidedWalkFlow(false);
       setResult({ title: editedWalk ? "Планы обновлены" : "Вы идёте гулять!", message: editedWalk ? "Новое время и место видны в расписании." : "Прогулка появилась в расписании. Соседи знают, где вас найти.", action: "Посмотреть мои планы", receipt: { title: `${savedWalk.walkTime.slice(0, 5)} · ${savedWalk.scheduleType === "always" ? "Ежедневно" : savedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}`, place: savedWalk.point, pet: `${savedWalk.pet} · ${savedWalk.complex}` }, onContinue: () => {
@@ -843,26 +850,36 @@ export default function Home() {
     }
   }
 
+  const welcomeScreen = <div className="screen welcome welcome-screen">
+    <DogmeetBrand tagline="Встретимся во дворе" />
+    <h1>Хорошая прогулка<br />начинается<br /><em>с компании.</em></h1>
+    <div className="welcome-photo hero-wrap">
+      <Image
+        src="/walk-hero-screen.avif"
+        alt="Хозяйка гуляет с собакой в парке"
+        fill
+        priority
+        unoptimized
+        style={{ objectFit: "cover" }}
+      />
+      <span className="photo-caption"><span>Знакомые места.</span><strong>Новые друзья.</strong></span>
+    </div>
+    <p>Узнайте, кто гуляет рядом, и расскажите соседям о своих планах.</p>
+    {screen === null && sessionError ? (
+      <div className="session-error" role="alert">
+        <p>{sessionError}</p>
+        <button className="button" type="button" onClick={retrySession}>Повторить</button>
+      </div>
+    ) : (
+      <button className="button" type="button" disabled={screen === null} onClick={openBrowserGuide}>Найти компанию</button>
+    )}
+    <small className="center-note">Без регистрации. Начнём с вашего района.</small>
+    {screen === null && !sessionError && <span className="visually-hidden" role="status">Восстанавливаем безопасную сессию</span>}
+  </div>;
+
   if (result && !result.sheet) return <DogmeetFrame><main><DogmeetHeader /><h1>{screen === "pet" ? petBeingEdited ? "Изменить питомца" : "Добавить питомца" : screen === "location" ? "Мой район" : walkBeingEdited ? "Изменить прогулку" : "Сообщить о прогулке"}</h1><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => { setResult(null); result.onContinue(); }}>{result.receipt && <div className="receipt"><strong>{result.receipt.title}</strong><span>{result.receipt.place}</span><small>{result.receipt.pet}</small></div>}</DogmeetState></main></DogmeetFrame>;
 
-  if (screen === null) {
-    return (
-      <DogmeetFrame>
-        <main><section className="restoring-shell" aria-label="Сервис совместных прогулок" aria-busy="true">
-          {sessionError ? (
-            <div className="session-error" role="alert">
-              <p>{sessionError}</p>
-              <button className="button" type="button" onClick={retrySession}>
-                Повторить
-              </button>
-            </div>
-          ) : (
-            <span className="visually-hidden" role="status">Восстанавливаем безопасную сессию</span>
-          )}
-        </section></main>
-      </DogmeetFrame>
-    );
-  }
+  if (screen === null) return <DogmeetFrame><main aria-busy={!sessionError}><section className="app-shell screen-welcome" aria-label="Сервис совместных прогулок">{welcomeScreen}</section></main></DogmeetFrame>;
 
   return (
     <DogmeetFrame className={(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>
@@ -882,25 +899,7 @@ export default function Home() {
             onPetsClick={() => { if (dockSection !== "pets") openCollectionScreen("my-pets", "dock"); }}
           />
         )}
-        {screen === "welcome" && (
-          <div className="screen welcome welcome-screen">
-            <DogmeetBrand tagline="Встретимся во дворе" />
-            <h1>Хорошая прогулка<br />начинается<br /><em>с компании.</em></h1>
-            <div className="welcome-photo hero-wrap">
-              <Image
-                src="/walk-hero.webp"
-                alt="Хозяйка гуляет с собакой в парке"
-                fill
-                priority
-                sizes="(max-width: 520px) 100vw, 430px"
-              />
-              <span className="photo-caption"><span>Знакомые места.</span><strong>Новые друзья.</strong></span>
-            </div>
-            <p>Узнайте, кто гуляет рядом, и расскажите соседям о своих планах.</p>
-            <button className="button" type="button" onClick={openBrowserGuide}>Найти компанию</button>
-            <small className="center-note">Без регистрации. Начнём с вашего района.</small>
-          </div>
-        )}
+        {screen === "welcome" && welcomeScreen}
 
         {screen === "browser-guide" && (
           <BrowserGuide
@@ -992,6 +991,7 @@ export default function Home() {
             profileHeadingRef={profileHeadingRef}
             onOpenLocationEditor={openLocationEditor}
             onOpenTelegramSubscription={requestTelegramSubscriptionLink}
+            highlightTelegram={highlightTelegram}
             onOpenMyWalks={() => openCollectionScreen("my-walks")}
             onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
             onOpenProfile={() => selectDockSection("profile")}

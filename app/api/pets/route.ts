@@ -1,11 +1,11 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
-import { Buffer } from "node:buffer";
 import { withDb } from "../../../db";
 import { petCollaborators, pets } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
 import { parsePetMutation } from "../../../server/application/pet-input";
 import { canEditPet, petPhotoUrl, uuidPattern } from "../../../server/domain/pet";
+import { AVIF_TYPE, encodePetPhotoFile, PetPhotoError } from "../../../server/pet-photo.mjs";
 import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
 type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "photoType" | "createdAt" | "updatedAt">;
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     const { name, breed, ownerName, photo } = parsedInput.value;
 
     const id = crypto.randomUUID();
-    const photoBytes = photo ? Buffer.from(await photo.arrayBuffer()) : null;
+    const photoBytes = photo ? await encodePetPhotoFile(photo) : null;
     const [pet] = await withDb((db) => db
         .insert(pets)
         .values({
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
           breed,
           ownerName,
           photo: photoBytes,
-          photoType: photo?.type ?? null
+          photoType: photoBytes ? AVIF_TYPE : null
         })
         .returning({
           id: pets.id,
@@ -131,6 +131,7 @@ export async function POST(request: Request) {
 
     return privateJson({ pet: publicPet(pet, session.clientId) }, { status: 201 });
   } catch (error) {
+    if (error instanceof PetPhotoError) return privateError(error.message, 400);
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }
@@ -178,8 +179,8 @@ export async function PATCH(request: Request) {
     const updatedAt = new Date();
     const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, updatedAt };
     if (photo) {
-      values.photo = Buffer.from(await photo.arrayBuffer());
-      values.photoType = photo.type;
+      values.photo = await encodePetPhotoFile(photo);
+      values.photoType = AVIF_TYPE;
     }
 
     const [pet] = await withDb((db) => db
@@ -211,6 +212,7 @@ export async function PATCH(request: Request) {
 
     return privateJson({ pet: publicPet(pet, session.clientId, Boolean(collaborator)) });
   } catch (error) {
+    if (error instanceof PetPhotoError) return privateError(error.message, 400);
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }

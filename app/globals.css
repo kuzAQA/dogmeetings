@@ -16,6 +16,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production { padding-inline: 0; }
 .production .phone { margin-inline: auto; }
 .production main { display: block; }
+.production main:has(.location-screen) { padding-bottom: 0; }
 .production .bottom-nav { left: 50%; }
 .production .sheet { left: 0; }
 .production .react-modal-sheet-root[data-sheet-state="closing"] { pointer-events: none; }
@@ -27,6 +28,37 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .production .screen, .production .app-shell { min-width: 0; }
 .production .hero-wrap > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.production:has(.welcome-screen) { padding-block: 0; }
+.production .phone:has(.welcome-screen), .production main:has(.welcome-screen) { min-height: 0; }
+.production main:has(.welcome-screen) { padding: 0; }
+.production .welcome-screen {
+  --welcome-gap: clamp(8px, 1.8dvh, 16px);
+  --welcome-inset: clamp(16px, 5vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--welcome-gap);
+  height: 100vh;
+  height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(var(--welcome-inset), env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(var(--welcome-inset), env(safe-area-inset-left, 0px));
+}
+.production .welcome-screen > * { flex-shrink: 0; }
+.production .welcome-screen h1 { font-size: clamp(28px, min(9vw, 5.5dvh), 38px); margin: 0; }
+.production .welcome-photo {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  margin: 0 calc(-1 * max(var(--welcome-inset), env(safe-area-inset-right, 0px))) 0 calc(-1 * max(var(--welcome-inset), env(safe-area-inset-left, 0px)));
+  overflow: visible;
+}
+.production .welcome-photo > img { object-position: center; }
+.production .welcome-screen > p { margin: 0; line-height: 1.5; }
+.production .welcome-screen .button, .production .welcome-screen .center-note { margin: 0; }
+@media (max-height: 700px) {
+  .production .welcome-screen { --welcome-gap: 8px; }
+  .production .welcome-screen .brand { font-size: 23px; }
+  .production .welcome-screen > p { font-size: 14px; line-height: 1.45; }
+  .production .welcome-screen .button { min-height: 48px; padding-block: 12px; }
+}
 .production .menu-row { text-decoration: none; }
 .production .walk-summary { color: var(--ink); }
 .production .walk-summary > .text-link { border: 0; background: transparent; padding: 0; text-align: left; }

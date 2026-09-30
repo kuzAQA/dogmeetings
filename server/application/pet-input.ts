@@ -1,11 +1,5 @@
-import {
-  allowedPhotoTypes,
-  containsLetter,
-  MAX_BREED_LENGTH,
-  MAX_PHOTO_SIZE,
-  normalizeName,
-  uuidPattern
-} from "../domain/pet";
+import { containsLetter, MAX_BREED_LENGTH, normalizeName, uuidPattern } from "../domain/pet";
+import { MAX_SOURCE_PHOTO_SIZE } from "../domain/pet-photo-limits.mjs";
 
 type MutationMode = "create" | "update";
 
@@ -25,8 +19,7 @@ type ParseResult<T> =
 
 function photoError(photo: File | null) {
   if (!photo) return "";
-  if (!allowedPhotoTypes.has(photo.type)) return "Поддерживаются фотографии JPEG, PNG и WebP.";
-  if (photo.size > MAX_PHOTO_SIZE) return "Фотография после сжатия должна быть меньше 1 МБ.";
+  if (photo.size > MAX_SOURCE_PHOTO_SIZE) return "Исходная фотография должна быть не больше 10 МБ.";
   return "";
 }
 

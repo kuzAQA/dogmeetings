@@ -31,6 +31,30 @@ function locationValue(value: string | null | undefined) {
   return trimmed ? trimmed.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "—";
 }
 
+type WalkNotificationState = {
+  petId: string;
+  petName: string;
+  place: string;
+  walkTime: string;
+  walkDate: string;
+  scheduleType: string;
+};
+
+export function telegramWalkChangeMessage(previous: WalkNotificationState, current: WalkNotificationState) {
+  const lines = ["Прогулка изменена:"];
+  const changed = (oldValue: string, newValue: string) => `<s>${locationValue(oldValue)}</s> → ${locationValue(newValue)}`;
+  const time = (walk: WalkNotificationState) => `${walk.walkTime.slice(0, 5)} · ${walk.scheduleType === "always" ? "каждый день" : walk.walkDate.split("-").reverse().join(".")}`;
+
+  if (previous.petId !== current.petId) lines.push(`Питомец: ${changed(previous.petName, current.petName)}`);
+  if (previous.place !== current.place) lines.push(`Место: ${changed(previous.place, current.place)}`);
+  if (previous.walkTime !== current.walkTime || previous.scheduleType !== current.scheduleType ||
+    (previous.scheduleType !== "always" && previous.walkDate !== current.walkDate)) {
+    lines.push(`Время: ${changed(time(previous), time(current))}`);
+  }
+
+  return lines.length > 1 ? lines.join("\n") : null;
+}
+
 export function telegramLocationRequestMessage(location: LocationRequestNotification) {
   return [
     "🆕 Новая заявка на локацию",
