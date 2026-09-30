@@ -32,6 +32,7 @@ test("subscription upsert and unsubscription are idempotent for one Telegram cha
   assert.match(subscriptions, /eq\(telegramComplexSubscriptions\.id, subscriptionId\)[\s\S]*eq\(telegramComplexSubscriptions\.telegramChatId, chatId\)/);
   const webhook = await readFile(new URL("../app/api/telegram/webhook/route.ts", import.meta.url), "utf8");
   assert.match(webhook, /activateTelegramComplexSubscription\(token, chatId\)/);
+  assert.match(webhook, /activateTelegramComplexSubscription\(token, chatId\);[\s\S]*?if \(chat\?\.type === "private"[\s\S]*?telegramBotRequest\("deleteMessage", \{ chat_id: chatId, message_id: message\.message_id \}\);[\s\S]*?if \(result\.status === "expired"\)/);
 });
 
 test("walk notifications are queued only for active subscriptions in the same complex", async () => {

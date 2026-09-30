@@ -77,6 +77,9 @@ async function handleTelegramStart(message: Record<string, unknown>) {
   }
 
   const result = await activateTelegramComplexSubscription(token, chatId);
+  if (chat?.type === "private" && typeof message.message_id === "number" && Number.isSafeInteger(message.message_id)) {
+    await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: message.message_id });
+  }
   if (result.status === "expired") {
     await telegramBotRequest("sendMessage", {
       chat_id: chatId,
