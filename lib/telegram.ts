@@ -34,6 +34,8 @@ function locationValue(value: string | null | undefined) {
 type WalkNotificationState = {
   petId: string;
   petName: string;
+  ownerName: string;
+  residentialComplex: string;
   place: string;
   walkTime: string;
   walkDate: string;
@@ -41,18 +43,25 @@ type WalkNotificationState = {
 };
 
 export function telegramWalkChangeMessage(previous: WalkNotificationState, current: WalkNotificationState) {
-  const lines = ["Прогулка изменена:"];
-  const changed = (oldValue: string, newValue: string) => `<s>${locationValue(oldValue)}</s> → ${locationValue(newValue)}`;
-  const time = (walk: WalkNotificationState) => `${walk.walkTime.slice(0, 5)} · ${walk.scheduleType === "always" ? "каждый день" : walk.walkDate.split("-").reverse().join(".")}`;
+  const who = (walk: WalkNotificationState) => `${walk.petName} · ${walk.ownerName}`;
+  const schedule = (walk: WalkNotificationState) => walk.scheduleType === "always" ? "каждый день" : walk.scheduleType === "tomorrow" ? "завтра" : "сегодня";
+  const dateChanged = previous.scheduleType !== "always" && previous.walkDate !== current.walkDate;
+  const time = (walk: WalkNotificationState) => `${walk.walkTime.slice(0, 5)} · ${schedule(walk)}${dateChanged && previous.scheduleType === current.scheduleType ? ` (${walk.walkDate.split("-").reverse().join(".")})` : ""}`;
+  const changed = (oldValue: string, newValue: string) => oldValue === newValue
+    ? locationValue(newValue)
+    : `<s>${locationValue(oldValue)}</s> → ${locationValue(newValue)}`;
 
-  if (previous.petId !== current.petId) lines.push(`Питомец: ${changed(previous.petName, current.petName)}`);
-  if (previous.place !== current.place) lines.push(`Место: ${changed(previous.place, current.place)}`);
-  if (previous.walkTime !== current.walkTime || previous.scheduleType !== current.scheduleType ||
-    (previous.scheduleType !== "always" && previous.walkDate !== current.walkDate)) {
-    lines.push(`Время: ${changed(time(previous), time(current))}`);
-  }
+  if (previous.petId === current.petId && who(previous) === who(current) &&
+    previous.residentialComplex === current.residentialComplex && previous.place === current.place &&
+    previous.walkTime === current.walkTime && previous.scheduleType === current.scheduleType && !dateChanged) return null;
 
-  return lines.length > 1 ? lines.join("\n") : null;
+  return [
+    `🐾 <b>Прогулка изменена в ЖК «${changed(previous.residentialComplex, current.residentialComplex)}»</b>`,
+    "",
+    `<b>Кто гуляет:</b> ${changed(who(previous), who(current))}`,
+    `<b>Где:</b> ${changed(previous.place, current.place)}`,
+    `<b>Во сколько:</b> ${changed(time(previous), time(current))}`
+  ].join("\n");
 }
 
 export function telegramLocationRequestMessage(location: LocationRequestNotification) {

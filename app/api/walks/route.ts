@@ -216,6 +216,8 @@ export async function PATCH(request: Request) {
           id: walks.id,
           petId: walks.petId,
           petName: pets.name,
+          ownerName: pets.ownerName,
+          residentialComplex: walks.residentialComplex,
           place: walks.place,
           walkTime: walks.walkTime,
           walkDate: walks.walkDate,
@@ -279,6 +281,8 @@ export async function PATCH(request: Request) {
       const message = telegramWalkChangeMessage(result.previous, {
         petId: result.pet.id,
         petName: result.pet.name,
+        ownerName: result.pet.ownerName,
+        residentialComplex: result.walk.residentialComplex,
         place: result.walk.place,
         walkTime: result.walk.walkTime,
         walkDate: result.walk.walkDate,

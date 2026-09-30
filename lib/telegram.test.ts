@@ -18,26 +18,27 @@ function restoreEnvironment() {
 
 test.afterEach(restoreEnvironment);
 
-test("walk edit message includes only changed fields and escapes Telegram HTML", () => {
+test("walk edit message includes the full walk card and escapes Telegram HTML", () => {
   const previous = {
-    petId: "old-pet", petName: "Шарик <&>", place: "Старое <место>",
+    petId: "old-pet", petName: "Шарик <&>", ownerName: "Иван", residentialComplex: "Старый ЖК", place: "Старое <место>",
     walkTime: "18:00:00", walkDate: "2026-09-30", scheduleType: "today"
   };
   const current = {
-    petId: "new-pet", petName: "Рекс & друзья", place: "Новое место",
+    petId: "new-pet", petName: "Рекс & друзья", ownerName: "Мария", residentialComplex: "Новый ЖК", place: "Новое место",
     walkTime: "19:00:00", walkDate: "2026-10-01", scheduleType: "tomorrow"
   };
 
   assert.equal(telegramWalkChangeMessage(previous, current), [
-    "Прогулка изменена:",
-    "Питомец: <s>Шарик &lt;&amp;&gt;</s> → Рекс &amp; друзья",
-    "Место: <s>Старое &lt;место&gt;</s> → Новое место",
-    "Время: <s>18:00 · 30.09.2026</s> → 19:00 · 01.10.2026"
+    "🐾 <b>Прогулка изменена в ЖК «<s>Старый ЖК</s> → Новый ЖК»</b>",
+    "",
+    "<b>Кто гуляет:</b> <s>Шарик &lt;&amp;&gt; · Иван</s> → Рекс &amp; друзья · Мария",
+    "<b>Где:</b> <s>Старое &lt;место&gt;</s> → Новое место",
+    "<b>Во сколько:</b> <s>18:00 · сегодня</s> → 19:00 · завтра"
   ].join("\n"));
   assert.equal(telegramWalkChangeMessage(previous, { ...previous, place: "Новый парк" }),
-    "Прогулка изменена:\nМесто: <s>Старое &lt;место&gt;</s> → Новый парк");
+    "🐾 <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n<b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n<b>Где:</b> <s>Старое &lt;место&gt;</s> → Новый парк\n<b>Во сколько:</b> 18:00 · сегодня");
   assert.equal(telegramWalkChangeMessage(previous, { ...previous, walkDate: "2026-10-01" }),
-    "Прогулка изменена:\nВремя: <s>18:00 · 30.09.2026</s> → 18:00 · 01.10.2026");
+    "🐾 <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n<b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n<b>Где:</b> Старое &lt;место&gt;\n<b>Во сколько:</b> <s>18:00 · сегодня (30.09.2026)</s> → 18:00 · сегодня (01.10.2026)");
   assert.equal(telegramWalkChangeMessage(previous, previous), null);
   assert.equal(telegramWalkChangeMessage({ ...previous, scheduleType: "always" },
     { ...previous, scheduleType: "always", walkDate: "2026-10-01" }), null);
