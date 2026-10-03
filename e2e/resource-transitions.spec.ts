@@ -2,11 +2,12 @@ import { expect, test } from "@playwright/test";
 import { mockApp, openNearby, pet, walk } from "./fixtures";
 import { petPhotoUrl } from "../server/domain/pet";
 
-test("keeps initial HTML and session restoration empty until the screen is known", async ({ request, page }) => {
+test("keeps initial HTML neutral and enables first-visit welcome before session bootstrap completes", async ({ request, page }) => {
   const html = await (await request.get("/")).text();
+  expect(html).not.toContain("Восстанавливаем безопасную сессию");
   expect(html).toContain('aria-busy="true"');
   expect(html).not.toContain('class="screen welcome welcome-screen"');
-  expect(html).not.toContain('class="loader"');
+  expect(html).not.toContain('src="/walk-hero-screen.avif"');
 
   await mockApp(page, { hasLocation: false });
   let sessionPending = false;
@@ -17,13 +18,14 @@ test("keeps initial HTML and session restoration empty until the screen is known
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect.poll(() => sessionPending).toBe(true);
-  await expect(page.locator('main[aria-busy="true"]')).toBeEmpty();
+  await expect(page.locator(".welcome-screen")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Найти компанию" })).toBeEnabled();
   await releaseSession();
   await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Найти компанию" })).toBeEnabled();
 });
 
-test("loads optional resources when first opening location", async ({ page }) => {
+test("preloads locations on welcome and loads optional resources when first opening location", async ({ page }) => {
   await mockApp(page, { hasLocation: false });
   const requests = { pets: 0, locations: 0, myWalks: 0 };
   page.on("request", (request) => {
@@ -35,7 +37,8 @@ test("loads optional resources when first opening location", async ({ page }) =>
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
-  expect(requests).toEqual({ pets: 0, locations: 0, myWalks: 0 });
+  await expect.poll(() => requests.locations).toBe(1);
+  expect(requests).toEqual({ pets: 0, locations: 1, myWalks: 0 });
 
   await page.getByRole("button", { name: "Найти компанию" }).click();
   await expect(page.getByRole("heading", { name: "Мой район" })).toBeVisible();
