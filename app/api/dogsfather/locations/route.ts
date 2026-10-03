@@ -6,9 +6,11 @@ import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { databaseErrorMessage } from "../../../../lib/database-error";
 import { privateJson } from "../../../../lib/session";
 import { readJsonRecord } from "../../../../server/transport/request-json";
+import { capitalizePlaceName, MAX_WALK_PLACE_LENGTH, normalizePlaceName } from "../../../../server/domain/walk";
 
-type LocationLevel = "city" | "district" | "complex";
-type LocationTarget = { level: LocationLevel; city: string; district: string; complex: string };
+type LocationTarget = { city: string; district: string; complex: string } & (
+  { level: "city" | "district" | "complex" } | { level: "place"; id: string }
+);
 
 function adminError(message: string, status: number, cookie?: string) {
   return privateJson({ error: message }, { status }, cookie);
@@ -21,11 +23,16 @@ function normalizeName(value: unknown, limit: number) {
 
 function readTarget(payload: Record<string, unknown> | null): LocationTarget | null {
   const level = payload?.level;
-  if (level !== "city" && level !== "district" && level !== "complex") return null;
+  if (level !== "city" && level !== "district" && level !== "complex" && level !== "place") return null;
   const city = normalizeName(payload?.city, 80);
   const district = normalizeName(payload?.district, 80);
   const complex = normalizeName(payload?.complex, 120);
-  if (!city || (level !== "city" && !district) || (level === "complex" && !complex)) return null;
+  if (!city || (level !== "city" && !district) || ((level === "complex" || level === "place") && !complex)) return null;
+  if (level === "place") {
+    const id = String(payload?.id ?? "");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+    return { level, id, city, district, complex };
+  }
   return { level, city, district, complex };
 }
 
@@ -42,6 +49,7 @@ function sessionWhere(target: LocationTarget) {
 }
 
 function placeWhere(target: LocationTarget) {
+  if (target.level === "place") return and(eq(places.id, target.id), eq(places.city, target.city), eq(places.district, target.district), eq(places.residentialComplex, target.complex));
   if (target.level === "city") return eq(places.city, target.city);
   if (target.level === "district") return and(eq(places.city, target.city), eq(places.district, target.district));
   return and(eq(places.city, target.city), eq(places.district, target.district), eq(places.residentialComplex, target.complex));
@@ -57,18 +65,26 @@ function targetName(target: LocationTarget) {
   return target.level === "city" ? target.city : target.level === "district" ? target.district : target.complex;
 }
 
-function isUniqueViolation(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+function isDatabaseViolation(error: unknown, code: string): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  return ("code" in error && error.code === code) || ("cause" in error && isDatabaseViolation(error.cause, code));
 }
 
 export async function GET(request: Request) {
   try {
     if (!await authorizeAdminRequest(request)) return adminError("Требуется вход.", 401);
-    const rows = await withDb((db) => db
-      .select({ city: locations.city, district: locations.district, complex: locations.residentialComplex })
-      .from(locations)
-      .orderBy(asc(locations.city), asc(locations.district), asc(locations.residentialComplex)));
-    return privateJson({ locations: rows });
+    const data = await withDb(async (db) => {
+      const rows = await db
+        .select({ city: locations.city, district: locations.district, complex: locations.residentialComplex })
+        .from(locations)
+        .orderBy(asc(locations.city), asc(locations.district), asc(locations.residentialComplex));
+      const placeRows = await db
+        .select({ id: places.id, name: places.name, city: places.city, district: places.district, complex: places.residentialComplex })
+        .from(places)
+        .orderBy(asc(places.name));
+      return { locations: rows, places: placeRows };
+    });
+    return privateJson(data);
   } catch {
     return adminError("Не удалось загрузить локации.", 500);
   }
@@ -79,8 +95,23 @@ export async function PATCH(request: Request) {
     if (!await authorizeAdminRequest(request, true)) return adminError("Требуется вход.", 401);
     const payload = await readJsonRecord(request);
     const target = readTarget(payload);
-    const name = normalizeName(payload?.name, target?.level === "complex" ? 120 : 80);
-    if (!target || !name) return adminError("Некорректное название локации.", 400);
+    const name = target?.level === "place"
+      ? normalizeName(capitalizePlaceName(String(payload?.name ?? "")), MAX_WALK_PLACE_LENGTH)
+      : normalizeName(payload?.name, target?.level === "complex" ? 120 : 80);
+    if (!target || !name) return adminError(target?.level === "place" ? `Укажите название места до ${MAX_WALK_PLACE_LENGTH} символов.` : "Некорректное название локации.", 400);
+    if (target.level === "place") {
+      const updated = await withDb((db) => db.transaction(async (tx) => {
+        const [place] = await tx.update(places)
+          .set({ name, normalizedName: normalizePlaceName(name) })
+          .where(placeWhere(target))
+          .returning({ id: places.id });
+        if (!place) return false;
+        await tx.update(walks).set({ place: name, updatedAt: new Date() }).where(eq(walks.placeId, place.id));
+        return true;
+      }));
+      if (!updated) return adminError("Место не найдено.", 404);
+      return privateJson({ updated: true });
+    }
     if (name === targetName(target)) return privateJson({ updated: true });
 
     const updated = await withDb((db) => db.transaction(async (tx) => {
@@ -107,7 +138,7 @@ export async function PATCH(request: Request) {
     if (updated === "duplicate") return adminError("Локация с таким названием уже существует.", 409);
     return privateJson({ updated: true });
   } catch (error) {
-    return adminError(isUniqueViolation(error) ? "Локация с таким названием уже существует." : databaseErrorMessage(error, "Не удалось сохранить локацию."), isUniqueViolation(error) ? 409 : 500);
+    return adminError(isDatabaseViolation(error, "23505") ? "Название уже используется в этой локации." : databaseErrorMessage(error, "Не удалось сохранить локацию."), isDatabaseViolation(error, "23505") ? 409 : 500);
   }
 }
 
@@ -120,6 +151,12 @@ export async function DELETE(request: Request) {
     const proof = String(payload?.proof ?? "");
     if (!target || !/^[A-Za-z0-9_-]{43}$/.test(proof)) return adminError("Некорректные данные удаления.", 400, clearChallenge);
     if (!await verifyAdminPasswordProof(request, proof)) return adminError("Пароль не подтверждён.", 403, clearChallenge);
+
+    if (target.level === "place") {
+      const deleted = await withDb((db) => db.delete(places).where(placeWhere(target)).returning({ id: places.id }));
+      if (!deleted.length) return adminError("Место не найдено.", 404, clearChallenge);
+      return privateJson({ deleted: true }, {}, clearChallenge);
+    }
 
     const deleted = await withDb((db) => db.transaction(async (tx) => {
       const [existing] = await tx.select({ city: locations.city }).from(locations).where(locationWhere(target)).limit(1);
@@ -134,6 +171,7 @@ export async function DELETE(request: Request) {
     if (!deleted) return adminError("Локация не найдена.", 404, clearChallenge);
     return privateJson({ deleted: true }, {}, clearChallenge);
   } catch (error) {
+    if (isDatabaseViolation(error, "23503")) return adminError("Нельзя удалить место: оно используется в прогулках.", 409, clearChallenge);
     return adminError(databaseErrorMessage(error, "Не удалось удалить локацию."), 500, clearChallenge);
   }
 }

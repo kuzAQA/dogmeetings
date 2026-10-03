@@ -39,8 +39,13 @@ export type AdminLocation = {
   complex: string;
 };
 
-export type AdminLocationLevel = "city" | "district" | "complex";
-
-export type AdminLocationTarget = AdminLocation & {
-  level: AdminLocationLevel;
+export type AdminPlace = AdminLocation & {
+  id: string;
+  name: string;
 };
+
+export type AdminLocationLevel = "city" | "district" | "complex" | "place";
+
+export type AdminLocationTarget = (AdminLocation & {
+  level: Exclude<AdminLocationLevel, "place">;
+}) | (AdminPlace & { level: "place" });

@@ -36,6 +36,7 @@ import {
   type AdminLocation,
   type AdminLocationLevel,
   type AdminLocationTarget,
+  type AdminPlace,
   type LocationRequest,
   type PendingRequestAction
 } from "../features/admin/model";
@@ -44,19 +45,21 @@ import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../fea
 import { DogmeetState } from "../components/ui/DogmeetState";
 import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 import { SingleLineInput } from "../components/ui/SingleLineInput";
+import { capitalizePlaceName, MAX_WALK_PLACE_LENGTH } from "../../server/domain/walk";
 
 type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "locations" | "telegram-notifications";
 
 function locationNameLimit(level: AdminLocationLevel) {
-  return level === "complex" ? 120 : 80;
+  return level === "place" ? MAX_WALK_PLACE_LENGTH : level === "complex" ? 120 : 80;
 }
 
 function locationName(target: AdminLocationTarget) {
+  if (target.level === "place") return target.name;
   return target.level === "city" ? target.city : target.level === "district" ? target.district : target.complex;
 }
 
 function locationKind(level: AdminLocationLevel) {
-  return level === "city" ? "город" : level === "district" ? "район" : "ЖК";
+  return level === "city" ? "город" : level === "district" ? "район" : level === "place" ? "место" : "ЖК";
 }
 
 function formatRequestDate(value: string) {
@@ -76,6 +79,7 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<LocationRequest[]>([]);
   const [pets, setPets] = useState<AdminPet[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
+  const [places, setPlaces] = useState<AdminPlace[]>([]);
   const [activeTelegramSubscriptions, setActiveTelegramSubscriptions] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +99,7 @@ export default function AdminPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedComplex, setSelectedComplex] = useState("");
   const [signOutPending, setSignOutPending] = useState(false);
   const [query, setQuery] = useState("");
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -105,9 +110,11 @@ export default function AdminPage() {
     setRequests([]);
     setPets([]);
     setLocations([]);
+    setPlaces([]);
     setActiveTelegramSubscriptions(null);
     setSelectedCity("");
     setSelectedDistrict("");
+    setSelectedComplex("");
     setLocationBeingEdited(null);
     setLocationPendingDelete(null);
     setDeletePassword("");
@@ -149,7 +156,9 @@ export default function AdminPage() {
     setContentLoading(true);
     setError("");
     try {
-      setLocations(await loadAdminLocations());
+      const data = await loadAdminLocations();
+      setLocations(data.locations);
+      setPlaces(data.places);
     } catch (loadError) {
       if (loadError instanceof ApiRequestError && loadError.status === 401) {
         returnToLogin();
@@ -237,9 +246,11 @@ export default function AdminPage() {
     setRequests([]);
     setPets([]);
     setLocations([]);
+    setPlaces([]);
     setActiveTelegramSubscriptions(null);
     setSelectedCity("");
     setSelectedDistrict("");
+    setSelectedComplex("");
     setUsername("");
     setPassword("");
     await requestDialogClose(dialogTrigger, () => {
@@ -262,6 +273,7 @@ export default function AdminPage() {
   function openLocations() {
     setSelectedCity("");
     setSelectedDistrict("");
+    setSelectedComplex("");
     setPhase("locations");
     void loadLocations();
   }
@@ -419,6 +431,10 @@ export default function AdminPage() {
 
   function goBackFromLocations() {
     setError("");
+    if (selectedComplex) {
+      setSelectedComplex("");
+      return;
+    }
     if (selectedDistrict) {
       setSelectedDistrict("");
       return;
@@ -433,9 +449,9 @@ export default function AdminPage() {
   async function saveLocationName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!locationBeingEdited || submitting) return;
-    const name = locationDraftName.trim();
+    const name = locationBeingEdited.level === "place" ? capitalizePlaceName(locationDraftName) : locationDraftName.trim();
     if (!containsLetter.test(name) || name.length > locationNameLimit(locationBeingEdited.level)) {
-      setError(`Укажите название ${locationKind(locationBeingEdited.level)}.`);
+      setError(locationBeingEdited.level === "place" ? `Укажите название места до ${MAX_WALK_PLACE_LENGTH} символов.` : `Укажите название ${locationKind(locationBeingEdited.level)}.`);
       return;
     }
 
@@ -443,11 +459,14 @@ export default function AdminPage() {
     setError("");
     try {
       await renameAdminLocation(locationBeingEdited, name);
-      setLocations(await loadAdminLocations());
+      const data = await loadAdminLocations();
+      setLocations(data.locations);
+      setPlaces(data.places);
       if (locationBeingEdited.level === "city" && selectedCity === locationBeingEdited.city) setSelectedCity(name);
       if (locationBeingEdited.level === "district" && selectedDistrict === locationBeingEdited.district) setSelectedDistrict(name);
+      if (locationBeingEdited.level === "complex" && selectedComplex === locationBeingEdited.complex) setSelectedComplex(name);
       setLocationBeingEdited(null);
-      setResult({ title: "Изменения сохранены", message: "Название локации обновлено.", heading: "Правка локации", sheet: true });
+      setResult({ title: "Изменения сохранены", message: locationBeingEdited.level === "place" ? "Название места обновлено, в том числе в связанных прогулках." : "Название локации обновлено.", heading: locationBeingEdited.level === "place" ? "Правка места" : "Правка локации", sheet: true });
     } catch (saveError) {
       if (saveError instanceof ApiRequestError && saveError.status === 401) {
         returnToLogin();
@@ -479,16 +498,19 @@ export default function AdminPage() {
       });
       setDeletePassword("");
       await deleteAdminLocation(locationPendingDelete, proof);
-      setLocations(await loadAdminLocations());
+      const data = await loadAdminLocations();
+      setLocations(data.locations);
+      setPlaces(data.places);
       if (locationPendingDelete.level === "city") {
         setSelectedCity("");
         setSelectedDistrict("");
       } else if (locationPendingDelete.level === "district") {
         setSelectedDistrict("");
       }
+      if (locationPendingDelete.level !== "place") setSelectedComplex("");
       await requestDialogClose(dialogTrigger, () => {
         setLocationPendingDelete(null);
-        setResult({ title: "Локация удалена", message: "Связанные данные этой локации также удалены.", heading: "Удаление локации", sheet: true });
+        setResult({ title: locationPendingDelete.level === "place" ? "Место удалено" : "Локация удалена", message: locationPendingDelete.level === "place" ? "Место больше не доступно для выбора в прогулках." : "Связанные данные этой локации также удалены.", heading: locationPendingDelete.level === "place" ? "Удаление места" : "Удаление локации", sheet: true });
       }, true);
     } catch (deleteError) {
       if (deleteError instanceof ApiRequestError && deleteError.status === 401) {
@@ -522,6 +544,7 @@ export default function AdminPage() {
   const cities = [...new Set(locations.map((location) => location.city))];
   const districts = [...new Set(locations.filter((location) => location.city === selectedCity).map((location) => location.district))];
   const complexes = locations.filter((location) => location.city === selectedCity && location.district === selectedDistrict);
+  const complexPlaces = places.filter((place) => place.city === selectedCity && place.district === selectedDistrict && place.complex === selectedComplex);
   const locationsBeingDeleted = locationPendingDelete ? locations.filter((location) => {
     if (locationPendingDelete.level === "city") return location.city === locationPendingDelete.city;
     if (locationPendingDelete.level === "district") return location.city === locationPendingDelete.city && location.district === locationPendingDelete.district;
@@ -548,7 +571,7 @@ export default function AdminPage() {
       <div className="admin-summary"><ShieldCheck /><h2>Всё начинается<br />с хорошего района.</h2><p>{requests.length} заявки ждут вашего решения.</p></div>
       <nav aria-label="Разделы панели администратора">
         <button className="menu-row" type="button" onClick={openRequests}><MapPin /><span><strong>Заявки жителей</strong><small>Добавление новых локаций</small></span><span className="count">{requests.length}</span></button>
-        <button className="menu-row" type="button" onClick={openLocations}><MapPin /><span><strong>Локации</strong><small>Города, районы и ЖК</small></span><ChevronRight /></button>
+        <button className="menu-row" type="button" onClick={openLocations}><MapPin /><span><strong>Локации</strong><small>Города, районы, ЖК и места для прогулок</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawPrint /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setPhase("telegram-notifications"); void loadTelegramSubscriptions(); }}><Bell /><span><strong>Уведомления в Telegram</strong><small>Активные подписки</small></span><ChevronRight /></button>
         <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
@@ -576,9 +599,12 @@ export default function AdminPage() {
       {pets.length > 0 && !pets.some((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))) && <p role="status">Никого не нашли. Попробуйте другое имя.</p>}
     </>}
     {phase === "locations" && <>
-      {sectionHeading(selectedDistrict ? "Жилые комплексы" : selectedCity ? "Районы" : "Города", selectedDistrict ? `${selectedCity} · ${selectedDistrict}` : selectedCity ? selectedCity : "Выберите город, затем район.")}
-      {contentLoading ? <DogmeetState state="loading" /> : error && !locationBeingEdited && !locationPendingDelete ? <DogmeetState state="error" message={error} onAction={loadLocations} /> : locations.length === 0 ? <DogmeetState state="empty" title="Локаций пока нет" message="Одобренные заявки жителей появятся здесь." action="К управлению" onAction={() => setPhase("dashboard")} /> : selectedDistrict ? complexes.map((location) => <article className="request-row" key={location.complex}>
-        <button className="menu-row" type="button" aria-label={`Открыть ${location.complex}`}><MapPin /><span><strong>{location.complex}</strong><small>{selectedCity} · {selectedDistrict}</small></span></button>
+      {sectionHeading(selectedComplex ? "Места для прогулок" : selectedDistrict ? "Жилые комплексы" : selectedCity ? "Районы" : "Города", selectedComplex ? `${selectedCity} · ${selectedDistrict} · ${selectedComplex}` : selectedDistrict ? `${selectedCity} · ${selectedDistrict}` : selectedCity ? selectedCity : "Выберите город, затем район.")}
+      {contentLoading ? <DogmeetState state="loading" /> : error && !locationBeingEdited && !locationPendingDelete ? <DogmeetState state="error" message={error} onAction={loadLocations} /> : locations.length === 0 ? <DogmeetState state="empty" title="Локаций пока нет" message="Одобренные заявки жителей появятся здесь." action="К управлению" onAction={() => setPhase("dashboard")} /> : selectedComplex ? complexPlaces.length ? complexPlaces.map((place) => <article className="request-row" key={place.id}>
+        <h2>{place.name}</h2>
+        {locationActions({ level: "place", ...place })}
+      </article>) : <DogmeetState state="empty" title="Мест пока нет" message="Места появятся, когда жители создадут прогулки в этом ЖК." action="К жилым комплексам" onAction={goBackFromLocations} /> : selectedDistrict ? complexes.map((location) => <article className="request-row" key={location.complex}>
+        <button className="menu-row" type="button" aria-label={`Открыть ${location.complex}`} onClick={() => setSelectedComplex(location.complex)}><MapPin /><span><strong>{location.complex}</strong><small>{selectedCity} · {selectedDistrict}</small></span><ChevronRight /></button>
         {locationActions({ level: "complex", ...location })}
       </article>) : selectedCity ? districts.map((district) => {
         const districtComplexes = locations.filter((location) => location.city === selectedCity && location.district === district);
@@ -614,11 +640,11 @@ export default function AdminPage() {
     {petPendingDelete && <DogmeetDialog title="Удаление администратором" busy={submitting} role="alertdialog" onDismiss={() => setPetPendingDelete(null)} footer={!submitting && <><button className="button danger" type="button" onClick={confirmPetDelete}>Удалить питомца</button><button className="button secondary" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => setPetPendingDelete(null))}>Оставить</button></>}>
       {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <><Image className="pet-face large" src={petPendingDelete.photoUrl} alt={petPendingDelete.name} width={92} height={92} unoptimized /><h2>Удалить {petPendingDelete.name}?</h2><p>Питомец и все его прогулки будут удалены. Это действие нельзя отменить.</p>{error && <p className="field-error" role="alert">{error}</p>}</>}
     </DogmeetDialog>}
-    {locationBeingEdited && <DogmeetDialog title="Правка локации" busy={submitting} role="dialog" onDismiss={() => { setLocationBeingEdited(null); setError(""); }} footer={!submitting && <><button className="button" type="submit" form="location-editor">Сохранить</button><button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setLocationBeingEdited(null); setError(""); })}>Отмена</button></>}>
+    {locationBeingEdited && <DogmeetDialog title={locationBeingEdited.level === "place" ? "Правка места" : "Правка локации"} busy={submitting} role="dialog" onDismiss={() => { setLocationBeingEdited(null); setError(""); }} footer={!submitting && <><button className="button" type="submit" form="location-editor">Сохранить</button><button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => { setLocationBeingEdited(null); setError(""); })}>Отмена</button></>}>
       {submitting ? <DogmeetState state="loading" title="Сохраняем…" /> : <form id="location-editor" autoComplete="off" onSubmit={saveLocationName} noValidate><h2>Переименовать {locationKind(locationBeingEdited.level)}</h2><label className="field"><span>Новое название</span><SingleLineInput autoComplete="off" aria-label="Новое название" maxLength={locationNameLimit(locationBeingEdited.level)} value={locationDraftName} onChange={(event) => { setLocationDraftName(event.target.value); setError(""); }} /></label>{error && <p className="field-error" role="alert">{error}</p>}</form>}
     </DogmeetDialog>}
-    {locationPendingDelete && <DogmeetDialog title="Удаление локации" busy={submitting} role="alertdialog" onDismiss={closeLocationDelete} footer={!submitting && <><button className="button danger" type="submit" form="location-delete" disabled={!deletePassword}>Удалить {locationKind(locationPendingDelete.level)}</button><button className="button secondary" type="button" onClick={(event) => requestDialogClose(event.currentTarget, closeLocationDelete)}>Оставить</button></>}>
-      {submitting ? <DogmeetState state="loading" title="Проверяем пароль…" /> : <form id="location-delete" onSubmit={confirmLocationDelete} noValidate><h2>Удалить {locationName(locationPendingDelete)}?</h2>{locationPendingDelete.level === "city" ? <><p>Будут удалены районы и жилые комплексы:</p><ul>{deletedDistricts.map((district) => <li key={district}><strong>{district}</strong><ul>{locationsBeingDeleted.filter((location) => location.district === district).map((location) => <li key={location.complex}>{location.complex}</li>)}</ul></li>)}</ul><p>Удалится {deletedDistricts.length} районов и {locationsBeingDeleted.length} ЖК.</p></> : locationPendingDelete.level === "district" ? <><p>Будут удалены жилые комплексы:</p><ul>{locationsBeingDeleted.map((location) => <li key={location.complex}>{location.complex}</li>)}</ul><p>Удалится {locationsBeingDeleted.length} ЖК.</p></> : <p>У этого ЖК нет дочерних элементов.</p>}<p>Также удалятся связанные сохранённые районы, места и прогулки.</p><label className="field"><span>Пароль администратора</span><SingleLineInput type="password" autoComplete="current-password" maxLength={256} value={deletePassword} onChange={(event) => { setDeletePassword(event.target.value); setError(""); }} /></label>{error && <p className="field-error" role="alert">{error}</p>}</form>}
+    {locationPendingDelete && <DogmeetDialog title={locationPendingDelete.level === "place" ? "Удаление места" : "Удаление локации"} busy={submitting} role="alertdialog" onDismiss={closeLocationDelete} footer={!submitting && <><button className="button danger" type="submit" form="location-delete" disabled={!deletePassword}>Удалить {locationKind(locationPendingDelete.level)}</button><button className="button secondary" type="button" onClick={(event) => requestDialogClose(event.currentTarget, closeLocationDelete)}>Оставить</button></>}>
+      {submitting ? <DogmeetState state="loading" title="Проверяем пароль…" /> : <form id="location-delete" onSubmit={confirmLocationDelete} noValidate><h2>Удалить {locationName(locationPendingDelete)}?</h2>{locationPendingDelete.level === "place" ? <p>Можно удалить только место без связанных прогулок. Другие места и локации сохранятся.</p> : <>{locationPendingDelete.level === "city" ? <><p>Будут удалены районы и жилые комплексы:</p><ul>{deletedDistricts.map((district) => <li key={district}><strong>{district}</strong><ul>{locationsBeingDeleted.filter((location) => location.district === district).map((location) => <li key={location.complex}>{location.complex}</li>)}</ul></li>)}</ul><p>Удалится {deletedDistricts.length} районов и {locationsBeingDeleted.length} ЖК.</p></> : locationPendingDelete.level === "district" ? <><p>Будут удалены жилые комплексы:</p><ul>{locationsBeingDeleted.map((location) => <li key={location.complex}>{location.complex}</li>)}</ul><p>Удалится {locationsBeingDeleted.length} ЖК.</p></> : <p>Будут удалены места для прогулок этого ЖК.</p>}<p>Также удалятся связанные сохранённые районы, места и прогулки.</p></>}<label className="field"><span>Пароль администратора</span><SingleLineInput type="password" autoComplete="current-password" maxLength={256} value={deletePassword} onChange={(event) => { setDeletePassword(event.target.value); setError(""); }} /></label>{error && <p className="field-error" role="alert">{error}</p>}</form>}
     </DogmeetDialog>}
     {signOutPending && <DogmeetDialog title="Выход" busy={submitting} role="alertdialog" onDismiss={() => setSignOutPending(false)} footer={<><button className="button" type="button" disabled={submitting} onClick={signOut}>{submitting ? "Выходим…" : "Выйти"}</button><button className="button quiet" type="button" disabled={submitting} onClick={(event) => requestDialogClose(event.currentTarget, () => setSignOutPending(false))}>Остаться</button></>}><LogOut className="state-icon" /><h2>Закончить работу?</h2><p>Для возвращения в управление потребуется снова ввести логин и пароль.</p></DogmeetDialog>}
     {result?.sheet && <DogmeetDialog title={result.heading} onDismiss={() => setResult(null)} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => setResult(null))}>Готово</button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}

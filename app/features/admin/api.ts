@@ -1,5 +1,5 @@
 import { requestJson } from "../api/client";
-import type { AdminLocation, AdminLocationTarget, AdminPet, LocationRequest, LoginChallenge, LoginProof } from "./model";
+import type { AdminLocation, AdminLocationTarget, AdminPet, AdminPlace, LocationRequest, LoginChallenge, LoginProof } from "./model";
 
 export async function getAdminSession() {
   return requestJson<{ authenticated?: boolean }>("/api/dogsfather/session", {
@@ -96,11 +96,11 @@ export async function deleteAdminPet(petId: string) {
 }
 
 export async function loadAdminLocations() {
-  const data = await requestJson<{ locations?: AdminLocation[] }>("/api/dogsfather/locations", {
+  const data = await requestJson<{ locations?: AdminLocation[]; places?: AdminPlace[] }>("/api/dogsfather/locations", {
     cache: "no-store",
     credentials: "same-origin"
   });
-  return data.locations ?? [];
+  return { locations: data.locations ?? [], places: data.places ?? [] };
 }
 
 export async function renameAdminLocation(target: AdminLocationTarget, name: string) {
