@@ -17,6 +17,13 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .phone { margin-inline: auto; }
 .production main { display: block; }
 .production main:has(.location-screen) { padding-bottom: 0; }
+.production .phone:has(.walks-screen), .production main:has(.walks-screen) { min-height: calc(100dvh - 116px); }
+/* The desktop frame already reserves 80px below the phone. */
+.production main.with-nav:has(.walks-screen) { padding-top: env(safe-area-inset-top, 0px); padding-bottom: calc(36px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 899px) {
+  .production .phone:has(.walks-screen), .production main:has(.walks-screen) { min-height: 100dvh; }
+  .production main.with-nav:has(.walks-screen) { padding-bottom: calc(80px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+}
 .production .bottom-nav { left: 50%; }
 .production .sheet { left: 0; }
 .production .react-modal-sheet-root[data-sheet-state="closing"] { pointer-events: none; }

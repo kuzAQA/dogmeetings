@@ -115,6 +115,7 @@ export default function Home() {
     locationOpenedFromMenu,
     dockWalkOpen,
     dockReturnSection,
+    plansSource,
     petsSource,
     dockSection,
     initializeNavigation,
@@ -170,6 +171,7 @@ export default function Home() {
     setMyWalks,
     myWalksLoaded,
     myWalksError,
+    setMyWalksError,
     reloadPets,
     retryWalks,
     retryPlaces,
@@ -416,7 +418,7 @@ export default function Home() {
 
   function openFormScreen(nextScreen: FormScreen) {
     const source = screen === "my-pets" ? petsSource : null;
-    pushNavigation(nextScreen, { petsSource: source });
+    pushNavigation(nextScreen, { petsSource: source, plansSource });
   }
 
   function beginFormClose(target: Screen, mode: "back" | "replace" = "back") {
@@ -441,7 +443,7 @@ export default function Home() {
     }
 
     if (mode === "replace") {
-      replaceNavigation(target);
+      replaceNavigation(target, { plansSource });
     } else {
       returnThroughHistory();
     }
@@ -614,8 +616,11 @@ export default function Home() {
   }
 
   function openCollectionScreen(nextScreen: "my-walks" | "my-pets", source: AppNavigationState["petsSource"] = null) {
-    if (screen === nextScreen && (nextScreen !== "my-pets" || petsSource === source)) return;
-    pushNavigation(nextScreen, { petsSource: nextScreen === "my-pets" ? source : null });
+    if (screen === nextScreen && (nextScreen === "my-pets" ? petsSource === source : (plansSource ?? "dock") === (source ?? "dock"))) return;
+    pushNavigation(nextScreen, {
+      plansSource: nextScreen === "my-walks" ? source : null,
+      petsSource: nextScreen === "my-pets" ? source : null
+    });
   }
 
   function returnToMenu() {
@@ -767,6 +772,10 @@ export default function Home() {
       setWalkSaving(false);
       setGuidedWalkFlow(false);
       setResult({ title: editedWalk ? "Планы обновлены" : "Вы идёте гулять!", message: editedWalk ? "Новое время и место видны в расписании." : "Прогулка появилась в расписании. Соседи знают, где вас найти.", action: "Посмотреть мои планы", receipt: { title: `${savedWalk.walkTime.slice(0, 5)} · ${savedWalk.scheduleType === "always" ? "Ежедневно" : savedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}`, place: savedWalk.point, pet: `${savedWalk.pet} · ${savedWalk.complex}` }, onContinue: () => {
+      if (plansSource === "profile") {
+        beginFormClose("my-walks");
+        return;
+      }
       replaceNavigation("my-walks");
       } });
     } catch (error) {
@@ -786,10 +795,10 @@ export default function Home() {
       setSavedWalks(walks.filter(isWalkScheduledForToday).map(apiWalkToCard));
       setMyWalks((current) => current.filter((walk) => walk.id !== deletedId));
     } catch (error) {
-      setWalksError(error instanceof Error ? error.message : "Не удалось загрузить прогулки.");
+      setMyWalksError(error instanceof Error ? error.message : "Не удалось загрузить прогулки.");
     } finally {
       pendingWalkRefreshRef.current = null;
-      openCollectionScreen("my-walks");
+      openCollectionScreen("my-walks", plansSource);
     }
   }
 
@@ -882,10 +891,10 @@ export default function Home() {
   if (screen === null) return <DogmeetFrame><main aria-busy={!sessionError}><section className="app-shell screen-welcome" aria-label="Сервис совместных прогулок">{welcomeScreen}</section></main></DogmeetFrame>;
 
   return (
-    <DogmeetFrame className={(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>
-      <main className={(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen ? "with-nav" : ""}>
+    <DogmeetFrame className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>
+      <main className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen ? "with-nav" : ""}>
       <section className={`app-shell screen-${screen}`} aria-label="Сервис совместных прогулок">
-        {(screen === "walks" || screen === "my-walks" || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen && (
+        {(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen && (
           <BottomDock
             section={screen === "my-walks" ? "plans" : screen === "my-pets" ? "pets" : "nearby"}
             walkFormDirty={walkForm.walkFormDirty}
@@ -893,7 +902,7 @@ export default function Home() {
             petsLoaded={petsLoaded}
             walkSaving={walkSaving}
             onNearbyClick={() => selectDockSection("nearby")}
-            onPlansClick={() => openCollectionScreen("my-walks")}
+            onPlansClick={() => openCollectionScreen("my-walks", "dock")}
             onWalkClick={startWalkAnnouncement}
             onAddPet={addPet}
             onPetsClick={() => { if (dockSection !== "pets") openCollectionScreen("my-pets", "dock"); }}
@@ -992,7 +1001,7 @@ export default function Home() {
             onOpenLocationEditor={openLocationEditor}
             onOpenTelegramSubscription={requestTelegramSubscriptionLink}
             highlightTelegram={highlightTelegram}
-            onOpenMyWalks={() => openCollectionScreen("my-walks")}
+            onOpenMyWalks={() => openCollectionScreen("my-walks", "profile")}
             onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
             onOpenProfile={() => selectDockSection("profile")}
             onBack={screen === "walk-detail" || screen === "contact" ? returnThroughHistory : dockWalkOpen ? closeDockWalkAnnouncement : () => selectDockSection("nearby")}
@@ -1003,6 +1012,7 @@ export default function Home() {
         {screen === "my-walks" && (
           <WalkCollection
             walks={myWalks}
+            fromDock={plansSource !== "profile"}
             loaded={myWalksLoaded}
             error={myWalksError}
             onRetry={() => { void retryMyWalks(); }}

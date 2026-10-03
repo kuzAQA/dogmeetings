@@ -165,6 +165,7 @@ export function useHomeResources(
     setMyWalks,
     myWalksLoaded,
     myWalksError,
+    setMyWalksError,
     reloadPets,
     retryWalks,
     retryPlaces,

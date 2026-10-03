@@ -12,6 +12,7 @@ type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () 
 
 type WalkCollectionProps = HeaderProps & {
   walks: ApiWalk[];
+  fromDock: boolean;
   loaded: boolean;
   error: string;
   onRetry: () => void;
@@ -24,10 +25,10 @@ type WalkCollectionProps = HeaderProps & {
   onDeleteWalk: (walk: ApiWalk) => void;
 };
 
-export function WalkCollection({ walks, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack }: WalkCollectionProps) {
+export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack }: WalkCollectionProps) {
   return (
     <div className="screen collection-screen my-walks-screen">
-      <DogmeetHeader {...(location ? { location, onLocation, onProfile } : { onBack })} />
+      <DogmeetHeader {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои планы</h1>
       {loaded && !error && walks.length > 0 && <p>Ваши встречи сегодня, завтра<br />и маленькие ежедневные традиции.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : walks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (

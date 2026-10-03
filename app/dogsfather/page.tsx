@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
+  Bell,
   Camera,
   ChevronRight,
   Compass,
@@ -22,6 +23,7 @@ import {
   getLoginChallenge,
   loadAdminPets,
   loadAdminLocations,
+  loadActiveTelegramSubscriptions,
   loadLocationRequests,
   logoutAdmin,
   rejectLocationRequest,
@@ -43,7 +45,7 @@ import { DogmeetState } from "../components/ui/DogmeetState";
 import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 import { SingleLineInput } from "../components/ui/SingleLineInput";
 
-type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "locations";
+type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "locations" | "telegram-notifications";
 
 function locationNameLimit(level: AdminLocationLevel) {
   return level === "complex" ? 120 : 80;
@@ -74,6 +76,7 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<LocationRequest[]>([]);
   const [pets, setPets] = useState<AdminPet[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
+  const [activeTelegramSubscriptions, setActiveTelegramSubscriptions] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
@@ -102,6 +105,7 @@ export default function AdminPage() {
     setRequests([]);
     setPets([]);
     setLocations([]);
+    setActiveTelegramSubscriptions(null);
     setSelectedCity("");
     setSelectedDistrict("");
     setLocationBeingEdited(null);
@@ -152,6 +156,23 @@ export default function AdminPage() {
         return;
       }
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить локации.");
+    } finally {
+      setContentLoading(false);
+    }
+  }, [returnToLogin]);
+
+  const loadTelegramSubscriptions = useCallback(async () => {
+    setContentLoading(true);
+    setActiveTelegramSubscriptions(null);
+    setError("");
+    try {
+      setActiveTelegramSubscriptions(await loadActiveTelegramSubscriptions());
+    } catch (loadError) {
+      if (loadError instanceof ApiRequestError && loadError.status === 401) {
+        returnToLogin();
+        return;
+      }
+      setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить подписки Telegram.");
     } finally {
       setContentLoading(false);
     }
@@ -216,6 +237,7 @@ export default function AdminPage() {
     setRequests([]);
     setPets([]);
     setLocations([]);
+    setActiveTelegramSubscriptions(null);
     setSelectedCity("");
     setSelectedDistrict("");
     setUsername("");
@@ -528,9 +550,17 @@ export default function AdminPage() {
         <button className="menu-row" type="button" onClick={openRequests}><MapPin /><span><strong>Заявки жителей</strong><small>Добавление новых локаций</small></span><span className="count">{requests.length}</span></button>
         <button className="menu-row" type="button" onClick={openLocations}><MapPin /><span><strong>Локации</strong><small>Города, районы и ЖК</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawPrint /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
+        <button className="menu-row" type="button" onClick={() => { setPhase("telegram-notifications"); void loadTelegramSubscriptions(); }}><Bell /><span><strong>Уведомления в Telegram</strong><small>Активные подписки</small></span><ChevronRight /></button>
         <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
         <button className="menu-row" type="button" onClick={() => setSignOutPending(true)}><LogOut /><span><strong>Выйти</strong></span><ChevronRight /></button>
       </nav>
+    </>}
+    {phase === "telegram-notifications" && <>
+      {sectionHeading("Уведомления в Telegram", "")}
+      {contentLoading ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={loadTelegramSubscriptions} /> : activeTelegramSubscriptions === null ? <DogmeetState state="loading" /> : <>
+        <div className="section-line" role="status"><h2>Активные подписки</h2><span className="count">{activeTelegramSubscriptions}</span></div>
+        <button className="button secondary" type="button" onClick={loadTelegramSubscriptions}>Обновить</button>
+      </>}
     </>}
     {phase === "requests" && <>
       {sectionHeading("Заявки жителей", "Жители предлагают новые места для совместных прогулок.")}

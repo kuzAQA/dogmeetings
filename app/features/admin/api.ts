@@ -24,6 +24,17 @@ export async function loadAdminPets() {
   return data.pets ?? [];
 }
 
+export async function loadActiveTelegramSubscriptions() {
+  const data = await requestJson<{ activeSubscriptions: number }>("/api/dogsfather/telegram-subscriptions", {
+    cache: "no-store",
+    credentials: "same-origin"
+  });
+  if (!data || !Number.isSafeInteger(data.activeSubscriptions) || data.activeSubscriptions < 0) {
+    throw new Error("Не удалось загрузить подписки Telegram.");
+  }
+  return data.activeSubscriptions;
+}
+
 export async function getLoginChallenge() {
   return requestJson<LoginChallenge>("/api/dogsfather/challenge", {
     cache: "no-store",

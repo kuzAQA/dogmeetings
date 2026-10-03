@@ -16,10 +16,11 @@ export type AppNavigationState = {
   locationOpenedFromMenu: boolean;
   dockWalkOpen: boolean;
   dockReturnSection: PrimaryDockSection;
+  plansSource: "dock" | "profile" | null;
   petsSource: "dock" | "profile" | null;
 };
 
-type NavigationOptions = Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "petsSource">>;
+type NavigationOptions = Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "plansSource" | "petsSource">>;
 
 export function createNavigationState(screen: Screen, options: NavigationOptions = {}): AppNavigationState {
   return {
@@ -29,6 +30,7 @@ export function createNavigationState(screen: Screen, options: NavigationOptions
     locationOpenedFromMenu: options.locationOpenedFromMenu ?? false,
     dockWalkOpen: options.dockWalkOpen ?? false,
     dockReturnSection: options.dockReturnSection ?? "nearby",
+    plansSource: options.plansSource ?? null,
     petsSource: options.petsSource ?? null
   };
 }
@@ -40,6 +42,7 @@ function normalizeNavigationState(value: Partial<AppNavigationState>): AppNaviga
     locationOpenedFromMenu: Boolean(value.locationOpenedFromMenu),
     dockWalkOpen: Boolean(value.dockWalkOpen),
     dockReturnSection: value.dockReturnSection ?? "nearby",
+    plansSource: value.plansSource === "dock" || value.plansSource === "profile" ? value.plansSource : null,
     petsSource: value.petsSource === "dock" || value.petsSource === "profile" ? value.petsSource : null
   });
 }
@@ -148,6 +151,7 @@ export function useHomeNavigation(hasLocation: boolean) {
     locationOpenedFromMenu: navigation?.locationOpenedFromMenu ?? false,
     dockWalkOpen: navigation?.dockWalkOpen ?? false,
     dockReturnSection: navigation?.dockReturnSection ?? "nearby",
+    plansSource: navigation?.plansSource ?? null,
     petsSource: navigation?.petsSource ?? null,
     dockSection,
     initializeNavigation,

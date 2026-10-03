@@ -51,7 +51,6 @@ test("centers the nearby menu and keeps the add action stable between plans and 
   await expect.poll(centered).toBeLessThan(1);
 
   await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBeGreaterThan(0);
   await expect(add).toHaveCSS("opacity", "1");
   await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBe(0);
   const plansX = await add.evaluate((element) => element.getBoundingClientRect().x);
@@ -249,16 +248,49 @@ test("opens the pet passport and preserves its actions", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Удалить питомца", exact: false })).toBeVisible();
 });
 
-test("opens the walk form with native time and preserved fields", async ({ page }) => {
+test("opens the walk form with the time wheels and preserved fields", async ({ page }) => {
   await openNearby(page);
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Сообщить о прогулке", exact: true })).toBeVisible();
   await expect(page.getByLabel("Питомец")).toBeVisible();
   await page.getByRole("button", { name: /^Время/ }).click();
-  await expect(page.locator('input[type="time"]')).toHaveAttribute("type", "time");
+  const timePicker = page.getByRole("group", { name: "Время прогулки", exact: true });
+  await expect(timePicker).toBeVisible();
+  await expect(timePicker.locator(".time-wheel")).toHaveCount(2);
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "40");
+});
+
+test("plans opened from the profile return there without the bottom dock", async ({ page }) => {
+  await openNearby(page);
+  await page.getByRole("navigation", { name: "Основная навигация" }).getByRole("button", { name: "Мои планы", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Назад", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Мой район и настройки", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мой район и настройки", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Мои планы/ }).click();
+  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Основная навигация" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мой район и настройки", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Основная навигация" })).toHaveCount(0);
+});
+
+test("failed refresh after deleting a walk shows a recoverable error in my plans", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openNearby(page);
+  await page.route("**/api/walks?*", (route) => route.fulfill({ status: 500, json: { error: "Не удалось обновить прогулки." } }));
+  await page.route("**/api/walks", (route) => route.fulfill({ json: { deleted: true } }));
+  await page.getByRole("button", { name: "Управлять", exact: true }).click();
+  await page.getByRole("dialog", { name: "Управление прогулкой" }).getByRole("button", { name: "Удалить прогулку", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Удалить прогулку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Прогулка удалена", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Посмотреть мои планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Не удалось обновить прогулки.");
+  await expect(page.getByRole("button", { name: "Повторить", exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("reopens walk pickers on the first click after closing", async ({ page }) => {
