@@ -4,11 +4,11 @@ import { Check, ChevronRight, MapPin, MessageCircle, Share2 } from "lucide-react
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import type { ApiWalk } from "../../../../lib/walks";
-import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
+import { DogmeetHeader, type TelegramMenuHint } from "../../../components/ui/DogmeetFrame";
 import type { Pet } from "../model";
 import { WalkActionsDialog } from "./WalkActionsDialog";
 
-type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () => void; onBack?: () => void };
+type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () => void; onBack?: () => void; telegramMenuHint?: TelegramMenuHint };
 
 type WalkCollectionProps = HeaderProps & {
   walks: ApiWalk[];
@@ -25,10 +25,10 @@ type WalkCollectionProps = HeaderProps & {
   onDeleteWalk: (walk: ApiWalk) => void;
 };
 
-export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack }: WalkCollectionProps) {
+export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack, telegramMenuHint }: WalkCollectionProps) {
   return (
     <div className="screen collection-screen my-walks-screen">
-      <DogmeetHeader {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
+      <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои планы</h1>
       {loaded && !error && walks.length > 0 && <p>Ваши встречи сегодня, завтра<br />и маленькие ежедневные традиции.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : walks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (
@@ -53,10 +53,10 @@ type PetCollectionProps = HeaderProps & {
   onRetry: () => void;
 };
 
-export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId, onDismissHighlight, onEdit, onOpen, onAdd, onRetry, location, onLocation, onProfile, onBack }: PetCollectionProps) {
+export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId, onDismissHighlight, onEdit, onOpen, onAdd, onRetry, location, onLocation, onProfile, onBack, telegramMenuHint }: PetCollectionProps) {
   return (
     <div className={`screen collection-screen pets-screen ${fromDock ? "collection-screen--dock" : ""}`} onPointerDownCapture={() => { if (highlightedPetId) onDismissHighlight(); }}>
-      <DogmeetHeader {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
+      <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои питомцы</h1>
       {loaded && !error && pets.length > 0 && <p>Те, ради кого мы выходим<br />из дома в любую погоду.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="Добавить питомца" onAction={onAdd} /> : <>

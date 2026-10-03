@@ -82,6 +82,53 @@ html, body { min-height: 100%; background: #e5e5e2; }
 }
 
 .production .page-header { view-transition-name: dogmeet-header; }
+.header-menu { position: relative; flex-shrink: 0; }
+.page-header .header-menu .icon-button { margin-left: 0; }
+.telegram-menu-hint {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  right: -8px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(230px, calc(100vw - 32px));
+  padding: 12px 34px 12px 14px;
+  border-radius: 16px;
+  background: #fff9ef;
+  box-shadow: 0 5px 20px #70543226;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.telegram-menu-hint::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  right: 22px;
+  border-inline: 8px solid transparent;
+  border-bottom: 12px solid #fff9ef;
+  pointer-events: none;
+}
+.telegram-menu-hint-bell { width: 28px; height: 28px; color: var(--orange); }
+.telegram-menu-hint em { white-space: nowrap; }
+.telegram-menu-hint-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+.telegram-menu-hint-close svg { width: 14px; height: 14px; }
 .production .page-header .brand { view-transition-name: dogmeet-brand; }
 .production .header-back { view-transition-name: dogmeet-back; }
 .production .contact-screen .page-header,

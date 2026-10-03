@@ -48,7 +48,7 @@ import { PetForm } from "./features/home/components/PetForm";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
 import { apiWalkToCard, isWalkScheduledForToday, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
-import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "./components/ui/DogmeetFrame";
+import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose, useTelegramMenuHint } from "./components/ui/DogmeetFrame";
 import { animateHeaderExit } from "./components/ui/motion.mjs";
 
 type PetReturnTarget = "my-pets" | "announce";
@@ -56,6 +56,7 @@ type WalkEditReturnTarget = "walks" | "my-walks";
 type FormScreen = "pet" | "announce";
 
 export default function Home() {
+  const telegramMenuHint = useTelegramMenuHint();
   const [selectedWalk, setSelectedWalk] = useState<Walk | null>(null);
   const [result, setResultState] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
   function setResult(next: typeof result) {
@@ -480,6 +481,7 @@ export default function Home() {
   }
 
   function openPet(pet: Pet) {
+    telegramMenuHint.dismiss();
     setPhotoUrl(pet.photoUrl);
     setPetNameInput(pet.name);
     setOwnerNameInput(pet.ownerName);
@@ -570,6 +572,7 @@ export default function Home() {
       setShowPetRequiredPopup(true);
       return;
     }
+    telegramMenuHint.dismiss();
     prepareNewWalkAnnouncement();
     openFormScreen("announce");
   }
@@ -580,6 +583,7 @@ export default function Home() {
       return;
     }
     if (dockWalkOpen) return;
+    telegramMenuHint.dismiss();
     const returnSection: PrimaryDockSection = dockSection === "nearby" || dockSection === "profile" ? dockSection : dockReturnSection;
     prepareNewWalkAnnouncement();
     pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: returnSection });
@@ -964,12 +968,13 @@ export default function Home() {
 
         {(screen === "walks" || screen === "walk-detail" || screen === "contact") && (
           <WalksWorkspace
+            telegramMenuHint={telegramMenuHint}
             selectedWalk={selectedWalk}
             onSelectWalk={setSelectedWalk}
             dockSection={dockSection}
             detailOpen={screen === "walk-detail"}
             contactOpen={screen === "contact"}
-            onOpenDetail={() => pushNavigation("walk-detail")}
+            onOpenDetail={() => { telegramMenuHint.dismiss(); pushNavigation("walk-detail"); }}
             onOpenContact={() => pushNavigation("contact")}
             location={location}
             period={period}
@@ -981,7 +986,7 @@ export default function Home() {
             ownedWalksById={ownedWalksById}
             openWalkActionsId={openWalkActionsId}
             onPeriodChange={selectPeriod}
-            onToggleWalkActions={(id) => setOpenWalkActionsId((currentId) => currentId === id ? null : id)}
+            onToggleWalkActions={(id) => { telegramMenuHint.dismiss(); setOpenWalkActionsId((currentId) => currentId === id ? null : id); }}
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
@@ -1011,6 +1016,7 @@ export default function Home() {
 
         {screen === "my-walks" && (
           <WalkCollection
+            telegramMenuHint={telegramMenuHint}
             walks={myWalks}
             fromDock={plansSource !== "profile"}
             loaded={myWalksLoaded}
@@ -1019,7 +1025,7 @@ export default function Home() {
             petsLoaded={petsLoaded}
             openWalkActionsId={openWalkActionsId}
             onStartWalk={startWalkAnnouncement}
-            onToggleWalkActions={(id) => setOpenWalkActionsId((currentId) => currentId === id ? null : id)}
+            onToggleWalkActions={(id) => { telegramMenuHint.dismiss(); setOpenWalkActionsId((currentId) => currentId === id ? null : id); }}
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "my-walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
@@ -1032,6 +1038,7 @@ export default function Home() {
 
         {screen === "my-pets" && (
           <PetCollection
+            telegramMenuHint={telegramMenuHint}
             pets={savedPets}
             fromDock={petsSource === "dock"}
             loaded={petsLoaded}

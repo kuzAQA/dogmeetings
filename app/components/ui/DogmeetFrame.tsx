@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowLeft, MapPin, MoreHorizontal, PawPrint } from "lucide-react";
-import { type DialogHTMLAttributes, type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { ArrowLeft, BellRing, MapPin, MoreHorizontal, PawPrint, X } from "lucide-react";
+import { type DialogHTMLAttributes, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Sheet, type SheetProps, useVirtualKeyboard } from "react-modal-sheet";
 
 export function DogmeetFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -200,15 +200,81 @@ export function DogmeetBrand({ tagline }: { tagline?: string }) {
   );
 }
 
+const telegramMenuHintSeenKey = "dogmeet.telegramMenuHintSeen";
+let telegramMenuHintShown = false;
+
+export function useTelegramMenuHint() {
+  const [hintVisible, setHintVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showHint = useCallback(() => {
+    if (telegramMenuHintShown) return;
+    try {
+      if (document.cookie.split(";").some((cookie) => cookie.trim() === `${telegramMenuHintSeenKey}=1`)) return;
+    } catch {
+      // Cookies can be blocked; still allow the hint once in this page session.
+    }
+    setHintVisible(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!hintVisible) return;
+    telegramMenuHintShown = true;
+    try {
+      document.cookie = `${telegramMenuHintSeenKey}=1; Path=/; SameSite=Lax`;
+    } catch {
+      // The in-memory flag still prevents a repeat while this page is open.
+    }
+    timerRef.current = setTimeout(() => setHintVisible(false), 10_000);
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [hintVisible]);
+
+  const dismissHint = useCallback(() => {
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setHintVisible(false);
+  }, []);
+
+  return { visible: hintVisible, show: showHint, dismiss: dismissHint };
+}
+
+export type TelegramMenuHint = ReturnType<typeof useTelegramMenuHint>;
+
+function TelegramMenuButton({ onOpen, hint }: { onOpen: () => void; hint?: TelegramMenuHint }) {
+  const showHint = hint?.show;
+  useEffect(() => {
+    if (!showHint) return;
+    const frame = window.requestAnimationFrame(showHint);
+    return () => window.cancelAnimationFrame(frame);
+  }, [showHint]);
+
+  return (
+    <div className="header-menu">
+      <button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={() => { hint?.dismiss(); onOpen(); }}><MoreHorizontal aria-hidden="true" /></button>
+      {hint?.visible && (
+        <div className="telegram-menu-hint" role="status">
+          <BellRing className="telegram-menu-hint-bell" aria-hidden="true" />
+          <span>Откройте меню, чтобы получать уведомления о прогулках <em>в Telegram</em></span>
+          <button type="button" className="telegram-menu-hint-close" aria-label="Закрыть подсказку" onClick={hint.dismiss}><X aria-hidden="true" /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type DogmeetHeaderProps = {
   onBack?: () => void;
   location?: string;
   onLocation?: () => void;
   onProfile?: () => void;
+  telegramMenuHint?: TelegramMenuHint;
   admin?: boolean;
 };
 
-export function DogmeetHeader({ onBack, location, onLocation, onProfile, admin = false }: DogmeetHeaderProps) {
+export function DogmeetHeader({ onBack, location, onLocation, onProfile, telegramMenuHint, admin = false }: DogmeetHeaderProps) {
   return (
     <header className={`page-header ${location ? "nearby-toolbar" : ""}`}>
       {onBack && <button type="button" className="icon-button header-back" aria-label="Назад" onClick={onBack}><ArrowLeft aria-hidden="true" /></button>}
@@ -218,7 +284,7 @@ export function DogmeetHeader({ onBack, location, onLocation, onProfile, admin =
           <MapPin aria-hidden="true" /><span>{location}</span>
         </button>
       )}
-      {onProfile && <button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={onProfile}><MoreHorizontal aria-hidden="true" /></button>}
+      {onProfile && <TelegramMenuButton onOpen={onProfile} hint={telegramMenuHint} />}
     </header>
   );
 }
