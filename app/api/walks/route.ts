@@ -284,6 +284,7 @@ export async function PATCH(request: Request) {
         ownerName: result.pet.ownerName,
         residentialComplex: result.walk.residentialComplex,
         place: result.walk.place,
+        comment: result.walk.comment,
         walkTime: result.walk.walkTime,
         walkDate: result.walk.walkDate,
         scheduleType: result.walk.scheduleType

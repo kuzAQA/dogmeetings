@@ -196,9 +196,10 @@ function walkNotificationMessage(notification) {
   return [
     `🐾 <b>Новая прогулка в ЖК «${escapeTelegramHtml(notification.residential_complex)}»</b>`,
     "",
-    `<b>Кто гуляет:</b> ${escapeTelegramHtml(notification.pet_name)} · ${escapeTelegramHtml(notification.owner_name)}`,
-    `<b>Где:</b> ${escapeTelegramHtml(notification.place)}`,
-    `<b>Во сколько:</b> ${escapeTelegramHtml(String(notification.walk_time).slice(0, 5))} · ${walkScheduleLabel(notification)}`
+    `🐕 <b>Кто гуляет:</b> ${escapeTelegramHtml(notification.pet_name)} · ${escapeTelegramHtml(notification.owner_name)}`,
+    `📍 <b>Где:</b> ${escapeTelegramHtml(notification.place)}`,
+    `🕒 <b>Во сколько:</b> ${escapeTelegramHtml(String(notification.walk_time).slice(0, 5))} · ${walkScheduleLabel(notification)}`,
+    ...(notification.comment?.trim() ? [`💬 <b>Комментарий:</b> ${escapeTelegramHtml(notification.comment)}`] : [])
   ].join("\n");
 }
 
@@ -231,6 +232,7 @@ async function retryWalkTelegramNotifications() {
             subscription.telegram_chat_id,
             walk.residential_complex,
             walk.place,
+            walk.comment,
             walk.walk_time,
             walk.schedule_type,
             pet.name AS pet_name,

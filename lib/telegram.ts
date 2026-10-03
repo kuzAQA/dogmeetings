@@ -37,6 +37,7 @@ type WalkNotificationState = {
   ownerName: string;
   residentialComplex: string;
   place: string;
+  comment?: string | null;
   walkTime: string;
   walkDate: string;
   scheduleType: string;
@@ -58,9 +59,10 @@ export function telegramWalkChangeMessage(previous: WalkNotificationState, curre
   return [
     `🐾 <b>Прогулка изменена в ЖК «${changed(previous.residentialComplex, current.residentialComplex)}»</b>`,
     "",
-    `<b>Кто гуляет:</b> ${changed(who(previous), who(current))}`,
-    `<b>Где:</b> ${changed(previous.place, current.place)}`,
-    `<b>Во сколько:</b> ${changed(time(previous), time(current))}`
+    `🐕 <b>Кто гуляет:</b> ${changed(who(previous), who(current))}`,
+    `📍 <b>Где:</b> ${changed(previous.place, current.place)}`,
+    `🕒 <b>Во сколько:</b> ${changed(time(previous), time(current))}`,
+    ...(current.comment?.trim() ? [`💬 <b>Комментарий:</b> ${locationValue(current.comment)}`] : [])
   ].join("\n");
 }
 
