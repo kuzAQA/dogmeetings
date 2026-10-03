@@ -51,7 +51,7 @@ main.with-nav{padding-bottom:138px}
 .button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .lead{font-size:22px;line-height:1.4;color:var(--ink);letter-spacing:-.02em}
 .brand{display:flex;align-items:center;gap:9px;font-size:25px;letter-spacing:-.04em;font-weight:800}
-.brand svg{color:var(--orange);width:28px;height:28px}
+.brand .brand-icon{width:28px;height:28px;object-fit:contain;flex-shrink:0}
 .brand>span{font-size:10px;letter-spacing:0;margin-left:auto;font-weight:600;color:var(--muted)}
 .welcome{padding-top:25px}
 .welcome h1{font-size:38px;line-height:1.12;margin:32px 0 23px}
@@ -329,7 +329,7 @@ main{min-height:calc(100dvh - 40px)}
 .nearby-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nearby-toolbar .icon-button{margin-top:0}
 .nearby-toolbar .brand{font-size:20px;gap:7px;flex-shrink:0;margin-right:0}
-.nearby-toolbar .brand svg{width:22px;height:22px}
+.nearby-toolbar .brand .brand-icon{width:22px;height:22px}
 .nearby-toolbar .location-switch{margin:0 0 0 auto;min-width:0;text-align:right;justify-content:flex-end;gap:4px}
 .nearby-toolbar .location-switch span{overflow-wrap:anywhere}
 
@@ -338,7 +338,7 @@ main{min-height:calc(100dvh - 40px)}
 
 
 .page-header .brand{font-size:20px;color:var(--ink);gap:7px}
-.page-header .brand svg{width:22px;height:22px}
+.page-header .brand .brand-icon{width:22px;height:22px}
 
 .field select{appearance:none;padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23222a39' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;background-size:18px}
 

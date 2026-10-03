@@ -57,7 +57,7 @@ export function telegramWalkChangeMessage(previous: WalkNotificationState, curre
     previous.walkTime === current.walkTime && previous.scheduleType === current.scheduleType && !dateChanged) return null;
 
   return [
-    `🐾 <b>Прогулка изменена в ЖК «${changed(previous.residentialComplex, current.residentialComplex)}»</b>`,
+    `<tg-emoji emoji-id="5334974127574920185">🐕</tg-emoji> <b>Прогулка изменена в ЖК «${changed(previous.residentialComplex, current.residentialComplex)}»</b>`,
     "",
     `🐕 <b>Кто гуляет:</b> ${changed(who(previous), who(current))}`,
     `📍 <b>Где:</b> ${changed(previous.place, current.place)}`,

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BellRing, MapPin, MoreHorizontal, PawPrint, X } from "lucide-react";
+import { ArrowLeft, BellRing, MapPin, MoreHorizontal, X } from "lucide-react";
 import { type DialogHTMLAttributes, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Sheet, type SheetProps, useVirtualKeyboard } from "react-modal-sheet";
 
@@ -193,7 +193,7 @@ export function DogmeetDialog({ open = true, onDismiss, onDismissStart, ...props
 export function DogmeetBrand({ tagline }: { tagline?: string }) {
   return (
     <span className="brand">
-      <PawPrint aria-hidden="true" />
+      <img className="brand-icon" src="/icons/dogmeet-mark.png?v=20261003-2" width={28} height={28} alt="" aria-hidden="true" />
       dogmeet
       {tagline && <span>{tagline}</span>}
     </span>

@@ -30,16 +30,16 @@ test("walk edit message includes the full walk card and escapes Telegram HTML", 
   };
 
   assert.equal(telegramWalkChangeMessage(previous, current), [
-    "🐾 <b>Прогулка изменена в ЖК «<s>Старый ЖК</s> → Новый ЖК»</b>",
+    "<tg-emoji emoji-id=\"5334974127574920185\">🐕</tg-emoji> <b>Прогулка изменена в ЖК «<s>Старый ЖК</s> → Новый ЖК»</b>",
     "",
     "🐕 <b>Кто гуляет:</b> <s>Шарик &lt;&amp;&gt; · Иван</s> → Рекс &amp; друзья · Мария",
     "📍 <b>Где:</b> <s>Старое &lt;место&gt;</s> → Новое место",
     "🕒 <b>Во сколько:</b> <s>18:00 · сегодня</s> → 19:00 · завтра"
   ].join("\n"));
   assert.equal(telegramWalkChangeMessage(previous, { ...previous, place: "Новый парк" }),
-    "🐾 <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n🐕 <b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n📍 <b>Где:</b> <s>Старое &lt;место&gt;</s> → Новый парк\n🕒 <b>Во сколько:</b> 18:00 · сегодня");
+    "<tg-emoji emoji-id=\"5334974127574920185\">🐕</tg-emoji> <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n🐕 <b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n📍 <b>Где:</b> <s>Старое &lt;место&gt;</s> → Новый парк\n🕒 <b>Во сколько:</b> 18:00 · сегодня");
   assert.equal(telegramWalkChangeMessage(previous, { ...previous, walkDate: "2026-10-01" }),
-    "🐾 <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n🐕 <b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n📍 <b>Где:</b> Старое &lt;место&gt;\n🕒 <b>Во сколько:</b> <s>18:00 · сегодня (30.09.2026)</s> → 18:00 · сегодня (01.10.2026)");
+    "<tg-emoji emoji-id=\"5334974127574920185\">🐕</tg-emoji> <b>Прогулка изменена в ЖК «Старый ЖК»</b>\n\n🐕 <b>Кто гуляет:</b> Шарик &lt;&amp;&gt; · Иван\n📍 <b>Где:</b> Старое &lt;место&gt;\n🕒 <b>Во сколько:</b> <s>18:00 · сегодня (30.09.2026)</s> → 18:00 · сегодня (01.10.2026)");
   assert.equal(telegramWalkChangeMessage(previous, previous), null);
   assert.equal(telegramWalkChangeMessage({ ...previous, scheduleType: "always" },
     { ...previous, scheduleType: "always", walkDate: "2026-10-01" }), null);
@@ -56,7 +56,7 @@ test("new walk message includes only nonblank saved comments and escapes Telegra
     walk_time: "18:00:00", schedule_type: "today"
   };
   const base = [
-    "🐾 <b>Новая прогулка в ЖК «ЖК &lt;&amp;&gt;»</b>",
+    "<tg-emoji emoji-id=\"5334974127574920185\">🐕</tg-emoji> <b>Новая прогулка в ЖК «ЖК &lt;&amp;&gt;»</b>",
     "",
     "🐕 <b>Кто гуляет:</b> Шарик · Иван",
     "📍 <b>Где:</b> Парк",

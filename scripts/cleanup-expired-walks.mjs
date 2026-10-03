@@ -194,7 +194,7 @@ function walkScheduleLabel(notification) {
 
 function walkNotificationMessage(notification) {
   return [
-    `🐾 <b>Новая прогулка в ЖК «${escapeTelegramHtml(notification.residential_complex)}»</b>`,
+    `<tg-emoji emoji-id="5334974127574920185">🐕</tg-emoji> <b>Новая прогулка в ЖК «${escapeTelegramHtml(notification.residential_complex)}»</b>`,
     "",
     `🐕 <b>Кто гуляет:</b> ${escapeTelegramHtml(notification.pet_name)} · ${escapeTelegramHtml(notification.owner_name)}`,
     `📍 <b>Где:</b> ${escapeTelegramHtml(notification.place)}`,
