@@ -20,10 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: "/favicon.ico?v=20261003-2", type: "image/x-icon", sizes: "16x16 32x32 48x48" },
-        { url: "/icons/dogmeet-32.png?v=20261003-2", type: "image/png", sizes: "32x32" }
+        { url: "/favicon.ico?v=20261003-3", type: "image/x-icon", sizes: "16x16 32x32 48x48" },
+        { url: "/icons/dogmeet-32.png?v=20261003-3", type: "image/png", sizes: "32x32" }
       ],
-      shortcut: "/favicon.ico?v=20261003-2",
+      shortcut: "/favicon.ico?v=20261003-3",
       apple: [{ url: "/apple-touch-icon.png?v=20261003-2", sizes: "180x180", type: "image/png" }]
     },
     openGraph: {
@@ -53,9 +53,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico?v=20261003-2" type="image/x-icon" sizes="16x16 32x32 48x48" />
-        <link rel="icon" href="/icons/dogmeet-32.png?v=20261003-2" type="image/png" sizes="32x32" />
-        <link rel="shortcut icon" href="/favicon.ico?v=20261003-2" type="image/x-icon" />
+        <link rel="icon" href="/favicon.ico?v=20261003-3" type="image/x-icon" sizes="16x16 32x32 48x48" />
+        <link rel="icon" href="/icons/dogmeet-32.png?v=20261003-3" type="image/png" sizes="32x32" />
+        <link rel="shortcut icon" href="/favicon.ico?v=20261003-3" type="image/x-icon" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20261003-2" sizes="180x180" />
       </head>
       <body>{children}</body>
