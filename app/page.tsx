@@ -878,21 +878,13 @@ export default function Home() {
       <span className="photo-caption"><span>Знакомые места.</span><strong>Новые друзья.</strong></span>
     </div>
     <p>Узнайте, кто гуляет рядом, и расскажите соседям о своих планах.</p>
-    {screen === null && sessionError ? (
-      <div className="session-error" role="alert">
-        <p>{sessionError}</p>
-        <button className="button" type="button" onClick={retrySession}>Повторить</button>
-      </div>
-    ) : (
-      <button className="button" type="button" disabled={screen === null} onClick={openBrowserGuide}>Найти компанию</button>
-    )}
+    <button className="button" type="button" onClick={openBrowserGuide}>Найти компанию</button>
     <small className="center-note">Без регистрации. Начнём с вашего района.</small>
-    {screen === null && !sessionError && <span className="visually-hidden" role="status">Восстанавливаем безопасную сессию</span>}
   </div>;
 
   if (result && !result.sheet) return <DogmeetFrame><main><DogmeetHeader /><h1>{screen === "pet" ? petBeingEdited ? "Изменить питомца" : "Добавить питомца" : screen === "location" ? "Мой район" : walkBeingEdited ? "Изменить прогулку" : "Сообщить о прогулке"}</h1><DogmeetState state="success" title={result.title} message={result.message} action={result.action} onAction={() => { setResult(null); result.onContinue(); }}>{result.receipt && <div className="receipt"><strong>{result.receipt.title}</strong><span>{result.receipt.place}</span><small>{result.receipt.pet}</small></div>}</DogmeetState></main></DogmeetFrame>;
 
-  if (screen === null) return <DogmeetFrame><main aria-busy={!sessionError}><section className="app-shell screen-welcome" aria-label="Сервис совместных прогулок">{welcomeScreen}</section></main></DogmeetFrame>;
+  if (screen === null) return <DogmeetFrame><main aria-busy={!sessionError}>{sessionError && <DogmeetState state="error" message={sessionError} onAction={retrySession} />}</main></DogmeetFrame>;
 
   return (
     <DogmeetFrame className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>

@@ -82,6 +82,9 @@ html, body { min-height: 100%; background: #e5e5e2; }
 }
 
 .production .page-header { view-transition-name: dogmeet-header; }
+.production .page-header .brand { flex-shrink: 0; }
+.production .page-header .brand-icon { width: 28.6px; height: 28.6px; }
+.production .page-header .location-switch span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .header-menu { position: relative; flex-shrink: 0; }
 .page-header .header-menu .icon-button { margin-left: 0; }
 .telegram-menu-hint {

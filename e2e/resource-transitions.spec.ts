@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 import { mockApp, openNearby, pet, walk } from "./fixtures";
 import { petPhotoUrl } from "../server/domain/pet";
 
-test("renders the first screen in HTML before session bootstrap", async ({ request, page }) => {
+test("keeps initial HTML and session restoration empty until the screen is known", async ({ request, page }) => {
   const html = await (await request.get("/")).text();
-  expect(html).toContain("Хорошая прогулка");
-  expect(html).toContain("welcome-screen");
-  expect(html).toContain("walk-hero-screen.webp");
+  expect(html).toContain('aria-busy="true"');
+  expect(html).not.toContain('class="screen welcome welcome-screen"');
+  expect(html).not.toContain('class="loader"');
 
   await mockApp(page, { hasLocation: false });
   let sessionPending = false;
@@ -17,9 +17,9 @@ test("renders the first screen in HTML before session bootstrap", async ({ reque
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect.poll(() => sessionPending).toBe(true);
-  await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Найти компанию" })).toBeDisabled();
+  await expect(page.locator('main[aria-busy="true"]')).toBeEmpty();
   await releaseSession();
+  await expect(page.getByRole("heading", { name: /Хорошая прогулка/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Найти компанию" })).toBeEnabled();
 });
 
