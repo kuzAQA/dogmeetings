@@ -66,7 +66,9 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
     setActionReady(false);
     dock.dataset.moving = "true";
     const styles = getComputedStyle(dock);
-    const duration = parseFloat(styles.getPropertyValue(actionHidden ? "--dock-exit" : "--dock-enter"));
+    const durationValue = styles.getPropertyValue(actionHidden ? "--dock-exit" : "--dock-enter").trim();
+    // Production CSS may serialize milliseconds as seconds; WAAPI expects milliseconds.
+    const duration = parseFloat(durationValue) * (durationValue.endsWith("ms") ? 1 : 1000);
     const easing = styles.getPropertyValue(actionHidden ? "--dock-hide-ease" : "--dock-show-ease").trim();
     // Reference stage coordinates, mapped to the site's fixed pill and button sizes.
     // 4.3% is the final button position; 14.3% is the initial pill edge.

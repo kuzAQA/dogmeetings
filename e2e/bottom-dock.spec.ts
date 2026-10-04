@@ -58,6 +58,25 @@ test("liquid dock keeps its width, gap and clear content on mobile", async ({ pa
   }
 });
 
+test("liquid dock preserves durations when production CSS uses seconds", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 844 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await openNearby(page);
+  const dock = page.locator(".bottom-nav");
+  await dock.evaluate((element) => {
+    const style = (element as HTMLElement).style;
+    style.setProperty("--dock-enter", ".3472s");
+    style.setProperty("--dock-exit", ".2688s");
+  });
+  for (const [tab, duration] of [["Мои планы", 347.2], ["Рядом", 268.8]] as const) {
+    await dock.getByRole("button", { name: tab, exact: true }).click();
+    const durations = await dock.evaluate((element) => element.getAnimations({ subtree: true }).map((animation) => animation.effect!.getTiming().duration));
+    expect(durations).toHaveLength(5);
+    for (const actual of durations) expect(Number(actual)).toBeCloseTo(duration, 4);
+    await expect(dock).toHaveAttribute("data-moving", "false");
+  }
+});
+
 test("nearby to pets reveals the same liquid action and opens the pet form", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 844 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
