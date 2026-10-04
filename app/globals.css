@@ -105,6 +105,23 @@ html, body { min-height: 100%; background: #e5e5e2; }
   font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
+  /* Grow from the pointer beneath the menu button. */
+  transform-origin: calc(100% - 30px) -12px;
+  animation: telegram-menu-hint-in 620ms var(--ease-in-out) both;
+}
+/* CSS spring approximation for this once-per-session entrance. */
+@keyframes telegram-menu-hint-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.35);
+  }
+  25% { opacity: 1; }
+  55% { transform: translateY(0) scale(1.08); }
+  78% { transform: translateY(0) scale(0.975); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .telegram-menu-hint { animation: none; }
 }
 .telegram-menu-hint::before {
   content: "";

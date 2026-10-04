@@ -57,6 +57,8 @@ test("centers the nearby menu and keeps the add action stable between plans and 
 
   await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
   await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBe(0);
+  await expect(add).toBeEnabled();
+  await expect(add).toHaveCSS("opacity", "1");
   expect(await add.evaluate((element) => element.getBoundingClientRect().x)).toBeCloseTo(plansX, 0);
 
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
@@ -162,6 +164,7 @@ test("keeps dock tab and screen changes inert", async ({ page }) => {
   await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(0);
+  await expect(page.locator(".dock-add")).toBeEnabled();
   expect(await page.locator(".dock-add").evaluate((element) => element.getAnimations().length)).toBe(0);
   const transitions = await page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts);
   await dock.getByRole("button", { name: "Питомцы", exact: true }).click();

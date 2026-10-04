@@ -203,7 +203,7 @@ export function DogmeetBrand({ tagline }: { tagline?: string }) {
 const telegramMenuHintSeenKey = "dogmeet.telegramMenuHintSeen";
 let telegramMenuHintShown = false;
 
-export function useTelegramMenuHint() {
+export function useTelegramMenuHint(canShow: boolean) {
   const [hintVisible, setHintVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -216,6 +216,20 @@ export function useTelegramMenuHint() {
     }
     setHintVisible(true);
   }, []);
+
+  useEffect(() => {
+    if (!canShow || telegramMenuHintShown) return;
+    let appearanceTimer: number | undefined;
+    const scheduleHint = () => {
+      appearanceTimer = window.setTimeout(showHint, 3_000);
+    };
+    if (document.readyState === "complete") scheduleHint();
+    else window.addEventListener("load", scheduleHint, { once: true });
+    return () => {
+      window.removeEventListener("load", scheduleHint);
+      window.clearTimeout(appearanceTimer);
+    };
+  }, [canShow, showHint]);
 
   useLayoutEffect(() => {
     if (!hintVisible) return;
@@ -238,19 +252,12 @@ export function useTelegramMenuHint() {
     setHintVisible(false);
   }, []);
 
-  return { visible: hintVisible, show: showHint, dismiss: dismissHint };
+  return { visible: hintVisible, dismiss: dismissHint };
 }
 
 export type TelegramMenuHint = ReturnType<typeof useTelegramMenuHint>;
 
 function TelegramMenuButton({ onOpen, hint }: { onOpen: () => void; hint?: TelegramMenuHint }) {
-  const showHint = hint?.show;
-  useEffect(() => {
-    if (!showHint) return;
-    const frame = window.requestAnimationFrame(showHint);
-    return () => window.cancelAnimationFrame(frame);
-  }, [showHint]);
-
   return (
     <div className="header-menu">
       <button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={() => { hint?.dismiss(); onOpen(); }}><MoreHorizontal aria-hidden="true" /></button>

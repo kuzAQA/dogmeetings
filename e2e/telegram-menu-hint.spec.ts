@@ -4,6 +4,58 @@ import { mockApp, openNearby } from "./fixtures";
 const seenKey = "dogmeet.telegramMenuHintSeen";
 const hintText = "Откройте меню, чтобы получать уведомления о прогулках в Telegram";
 
+test("waits for page load and three seconds on nearby before showing the hint", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 100));
+  await mockApp(page);
+  let finishImageLoad!: () => void;
+  const imageReady = new Promise<void>((resolve) => { finishImageLoad = resolve; });
+  await page.route("**/hint-page-load.svg", async (route) => {
+    await imageReady;
+    await route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" />' });
+  });
+  await page.addInitScript(() => {
+    window.addEventListener("DOMContentLoaded", () => {
+      const image = document.createElement("img");
+      image.hidden = true;
+      image.src = "/hint-page-load.svg";
+      document.body.append(image);
+    }, { once: true });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  const hint = page.locator(".telegram-menu-hint");
+  await page.clock.runFor(5_000);
+  expect(await page.evaluate(() => document.readyState)).toBe("interactive");
+  await expect(hint).toHaveCount(0);
+  finishImageLoad();
+  await page.waitForLoadState("load");
+  await page.clock.runFor(2_999);
+  await expect(hint).toHaveCount(0);
+  await page.clock.runFor(1);
+  await expect(hint).toBeVisible();
+});
+
+test("restarts the appearance delay when returning to nearby", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 100));
+  await openNearby(page);
+  const hint = page.locator(".telegram-menu-hint");
+  await page.clock.runFor(2_000);
+  await expect(hint).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Основная навигация" }).getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.clock.runFor(5_000);
+  await expect(hint).toHaveCount(0);
+  expect((await page.context().cookies()).some((cookie) => cookie.name === seenKey)).toBe(false);
+  await page.getByRole("navigation", { name: "Основная навигация" }).getByRole("button", { name: "Рядом", exact: true }).click();
+  await page.clock.runFor(2_999);
+  await expect(hint).toHaveCount(0);
+  await page.clock.runFor(1);
+  await expect(hint).toBeVisible();
+});
+
 test("keeps the hint across dock tabs and closes ten seconds after the first display", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.install();
@@ -32,13 +84,14 @@ test("keeps the hint across dock tabs and closes ten seconds after the first dis
   await expect(hint).toHaveCount(0);
 });
 
-test("close button works from the keyboard and does not show again on reload", async ({ page }) => {
+test("close button works from the keyboard and does not show again on reload", async ({ page, browserName }) => {
   await openNearby(page);
+  await expect(page.locator(".telegram-menu-hint")).toBeVisible();
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
   const close = page.getByRole("button", { name: "Закрыть подсказку", exact: true });
   await expect(close).toBeVisible();
   await page.getByRole("button", { name: "Мой район и настройки", exact: true }).focus();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
   await expect(close).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator(".telegram-menu-hint")).toHaveCount(0);
@@ -65,6 +118,7 @@ test("opening the menu dismisses the hint and preserves the menu action", async 
 
 test("opening a pet card dismisses the hint permanently for the session", async ({ page }) => {
   await openNearby(page);
+  await expect(page.locator(".telegram-menu-hint")).toBeVisible();
   await page.getByRole("button", { name: "Питомцы", exact: true }).click();
   await expect(page.locator(".telegram-menu-hint")).toBeVisible();
   await page.getByRole("button", { name: /Собака Луна/ }).click();
@@ -79,6 +133,7 @@ for (const screen of ["nearby", "plans"]) {
   test(`manage dismisses the hint on ${screen} without reopening it on close`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openNearby(page);
+    await expect(page.locator(".telegram-menu-hint")).toBeVisible();
     if (screen === "plans") await page.getByRole("button", { name: "Мои планы", exact: true }).click();
     await expect(page.locator(".telegram-menu-hint")).toBeVisible();
     await page.getByRole("button", { name: "Управлять", exact: true }).click();
@@ -103,6 +158,7 @@ test("opening a walk dismisses the hint without reopening it on return", async (
 
 test("opening the walk form dismisses the hint without reopening it on return", async ({ page }) => {
   await openNearby(page);
+  await expect(page.locator(".telegram-menu-hint")).toBeVisible();
   await page.getByRole("button", { name: "Мои планы", exact: true }).click();
   await expect(page.locator(".telegram-menu-hint")).toBeVisible();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
@@ -168,6 +224,8 @@ test("matches the reference at 320, 375 and 1440 px without covering the menu or
     const hint = page.locator(".telegram-menu-hint");
     await expect(hint).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    // Measure the settled bubble, after its entrance has finished.
+    await hint.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
     const geometry = await hint.evaluate((element) => {
       const bubble = element.getBoundingClientRect();
       const menu = document.querySelector(".header-menu > button")!.getBoundingClientRect();

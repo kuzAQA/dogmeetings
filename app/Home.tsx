@@ -60,7 +60,6 @@ type FormScreen = "pet" | "announce";
 
 export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }) {
   const welcomeContinued = useRef(false);
-  const telegramMenuHint = useTelegramMenuHint();
   const [selectedWalk, setSelectedWalk] = useState<Walk | null>(null);
   const [result, setResultState] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
   function setResult(next: typeof result) {
@@ -193,6 +192,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     retryPlaces,
     retryMyWalks
   } = useHomeResources(sessionReady, location, hasLocation || screen === "location" || screen === "my-pets", hasLocation);
+  const telegramMenuHint = useTelegramMenuHint(screen === "walks" && dockSection === "nearby" && walksLoaded);
   const walkForm = useWalkForm(savedPets, sharedPlaces, placesLoaded);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
