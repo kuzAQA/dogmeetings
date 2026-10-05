@@ -21,7 +21,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 /* The desktop frame already reserves 80px below the phone. */
 .production main.with-nav { padding-top: env(safe-area-inset-top, 0px); padding-bottom: calc(36px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
 @media (max-width: 899px) {
-  :root, body { background: var(--paper); }
+  :root, body { background: var(--paper); overscroll-behavior-y: none; }
   .production .phone, .production main { min-height: 100dvh; }
   .production main.with-nav { padding-bottom: calc(80px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
   /* Sliding content must not expand Chrome's mobile layout viewport and move the fixed dock. */
