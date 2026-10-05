@@ -103,10 +103,12 @@ test("collection scroll follows content height on every screen", async ({ page }
   }
 });
 
-test("mobile bottom sheets preserve the page and paper canvas", async ({ page }) => {
+test("mobile page allows native refresh while bottom sheets preserve the page and paper canvas", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 667 });
   await openNearby(page, { nearby: Array.from({ length: 8 }, (_, index) => ({ ...walk, id: `nearby-${index}` })), mine: [] });
+  await expect(page.locator("html")).toHaveCSS("overscroll-behavior-y", "auto");
+  await expect(page.locator("body")).toHaveCSS("overscroll-behavior-y", "auto");
   await page.evaluate(() => scrollTo(0, 180));
   const before = await page.locator(".phone").evaluate((element) => element.getBoundingClientRect().top);
   await page.getByRole("button", { name: "Весь день", exact: true }).click();
@@ -115,8 +117,9 @@ test("mobile bottom sheets preserve the page and paper canvas", async ({ page })
   await expect.poll(() => page.locator(".phone").evaluate((element) => element.getBoundingClientRect().top)).toBe(before);
   await expect(page.locator("html")).toHaveCSS("background-color", "rgb(247, 244, 237)");
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(247, 244, 237)");
-  await expect(page.locator("html")).toHaveCSS("overscroll-behavior-y", "none");
+  await expect(dialog.locator(".sheet-content")).toHaveCSS("overscroll-behavior-y", "none");
   await page.getByRole("button", { name: "Показать прогулки", exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.locator("html")).toHaveCSS("overscroll-behavior-y", "auto");
   await expect.poll(() => page.locator(".phone").evaluate((element) => element.getBoundingClientRect().top)).toBe(before);
 });
