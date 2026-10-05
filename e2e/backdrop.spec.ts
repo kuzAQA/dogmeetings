@@ -7,10 +7,13 @@ test("shared backdrop transitions during sheet open and close", async ({ page })
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   const trigger = page.getByRole("button", { name: /^Время/ });
   await page.evaluate(() => {
-    const state = window as Window & { backdropTransitions?: string[] };
+    const state = window as Window & { backdropTransitions?: { property: string; opacity: unknown[] }[] };
     state.backdropTransitions = [];
     document.addEventListener("transitionrun", (event) => {
-      if (event.target instanceof HTMLElement && event.target.classList.contains("sheet-backdrop")) state.backdropTransitions!.push(`${event.target.closest(".react-modal-sheet-root")?.getAttribute("data-sheet-state")}:${event.propertyName}`);
+      if (!(event.target instanceof HTMLElement) || !event.target.classList.contains("sheet-backdrop")) return;
+      const transition = event.target.getAnimations().find((animation) => animation instanceof CSSTransition && animation.transitionProperty === event.propertyName);
+      const effect = transition?.effect;
+      state.backdropTransitions!.push({ property: event.propertyName, opacity: effect instanceof KeyframeEffect ? effect.getKeyframes().map((frame) => frame.opacity) : [] });
     });
   });
   await trigger.click();
@@ -23,7 +26,7 @@ test("shared backdrop transitions during sheet open and close", async ({ page })
   await expect(sheet).toHaveAttribute("data-sheet-state", "open");
   await expect(backdrop).toHaveClass(/react-modal-sheet-backdrop/);
   await expect(backdrop).toHaveCSS("transition-property", "opacity");
-  await expect.poll(() => page.evaluate(() => (window as Window & { backdropTransitions?: string[] }).backdropTransitions ?? [])).toContain("opening:opacity");
+  await expect.poll(() => page.evaluate(() => (window as Window & { backdropTransitions?: { property: string; opacity: unknown[] }[] }).backdropTransitions ?? [])).toContainEqual({ property: "opacity", opacity: ["0", "1"] });
 
   await backdrop.click({ force: true });
   await expect(sheet).toHaveAttribute("data-sheet-state", "closing");

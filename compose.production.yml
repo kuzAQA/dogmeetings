@@ -46,6 +46,7 @@ services:
     mem_limit: 128m
 
   migrate-pet-photos:
+    profiles: ["legacy-photo-migration"]
     image: dogmeet-app:latest
     build:
       context: .
@@ -68,6 +69,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      IMAGE_AVIF_QUALITY: ${IMAGE_AVIF_QUALITY:-40}
       ADMIN_USERNAME_HASH: ${ADMIN_USERNAME_HASH}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
@@ -80,8 +82,6 @@ services:
       TZ: Europe/Moscow
     depends_on:
       migrate:
-        condition: service_completed_successfully
-      migrate-pet-photos:
         condition: service_completed_successfully
     healthcheck:
       test:
@@ -114,8 +114,6 @@ services:
       NODE_OPTIONS: --max-old-space-size=64
     depends_on:
       migrate:
-        condition: service_completed_successfully
-      migrate-pet-photos:
         condition: service_completed_successfully
     mem_limit: 128m
 

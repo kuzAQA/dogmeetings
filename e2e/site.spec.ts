@@ -2,6 +2,23 @@ import { expect, test } from "@playwright/test";
 
 import { mockApp, openNearby, walk } from "./fixtures";
 
+for (const comment of [null, "", " \n\t ", "Возьмём мячик"]) {
+  test(`shows only saved comments in nearby walk details (${JSON.stringify(comment)})`, async ({ page }) => {
+    await mockApp(page);
+    await page.route("**/api/walks?*", (route) => route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ walks: [{ ...walk, comment }] }),
+    }));
+    await page.goto("/");
+    await page.locator(".walk-summary").first().click();
+    await expect(page.getByRole("heading", { name: "Встреча на прогулке" })).toBeVisible();
+    const quote = page.locator(".walk-detail-screen blockquote");
+    if (comment?.trim()) await expect(quote).toHaveText(`«${comment}»`);
+    else await expect(quote).toHaveCount(0);
+    await expect(page.getByText("Приходите гулять вместе", { exact: false })).toHaveCount(0);
+  });
+}
+
 test("ends the timeline cleanly and aligns comment icons", async ({ page }) => {
   await openNearby(page, { nearby: [walk, { ...walk, id: "10000000-0000-4000-8000-000000000002", walkTime: "19:30" }] });
   const rows = page.locator(".timeline .walk-row");
@@ -262,7 +279,7 @@ test("opens the walk form with the time wheels and preserved fields", async ({ p
   await expect(timePicker).toBeVisible();
   await expect(timePicker.locator(".time-wheel")).toHaveCount(2);
   await page.keyboard.press("Escape");
-  await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "40");
+  await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "50");
 });
 
 test("plans opened from the profile return there without the bottom dock", async ({ page }) => {
@@ -340,7 +357,7 @@ test("shows first-time location fields without a preview", async ({ page }) => {
   }
   await expect(page.getByRole("button", { name: "Продолжить" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Предложить новую локацию" })).toBeVisible();
-  for (const [height, shouldScroll] of [[667, false], [640, true]] as const) {
+  for (const [height, shouldScroll] of [[667, false], [560, true]] as const) {
     await page.setViewportSize({ width: 390, height });
     const { scrollHeight, lastButtonBottom } = await page.evaluate(() => ({
       scrollHeight: document.documentElement.scrollHeight,

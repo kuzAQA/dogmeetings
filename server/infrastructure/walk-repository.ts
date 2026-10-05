@@ -17,6 +17,7 @@ export type WalkRow = {
   placeId: string;
   place: string;
   comment: string | null;
+  notifyTelegram: boolean;
   scheduleType: string;
   walkDate: string;
   walkTime: string;
@@ -37,6 +38,7 @@ const walkSelection = {
   placeId: walks.placeId,
   place: walks.place,
   comment: walks.comment,
+  notifyTelegram: walks.notifyTelegram,
   scheduleType: walks.scheduleType,
   walkDate: walks.walkDate,
   walkTime: walks.walkTime,

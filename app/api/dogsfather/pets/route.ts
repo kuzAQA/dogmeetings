@@ -70,7 +70,7 @@ export async function PATCH(request: Request) {
       return adminError(`Укажите корректную породу до ${MAX_BREED_LENGTH} символов.`, 400);
     }
 
-    const hasPhoto = photo instanceof File && photo.size > 0;
+    const hasPhoto = photo instanceof File && (photo.size > 0 || photo.name !== "");
     const updatedAt = new Date();
     const values: Partial<typeof pets.$inferInsert> = { name, ownerName, breed, updatedAt };
     if (hasPhoto) {
@@ -95,7 +95,7 @@ export async function PATCH(request: Request) {
     if (!pet) return adminError("Питомец не найден.", 404);
     return privateJson({ pet: publicPet(pet) });
   } catch (error) {
-    if (error instanceof PetPhotoError) return adminError(error.message, 400);
+    if (error instanceof PetPhotoError) return adminError(error.message, error.status);
     return adminError("Не удалось сохранить питомца.", 500);
   }
 }

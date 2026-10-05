@@ -131,7 +131,7 @@ export async function POST(request: Request) {
 
     return privateJson({ pet: publicPet(pet, session.clientId) }, { status: 201 });
   } catch (error) {
-    if (error instanceof PetPhotoError) return privateError(error.message, 400);
+    if (error instanceof PetPhotoError) return privateError(error.message, error.status);
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }
@@ -212,7 +212,7 @@ export async function PATCH(request: Request) {
 
     return privateJson({ pet: publicPet(pet, session.clientId, Boolean(collaborator)) });
   } catch (error) {
-    if (error instanceof PetPhotoError) return privateError(error.message, 400);
+    if (error instanceof PetPhotoError) return privateError(error.message, error.status);
     return privateJson({ error: errorMessage(error) }, { status: 500 });
   }
 }

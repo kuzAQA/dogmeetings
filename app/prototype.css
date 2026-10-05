@@ -64,14 +64,14 @@ main.with-nav{padding-bottom:138px}
 .location-screen .lead{font-size:18px}
 .location-screen .center-note{margin-bottom:8px}
 .location-screen .center-note + .button{margin-top:8px}
-.location-request-divider{border:0;border-top:1px solid var(--line);margin:var(--space-6) 32px var(--space-3)}
-.location-request-divider + .button{margin-top:0}
+.location-screen .location-request-divider{border:0;border-top:1px solid var(--line);margin:var(--space-3) 32px var(--space-1)}
+.location-request-divider + .button{margin-top:0;margin-bottom:var(--space-6)}
 .location-switch{display:flex;align-items:center;gap:8px;font-weight:700;min-height:44px;border:0;background:transparent;padding:12px 0;margin:15px 0 18px;font-size:13px}
 .location-switch svg:first-child{color:var(--orange);width:18px}
 .location-switch svg:last-child{width:16px}
 .day-heading{display:flex;align-items:flex-start;gap:12px;padding-top:20px}
 .day-divider{height:1px;background:var(--line);margin-top:22px}
-.day-heading h1{font-size:33px;flex:1;margin:0;letter-spacing:-.04em}
+.day-heading h1{font-size:33px;flex:1;margin:0;letter-spacing:-.04em;transform-origin:left center}
 .date-stamp{display:flex;flex-direction:column;align-items:center;border-top:3px solid var(--orange);padding:7px 0 0;min-width:73px;line-height:1.45;font-size:10px;text-align:center}
 .date-stamp strong{font-size:35px;line-height:1.15;letter-spacing:-.04em}
 .daily-summary{display:flex;gap:13px;align-items:center;margin:22px 0 26px;padding-bottom:24px;border-bottom:1px solid var(--line)}
@@ -121,6 +121,16 @@ main.with-nav{padding-bottom:138px}
 .field input[aria-invalid=true],.field select[aria-invalid=true],.field textarea[aria-invalid=true]{border:2px solid var(--error)}
 .field-error{color:var(--error);font-size:12px;line-height:1.6}
 .counter{align-self:flex-end;color:var(--muted);margin-top:-5px}
+.walk-comment-field{margin-bottom:8px}
+.walk-telegram-row{display:flex;align-items:center;gap:4px}
+.walk-telegram-row+.note{margin-top:8px}
+.walk-telegram-label{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:44px;font-size:13px;line-height:1.6;cursor:pointer}
+.walk-telegram-label input{width:20px;height:20px;margin:0;flex-shrink:0;accent-color:var(--orange)}
+.walk-telegram-info{width:24px;height:24px;color:var(--muted)}
+.walk-telegram-info-wrap{position:relative;flex-shrink:0}
+.walk-telegram-info-trigger{display:flex;align-items:center;justify-content:flex-end;width:24px;height:44px;padding:0;border:0;background:transparent;cursor:pointer}
+.walk-telegram-info-wrap .walk-telegram-hint{width:min(260px,calc(100vw - 32px));top:auto;bottom:calc(100% + 4px);right:-12px;transform-origin:calc(100% - 24px) calc(100% + 12px)}
+.walk-telegram-info-wrap .walk-telegram-hint::before{top:auto;bottom:-12px;right:16px;transform:rotate(180deg)}
 .note{display:flex;gap:10px;align-items:center;background:#eeece5;padding:15px;border-radius:10px;font-size:12px;line-height:1.7;color:var(--muted);margin:20px 0}
 .note svg{width:18px;height:21px;color:var(--ink)}
 .pets-screen .pet-share-note{position:relative}
@@ -416,7 +426,7 @@ main{min-height:calc(100dvh - 40px)}
  --dock-size:60px;
  --dock-gap:12px;
  --dock-shift:calc((var(--dock-size) + var(--dock-gap))/2);
- --dock-enter:347.2ms;--dock-exit:268.8ms;
+ --dock-enter:451.36ms;--dock-exit:349.44ms;
  --dock-show-ease:cubic-bezier(.18,.86,.20,1.06);--dock-hide-ease:cubic-bezier(.42,0,.28,1);
  --dock-liquid-size:calc(var(--dock-size) * .7716049383);
  width:min(359px,calc(100% - 30px));max-width:min(359px,calc(100% - 30px));height:var(--dock-size);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;isolation:isolate;
@@ -524,6 +534,7 @@ main{min-height:calc(100dvh - 40px)}
 .toast{opacity:1;transform:translate(-50%,0);transition:opacity var(--motion-screen) var(--ease-out),transform var(--motion-screen) var(--ease-out)}
 
 .state-block{opacity:1;transition:opacity var(--motion-fast) var(--ease-out)}
+.production main.with-nav [data-dock-panel] .state-block,.production .dock-screen-exit [data-dock-panel] .state-block{transition:none}
 
 @starting-style{
  .toast{opacity:0;transform:translate(-50%,8px)}

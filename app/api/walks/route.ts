@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { pets, telegramComplexSubscriptions, telegramWalkNotifications, walks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
@@ -30,6 +30,7 @@ function publicWalk(walk: WalkRow) {
     placeId: walk.placeId,
     point: walk.place,
     comment: walk.comment,
+    notifyTelegram: walk.notifyTelegram,
     walkDate: walk.walkDate,
     walkTime: walk.walkTime.slice(0, 5),
     scheduleType: walk.scheduleType,
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
 
     const parsedInput = parseWalkMutation(await readJsonRecord(request), "create");
     if (!parsedInput.ok) return privateError(parsedInput.error, 400);
-    const { petId, place, normalizedPlace, comment, scheduleType, walkTime } = parsedInput.value;
+    const { petId, place, normalizedPlace, comment, scheduleType, walkTime, notifyTelegram } = parsedInput.value;
     const { city, district, complex: residentialComplex } = savedLocation;
 
     const walkDate = moscowDate(scheduleType === "tomorrow" ? 1 : 0);
@@ -125,6 +126,7 @@ export async function POST(request: Request) {
           placeId: sharedPlace.id,
           place: sharedPlace.name,
           comment: comment || null,
+          notifyTelegram,
           scheduleType,
           walkDate,
           walkTime,
@@ -135,6 +137,7 @@ export async function POST(request: Request) {
           placeId: walks.placeId,
           place: walks.place,
           comment: walks.comment,
+          notifyTelegram: walks.notifyTelegram,
           scheduleType: walks.scheduleType,
           walkDate: walks.walkDate,
           walkTime: walks.walkTime,
@@ -144,26 +147,28 @@ export async function POST(request: Request) {
           updatedAt: walks.updatedAt
         });
 
-      const subscriptions = await tx
-        .select({ id: telegramComplexSubscriptions.id })
-        .from(telegramComplexSubscriptions)
-        .where(and(
-          eq(telegramComplexSubscriptions.active, true),
-          eq(telegramComplexSubscriptions.city, city),
-          eq(telegramComplexSubscriptions.district, district),
-          eq(telegramComplexSubscriptions.residentialComplex, residentialComplex)
-        ));
-      if (subscriptions.length > 0) {
-        await tx
-          .insert(telegramWalkNotifications)
-          .values(subscriptions.map((subscription) => ({
-            id: crypto.randomUUID(),
-            walkId: walk.id,
-            subscriptionId: subscription.id
-          })))
-          .onConflictDoNothing({
-            target: [telegramWalkNotifications.walkId, telegramWalkNotifications.subscriptionId]
-          });
+      if (walk.notifyTelegram) {
+        const subscriptions = await tx
+          .select({ id: telegramComplexSubscriptions.id })
+          .from(telegramComplexSubscriptions)
+          .where(and(
+            eq(telegramComplexSubscriptions.active, true),
+            eq(telegramComplexSubscriptions.city, city),
+            eq(telegramComplexSubscriptions.district, district),
+            eq(telegramComplexSubscriptions.residentialComplex, residentialComplex)
+          ));
+        if (subscriptions.length > 0) {
+          await tx
+            .insert(telegramWalkNotifications)
+            .values(subscriptions.map((subscription) => ({
+              id: crypto.randomUUID(),
+              walkId: walk.id,
+              subscriptionId: subscription.id
+            })))
+            .onConflictDoNothing({
+              target: [telegramWalkNotifications.walkId, telegramWalkNotifications.subscriptionId]
+            });
+        }
       }
 
       return { pet, walk };
@@ -205,7 +210,7 @@ export async function PATCH(request: Request) {
 
     const parsedInput = parseWalkMutation(await readJsonRecord(request), "update");
     if (!parsedInput.ok) return privateError(parsedInput.error, 400);
-    const { walkId, petId, place, normalizedPlace, comment, scheduleType, walkTime } = parsedInput.value;
+    const { walkId, petId, place, normalizedPlace, comment, scheduleType, walkTime, notifyTelegram } = parsedInput.value;
     const { city, district, complex: residentialComplex } = savedLocation;
 
     const walkDate = moscowDate(scheduleType === "tomorrow" ? 1 : 0);
@@ -249,6 +254,7 @@ export async function PATCH(request: Request) {
           placeId: sharedPlace.id,
           place: sharedPlace.name,
           comment: comment || null,
+          notifyTelegram,
           scheduleType,
           walkDate,
           walkTime,
@@ -261,6 +267,7 @@ export async function PATCH(request: Request) {
           placeId: walks.placeId,
           place: walks.place,
           comment: walks.comment,
+          notifyTelegram: walks.notifyTelegram,
           scheduleType: walks.scheduleType,
           walkDate: walks.walkDate,
           walkTime: walks.walkTime,
@@ -269,6 +276,14 @@ export async function PATCH(request: Request) {
           residentialComplex: walks.residentialComplex,
           updatedAt: walks.updatedAt
         });
+
+      // A pending creation card must not duplicate the notification for this save.
+      if (notifyTelegram !== undefined) {
+        await tx.delete(telegramWalkNotifications).where(and(
+          eq(telegramWalkNotifications.walkId, walk.id),
+          isNull(telegramWalkNotifications.sentAt)
+        ));
+      }
 
       return { previous, pet, walk };
     }));
@@ -288,8 +303,8 @@ export async function PATCH(request: Request) {
         walkTime: result.walk.walkTime,
         walkDate: result.walk.walkDate,
         scheduleType: result.walk.scheduleType
-      });
-      if (message) {
+      }, notifyTelegram === true);
+      if (result.walk.notifyTelegram && message) {
         const subscriptions = await withDb((db) => db
           .select({ chatId: telegramComplexSubscriptions.telegramChatId })
           .from(telegramComplexSubscriptions)

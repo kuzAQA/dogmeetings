@@ -30,10 +30,12 @@ export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWa
     <div className="screen collection-screen my-walks-screen">
       <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои планы</h1>
+      <div data-dock-panel>
       {loaded && !error && walks.length > 0 && <p>Ваши встречи сегодня, завтра<br />и маленькие ежедневные традиции.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : walks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (
       <div className="timeline">{walks.map((walk) => <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.walkTime.slice(0, 5)}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary"><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}<button className="text-link" type="button" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>Управлять<ChevronRight aria-hidden="true" /></button></div>{openWalkActionsId === walk.id && <WalkActionsDialog walk={walk} owned={walk} onClose={onCloseWalkActions} onEdit={onEditWalk} onDelete={onDeleteWalk} />}</div>)}</div>
       )}
+      </div>
     </div>
   );
 }
@@ -58,11 +60,13 @@ export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId,
     <div className={`screen collection-screen pets-screen ${fromDock ? "collection-screen--dock" : ""}`} onPointerDownCapture={() => { if (highlightedPetId) onDismissHighlight(); }}>
       <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои питомцы</h1>
+      <div data-dock-panel>
       {loaded && !error && pets.length > 0 && <p>Те, ради кого мы выходим<br />из дома в любую погоду.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="Добавить питомца" onAction={onAdd} /> : <>
         <div className="note pet-share-note"><Share2 aria-hidden="true" />Питомцем можно поделиться с близким человеком и вместе планировать прогулки.</div>
         <div className="pet-rows">{pets.map((pet) => <button className="pet-row" type="button" key={pet.id} onClick={() => (onOpen ?? onEdit)(pet)}><Image className="pet-face" data-pet-photo={pet.id} src={pet.photoUrl} alt={`Собака ${pet.name}`} width={72} height={72} unoptimized={pet.photoUrl.startsWith("/api/")} /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{highlightedPetId === pet.id ? <Check aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>)}</div>
       </>}
+      </div>
     </div>
   );
 }

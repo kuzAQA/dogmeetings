@@ -41,6 +41,7 @@ export type LegacySessionData = {
 };
 
 export type WalkMutation = {
+  notifyTelegram: boolean;
   walkId?: string;
   petId: string;
   place: string;
@@ -56,7 +57,7 @@ export const STORAGE_KEY = "dogwalk.location.v1";
 export const HAS_LOCATION_KEY = "dogwalk.hasLocation.v1";
 export const CLIENT_ID_KEY = "dogwalk.clientId.v1";
 export const MAX_WALK_META_LENGTH = 40;
-export const MAX_WALK_COMMENT_LENGTH = MAX_WALK_META_LENGTH;
+export const MAX_WALK_COMMENT_LENGTH = 50;
 export const MAX_BREED_LENGTH = 20;
 export const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

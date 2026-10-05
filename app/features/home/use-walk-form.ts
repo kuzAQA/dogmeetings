@@ -34,6 +34,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
   const [walkTime, setWalkTime] = useState("");
   const [walkTimePickerOpen, setWalkTimePickerOpen] = useState(false);
   const [walkComment, setWalkComment] = useState("");
+  const [notifyTelegram, setNotifyTelegram] = useState(true);
   const [walkFormDirty, setWalkFormDirty] = useState(false);
   const dockFormRef = useRef<HTMLFormElement>(null);
   const { normalizedValue, places: matchingSharedPlaces } = useMemo(
@@ -95,6 +96,11 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setWalkComment(value);
   }
 
+  function changeNotifyTelegram(value: boolean, inDock = false) {
+    markDirty(inDock);
+    setNotifyTelegram(value);
+  }
+
   function prepareNewWalk() {
     setTouchedFields({});
     setSubmitError("");
@@ -104,6 +110,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setScheduleType("today");
     setWalkTime("");
     setWalkComment("");
+    setNotifyTelegram(true);
     setWalkFormDirty(false);
   }
 
@@ -116,6 +123,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setScheduleType(walk.scheduleType);
     setWalkTime(walk.walkTime.slice(0, 5));
     setWalkComment(walk.comment?.slice(0, MAX_WALK_COMMENT_LENGTH) ?? "");
+    setNotifyTelegram(walk.notifyTelegram ?? true);
     setWalkFormDirty(false);
   }
 
@@ -127,6 +135,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setScheduleType("today");
     setWalkTime("");
     setWalkComment("");
+    setNotifyTelegram(true);
     setWalkFormDirty(false);
   }
 
@@ -163,6 +172,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     walkTime,
     walkTimePickerOpen,
     walkComment,
+    notifyTelegram,
     walkFormDirty,
     matchingSharedPlaces,
     placeSuggestionsVisible,
@@ -179,6 +189,7 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     chooseSharedPlace,
     changeWalkTime,
     changeWalkComment,
+    changeNotifyTelegram,
     prepareNewWalk,
     prepareWalkEdit,
     resetWalkForm,

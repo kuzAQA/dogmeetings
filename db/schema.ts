@@ -223,6 +223,7 @@ export const walks = pgTable(
     placeId: uuid("place_id").notNull().references(() => places.id, { onDelete: "restrict" }),
     place: varchar("place", { length: 100 }).notNull(),
     comment: varchar("comment", { length: 60 }),
+    notifyTelegram: boolean("notify_telegram").notNull().default(true),
     scheduleType: varchar("schedule_type", { length: 10 }).notNull().default("today"),
     walkDate: date("walk_date", { mode: "string" }).notNull().default(sql`CURRENT_DATE`),
     walkTime: time("walk_time").notNull().default("12:00:00"),

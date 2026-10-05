@@ -43,7 +43,7 @@ type WalkNotificationState = {
   scheduleType: string;
 };
 
-export function telegramWalkChangeMessage(previous: WalkNotificationState, current: WalkNotificationState) {
+export function telegramWalkChangeMessage(previous: WalkNotificationState, current: WalkNotificationState, force = false) {
   const who = (walk: WalkNotificationState) => `${walk.petName} · ${walk.ownerName}`;
   const schedule = (walk: WalkNotificationState) => walk.scheduleType === "always" ? "каждый день" : walk.scheduleType === "tomorrow" ? "завтра" : "сегодня";
   const dateChanged = previous.scheduleType !== "always" && previous.walkDate !== current.walkDate;
@@ -52,7 +52,7 @@ export function telegramWalkChangeMessage(previous: WalkNotificationState, curre
     ? locationValue(newValue)
     : `<s>${locationValue(oldValue)}</s> → ${locationValue(newValue)}`;
 
-  if (previous.petId === current.petId && who(previous) === who(current) &&
+  if (!force && previous.petId === current.petId && who(previous) === who(current) &&
     previous.residentialComplex === current.residentialComplex && previous.place === current.place &&
     previous.walkTime === current.walkTime && previous.scheduleType === current.scheduleType && !dateChanged) return null;
 

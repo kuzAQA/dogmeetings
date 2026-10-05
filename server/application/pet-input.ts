@@ -19,7 +19,7 @@ type ParseResult<T> =
 
 function photoError(photo: File | null) {
   if (!photo) return "";
-  if (photo.size > MAX_SOURCE_PHOTO_SIZE) return "Исходная фотография должна быть не больше 10 МБ.";
+  if (photo.size > MAX_SOURCE_PHOTO_SIZE) return "Исходная фотография должна быть не больше 20 МБ.";
   return "";
 }
 
@@ -31,7 +31,7 @@ export function parsePetMutation(formData: FormData, mode: MutationMode): ParseR
   const breed = String(formData.get("breed") ?? "").trim();
   const ownerName = normalizeName(formData.get("ownerName"));
   const uploadedPhoto = formData.get("photo");
-  const photo = uploadedPhoto instanceof File && uploadedPhoto.size > 0 ? uploadedPhoto : null;
+  const photo = uploadedPhoto instanceof File && (uploadedPhoto.size > 0 || uploadedPhoto.name !== "") ? uploadedPhoto : null;
 
   if (mode === "update" && !uuidPattern.test(petId)) {
     return { ok: false, error: "Некорректные данные питомца." };

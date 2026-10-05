@@ -16,6 +16,7 @@ export type Walk = {
 };
 
 export type ApiWalk = {
+  notifyTelegram?: boolean;
   id: string;
   petId: string;
   pet: string;

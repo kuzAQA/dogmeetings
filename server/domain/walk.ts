@@ -1,4 +1,5 @@
 export const MAX_WALK_META_LENGTH = 40;
+export const MAX_WALK_COMMENT_LENGTH = 50;
 export const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
 
 const scheduleTypes = new Set(["today", "tomorrow", "always"]);

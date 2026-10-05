@@ -2,6 +2,7 @@
 
 import { CalendarDays, Check, Compass, PawPrint, Plus } from "lucide-react";
 import { useId, useLayoutEffect, useRef, useState } from "react";
+import { dockMotionDuration } from "../../components/ui/motion.mjs";
 
 type BottomDockProps = {
   section: "nearby" | "plans" | "pets" | "walk";
@@ -27,6 +28,7 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
   const motionPosition = useRef(actionHidden ? 0 : 1);
   const motionFrames = useRef<Keyframe[] | null>(null);
   const actionFocused = useRef(false);
+  const selectionFrame = useRef(`translateX(${section === "plans" ? 100 : section === "pets" ? 200 : 0}%)`);
 
   useLayoutEffect(() => {
     const mobile = matchMedia("(max-width: 899px)");
@@ -174,6 +176,36 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
       dock.dataset.moving = "false";
     };
   }, [actionHidden, preferences.mobile, preferences.reduced]);
+
+  useLayoutEffect(() => {
+    const dock = dockRef.current;
+    const indicator = dock?.querySelector<HTMLElement>(".nav-indicator");
+    if (!dock || !indicator) return;
+    const target = `translateX(${section === "plans" ? 100 : section === "pets" ? 200 : 0}%)`;
+    if (!preferences.mobile || preferences.reduced || document.documentElement.dataset.motionInput === "keyboard" || selectionFrame.current === target) {
+      selectionFrame.current = target;
+      return;
+    }
+    const animation = indicator.animate([
+      { transform: selectionFrame.current }, { transform: target },
+    ], {
+      duration: dockMotionDuration(dock, actionHidden),
+      easing: getComputedStyle(dock).getPropertyValue("--dock-show-ease").trim(),
+      fill: "both",
+    });
+    let current = true;
+    void animation.finished.then(() => {
+      if (!current) return;
+      current = false;
+      selectionFrame.current = target;
+      animation.cancel();
+    }).catch(() => { /* The next selection continues from the current position. */ });
+    return () => {
+      if (current) selectionFrame.current = getComputedStyle(indicator).transform;
+      current = false;
+      animation.cancel();
+    };
+  }, [section, actionHidden, preferences.mobile, preferences.reduced]);
 
   return (
     <nav ref={dockRef} className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">

@@ -2,9 +2,9 @@
 
 import { Check, ChevronDown, ChevronRight, Clock3, MapPin, Search } from "lucide-react";
 import Image from "next/image";
-import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useRef, useState } from "react";
+import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useEffect, useId, useRef, useState } from "react";
 import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
-import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
+import { DogmeetDialog, DogmeetHeader, requestDialogClose, TelegramHintBubble } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { SingleLineInput } from "../../../components/ui/SingleLineInput";
 import { keepActionVisibleAfterFocus } from "../../../components/ui/keyboard-scroll";
@@ -47,6 +47,27 @@ type Props = {
 export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, locationName, onAddPet, placesLoaded, placesError = "", onRetryPlaces, walkForm, walkSaving, editing, onSubmit, onBack }: Props) {
   const { dockFormRef, touchedFields, submitError, placeInput, scheduleType, selectedPetId, walkTime, walkComment, placeIsValid, timeIsValid, changeScheduleType, selectPet, updatePlaceInput, chooseSharedPlace, changeWalkTime, changeWalkComment } = walkForm;
   const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const telegramHintRef = useRef<HTMLDivElement>(null);
+  const telegramHintId = useId();
+  const [telegramHintOpen, setTelegramHintOpen] = useState(false);
+  useEffect(() => {
+    if (!telegramHintOpen) return;
+    function onOutsideClick(event: globalThis.MouseEvent) {
+      if (event.target instanceof Node && !telegramHintRef.current?.contains(event.target)) setTelegramHintOpen(false);
+    }
+    function onEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setTelegramHintOpen(false);
+      telegramHintRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    }
+    document.addEventListener("click", onOutsideClick);
+    document.addEventListener("keydown", onEscape, true);
+    return () => {
+      document.removeEventListener("click", onOutsideClick);
+      document.removeEventListener("keydown", onEscape, true);
+    };
+  }, [telegramHintOpen]);
   const [picker, setPicker] = useState<"pet" | "place" | "time" | null>(null);
   const [timeDraft, setTimeDraft] = useState("");
   const [timePickerError, setTimePickerError] = useState("");
@@ -127,7 +148,14 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
         {touchedFields["walk-place"] && !placeIsValid && <p className="field-error">Укажите место прогулки</p>}
 
-        <label className="field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onFocus={scrollWalkFormAfterKeyboard} onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
+        <label className="field walk-comment-field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onFocus={scrollWalkFormAfterKeyboard} onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
+        <div className="walk-telegram-row">
+          <label className="walk-telegram-label"><input type="checkbox" name="notifyTelegram" checked={walkForm.notifyTelegram} onChange={(event) => walkForm.changeNotifyTelegram(event.target.checked, inDock)} /><span>Отправить уведомление в бота Telegram</span></label>
+          <div className="walk-telegram-info-wrap" ref={telegramHintRef}>
+            <button type="button" className="walk-telegram-info-trigger" aria-label="Об уведомлениях в Telegram" aria-expanded={telegramHintOpen} aria-controls={telegramHintId} onClick={() => setTelegramHintOpen((open) => !open)}><svg className="walk-telegram-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 11v6M12 7h.01" /></svg></button>
+            {telegramHintOpen && <TelegramHintBubble id={telegramHintId} className="walk-telegram-hint" onDismiss={() => { setTelegramHintOpen(false); telegramHintRef.current?.querySelector<HTMLButtonElement>("button")?.focus(); }}>О вашей прогулке будет отправлено уведомление в бота <em>Telegram</em>, чтобы его увидели другие владельцы собак вашего ЖК.</TelegramHintBubble>}
+          </div>
+        </div>
         <div className="note"><MapPin aria-hidden="true" />Прогулка появится в районе {locationName}.</div>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
         <button ref={submitButtonRef} className="button" type="submit" disabled={walkSaving}>{walkSaving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Сообщить о прогулке"}</button>

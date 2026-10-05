@@ -2,36 +2,24 @@ import { eq } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { pets } from "../../../db/schema";
 
-const IMMUTABLE_PHOTO_CACHE = "public, max-age=31536000, immutable";
+const PHOTO_CACHE = "private, no-cache";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const id = requestUrl.searchParams.get("id")?.trim();
   if (!id) {
-    return Response.json({ error: "Не указан питомец." }, { status: 400 });
+    return Response.json({ error: "Не указан питомец." }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 
   try {
     const [pet] = await withDb((db) => db
-        .select({ photo: pets.photo, photoType: pets.photoType, updatedAt: pets.updatedAt })
+        .select({ photo: pets.photo, photoType: pets.photoType })
         .from(pets)
         .where(eq(pets.id, id))
         .limit(1));
 
     if (!pet) {
-      return Response.json({ error: "Фотография не найдена." }, { status: 404 });
-    }
-
-    const currentVersion = String(pet.updatedAt.getTime());
-    if (requestUrl.searchParams.get("v") !== currentVersion) {
-      requestUrl.searchParams.set("v", currentVersion);
-      return new Response(null, {
-        status: 307,
-        headers: {
-          "Location": requestUrl.toString(),
-          "Cache-Control": "no-store"
-        }
-      });
+      return Response.json({ error: "Фотография не найдена." }, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
 
     if (!pet.photo || !pet.photoType) {
@@ -39,20 +27,30 @@ export async function GET(request: Request) {
         status: 302,
         headers: {
           "Location": new URL("/dog-placeholder.avif", request.url).toString(),
-          "Cache-Control": IMMUTABLE_PHOTO_CACHE
+          "Cache-Control": "no-store"
         }
       });
     }
 
-    return new Response(new Uint8Array(pet.photo), {
+    const photo = new Uint8Array(pet.photo);
+    const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", photo));
+    const etag = `"${Array.from(hash, (byte) => byte.toString(16).padStart(2, "0")).join("")}-${pet.photoType}"`;
+    // Revalidate the bytes, including replacements made without changing updatedAt.
+    const headers = { "Cache-Control": PHOTO_CACHE, "ETag": etag };
+    const unchanged = request.headers.get("if-none-match")?.split(",").some((value) =>
+      value.trim() === "*" || value.trim().replace(/^W\//, "") === etag);
+    if (unchanged) return new Response(null, { status: 304, headers });
+
+    return new Response(photo, {
       headers: {
         "Content-Type": pet.photoType,
         "Content-Length": String(pet.photo.byteLength),
-        "Cache-Control": IMMUTABLE_PHOTO_CACHE,
+        ...(pet.photoType === "image/avif" ? { "Content-Disposition": `inline; filename="${encodeURIComponent(id)}.avif"` } : {}),
+        ...headers,
         "X-Content-Type-Options": "nosniff"
       }
     });
   } catch {
-    return Response.json({ error: "Не удалось загрузить фотографию." }, { status: 500 });
+    return Response.json({ error: "Не удалось загрузить фотографию." }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }

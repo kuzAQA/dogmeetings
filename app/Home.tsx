@@ -30,6 +30,7 @@ import {
   type Pet,
 } from "./features/home/model";
 import { useHomeResources } from "./features/home/use-home-resources";
+import { preparePetPhoto } from "./features/shared/prepare-pet-photo";
 import { BottomDock } from "./features/home/BottomDock";
 import {
   createNavigationState,
@@ -255,7 +256,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
 
   useEffect(() => {
     if (!walkPendingDelete && !petPendingDelete && !(screen === "walks" && menuOpen)) return;
-    if (walkPendingDelete || petPendingDelete) deleteCancelRef.current?.focus();
+    if (walkPendingDelete || petPendingDelete) deleteCancelRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || walkPendingDelete || petPendingDelete) return;
       if (screen === "walks" && menuOpen) {
@@ -271,15 +272,15 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   }, [menuOpen, screen]);
 
   useEffect(() => {
-    if (showPetRequiredPopup) informationButtonRef.current?.focus();
+    if (showPetRequiredPopup) informationButtonRef.current?.focus({ preventScroll: true });
   }, [showPetRequiredPopup]);
 
   useEffect(() => {
-    if (locationRequestSent) locationRequestButtonRef.current?.focus();
+    if (locationRequestSent) locationRequestButtonRef.current?.focus({ preventScroll: true });
   }, [locationRequestSent]);
 
   useEffect(() => {
-    if (petToShare && !petShareLoading) shareDoneButtonRef.current?.focus();
+    if (petToShare && !petShareLoading) shareDoneButtonRef.current?.focus({ preventScroll: true });
   }, [petShareLoading, petToShare]);
 
   useEffect(() => {
@@ -428,7 +429,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       return;
     }
     if (file.size > MAX_SOURCE_PHOTO_SIZE) {
-      setPhotoError("Исходная фотография должна быть меньше 10 МБ.");
+      setPhotoError("Исходная фотография должна быть меньше 20 МБ.");
       return;
     }
     if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -716,6 +717,8 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       const photo = formData.get("photo");
       if (!(photo instanceof File) || photo.size === 0) {
         formData.delete("photo");
+      } else {
+        formData.set("photo", await preparePetPhoto(photo));
       }
       if (editedPet) formData.set("petId", editedPet.id);
       const savedPet = await savePetRequest(formData, Boolean(editedPet));
@@ -768,6 +771,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
         petId,
         place: submittedPlace,
         comment: walkForm.walkComment.trim(),
+        notifyTelegram: walkForm.notifyTelegram,
         scheduleType: walkForm.scheduleType,
         walkTime: submittedWalkTime,
         city: editedWalk?.city ?? location.city,

@@ -76,7 +76,7 @@ export function useHomeNavigation(hasLocation: boolean) {
       const heading = document.querySelector<HTMLElement>("main h1");
       heading?.setAttribute("tabindex", "-1");
       heading?.focus({ preventScroll: true });
-    }, { direction: directionFor(from, to, back), photoId: photo, keyboard: document.documentElement.dataset.motionInput === "keyboard", target: to });
+    }, { direction: directionFor(from, to, back), photoId: photo, keyboard: document.documentElement.dataset.motionInput === "keyboard", from, target: to });
   }, []);
 
   const buildNavigationState = useCallback((nextScreen: Screen, options: NavigationOptions = {}) => {

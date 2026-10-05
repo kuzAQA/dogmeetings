@@ -117,7 +117,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
         <p>Хозяин: {selectedWalk.owner}</p>
         <div className="big-time"><Clock3 /><strong>{selectedWalk.time}</strong><span>{selectedWalk.scheduleType === "always" ? "Ежедневно" : selectedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span></div>
         <div className="place-detail"><MapPin /><div><h3>{selectedWalk.point}</h3><p>{location.complex}<br />{location.city}, {location.district}</p></div></div>
-        <blockquote>«{selectedWalk.comment || "Приходите гулять вместе"}»</blockquote>
+        {selectedWalk.comment && <blockquote>«{selectedWalk.comment}»</blockquote>}
         <div className="note">Узнаете друг друга по питомцу. Встречайтесь в указанном месте.</div>
         <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}</button>
       </div>
@@ -131,6 +131,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
     <div className="screen walks-screen">
       <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} telegramMenuHint={telegramMenuHint} />
       <div className="day-heading"><h1>Кто сегодня<br /><em>на прогулку?</em></h1><span className="date-stamp"><strong>{day}</strong>{month}<br />{weekday}</span></div>
+      <div data-dock-panel>
       {!hasTodayWalks && <div className="day-divider" aria-hidden="true" />}
       {showWalkControls && <>
         {visibleWalks.length > 0 && <div className="daily-summary">
@@ -145,6 +146,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           return <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.time}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary" role="button" tabIndex={0} onClick={() => { onSelectWalk(walk); onOpenDetail(); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectWalk(walk); onOpenDetail(); } }}><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}{owned && <button className="text-link" type="button" onClick={(event) => { event.stopPropagation(); telegramMenuHint?.dismiss(); setActionsWalk(walk); }}>Управлять<ChevronRight aria-hidden="true" /></button>}</div></div>;
         })}</div>
       )}
+      </div>
       <DogmeetDialog open={filtersOpen} title="Время прогулки" onDismiss={() => setFiltersOpen(false)} onDismissStart={() => setFiltersOpen(false)} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onPeriodChange(tempPeriod))}>Показать прогулки</button>}><p>В какое время вам удобнее встретиться?</p><div className="option-list">{periods.map((item, index) => { const Icon = [Clock3, Sunrise, Sun, Sunset][index]!; return <button key={item} type="button" aria-pressed={tempPeriod === item} onClick={() => setTempPeriod(item)}><Icon aria-hidden="true" /><span><strong>{item === "Все" ? "Весь день" : item}</strong><small>{["Все прогулки сегодня", "До 12:00", "12:00–17:59", "После 18:00"][index]}</small></span>{tempPeriod === item && <Check aria-hidden="true" />}</button>; })}</div></DogmeetDialog>
       {actionsWalk && (() => {
         const owned = ownedWalksById.get(actionsWalk.id);

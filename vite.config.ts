@@ -7,6 +7,7 @@ const PLACEHOLDER_DATABASE_ID = "00000000-0000-4000-8000-000000000000";
 const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const isPlaywrightTest = process.env.PLAYWRIGHT_TEST === "1";
+const useNodeRuntime = process.env.VINEXT_RUNTIME === "node";
 
 export default defineConfig(async ({ mode }) => {
   process.env.WRANGLER_WRITE_LOGS ??= "false";
@@ -16,7 +17,7 @@ export default defineConfig(async ({ mode }) => {
   const localBindingConfig = {
     main: "./worker/index.ts",
     compatibility_flags: ["nodejs_compat"],
-    vars: { DATABASE_URL: localEnv.DATABASE_URL ?? "" },
+    vars: { DATABASE_URL: localEnv.DATABASE_URL ?? "", IMAGE_AVIF_QUALITY: localEnv.IMAGE_AVIF_QUALITY ?? "40" },
     d1_databases: d1
       ? [{ binding: d1, database_name: "site-creator-d1", database_id: PLACEHOLDER_DATABASE_ID }]
       : [],
@@ -32,7 +33,7 @@ export default defineConfig(async ({ mode }) => {
     plugins: [
       vinext(),
       sites(),
-      cloudflare({
+      !useNodeRuntime && cloudflare({
         inspectorPort: isPlaywrightTest ? false : undefined,
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         config: localBindingConfig

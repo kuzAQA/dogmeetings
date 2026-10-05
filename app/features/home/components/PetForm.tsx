@@ -66,7 +66,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
       <form className="pet-form" autoComplete="off" hidden={saving || Boolean(submitError)} onSubmit={onSubmit} aria-busy={saving} noValidate>
         {photoOpen && <Image className="photo-preview" src={preview} alt="Предпросмотр фотографии" width={346} height={346} unoptimized />}
         <label className="upload" hidden={!photoOpen}><Camera /><strong>Выбрать файл</strong><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} /></label>
-        {photoOpen && <><p>JPG, PNG или WebP до 10 МБ. Выберите снимок, на котором хорошо видно питомца.</p>{photoError && <p className="field-error" role="alert">{photoError}</p>}<button className="button" type="button" disabled={Boolean(photoError)} onClick={() => setPhotoOpen(false)}>Использовать фото</button></>}
+        {photoOpen && <><p>JPG, PNG или WebP до 20 МБ. Выберите снимок, на котором хорошо видно питомца.</p>{photoError && <p className="field-error" role="alert">{photoError}</p>}<button className="button" type="button" disabled={Boolean(photoError)} onClick={() => setPhotoOpen(false)}>Использовать фото</button></>}
         <div hidden={photoOpen}>
         <button type="button" className="photo-editor" onClick={() => setPhotoOpen(true)}>
           <Image src={preview} alt="Фотография" width={86} height={86} unoptimized />

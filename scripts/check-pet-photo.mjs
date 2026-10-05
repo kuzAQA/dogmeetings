@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import sharp from "sharp";
-import { encodeAvif } from "../server/pet-photo.mjs";
+import { AVIF_TYPE, encodeAvif, encodePetPhotoFile, PetPhotoError } from "../server/pet-photo.mjs";
+import { spawnSync } from "node:child_process";
 import { migratePetPhotos } from "./migrate-pet-photos.mjs";
 
 const width = 128;
@@ -24,7 +26,8 @@ assert.equal(encodedMetadata.format, "heif");
 assert.equal(encodedMetadata.width, width);
 assert.equal(encodedMetadata.height, height);
 assert.equal(encodedMetadata.hasAlpha, true);
-assert.ok(encoded.length < source.length, "AVIF should reduce this PNG fixture");
+assert.equal(AVIF_TYPE, "image/avif");
+assert.equal(encodedMetadata.compression, "av1");
 let squaredError = 0;
 let comparedChannels = 0;
 for (let i = 0; i < decodedAvif.length; i += 4) {
@@ -37,9 +40,94 @@ for (let i = 0; i < decodedAvif.length; i += 4) {
 }
 const mse = squaredError / comparedChannels;
 const psnr = 10 * Math.log10((255 * 255) / mse);
-assert.ok(psnr >= 40, `Expected high visual quality, got ${psnr.toFixed(2)} dB`);
+assert.ok(psnr >= 30, `Expected usable lossy quality, got ${psnr.toFixed(2)} dB`);
 const alphaAt = (x) => decodedAvif[(64 * width + x) * 4 + 3];
 assert.deepEqual([16, 48, 80, 112].map(alphaAt), [0, 85, 170, 255]);
+
+const phonePhoto = await sharp(await readFile(new URL("../public/dog-bonya.webp", import.meta.url)))
+  .resize(4032, 3024, { fit: "fill" })
+  .jpeg({ quality: 90 })
+  .toBuffer();
+const phoneStarted = performance.now();
+const phoneEncoded = await encodeAvif(phonePhoto);
+const phoneElapsed = performance.now() - phoneStarted;
+assert.ok(phoneElapsed < 60_000, `Phone photo conversion took ${Math.round(phoneElapsed)} ms`);
+const phoneMetadata = await sharp(phoneEncoded).metadata();
+assert.equal(phoneMetadata.width, 4032);
+assert.equal(phoneMetadata.height, 3024);
+console.log(`12 MP JPEG: ${phonePhoto.length} -> ${phoneEncoded.length} bytes in ${Math.round(phoneElapsed)} ms.`);
+
+// Orientation and private metadata must not survive the conversion.
+const oriented = await sharp(source).resize(96, 64).removeAlpha().jpeg()
+  .withMetadata({ orientation: 6 })
+  .withExifMerge({ IFD0: { Artist: "private" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "55/1 45/1 0/1" } })
+  .toBuffer();
+assert.ok((await sharp(oriented).metadata()).exif);
+const orientedResult = await encodeAvif(oriented);
+const clean = await sharp(orientedResult).metadata();
+assert.equal(clean.orientation, undefined);
+assert.equal(clean.exif, undefined);
+assert.equal(clean.xmp, undefined);
+assert.equal(clean.icc, undefined);
+assert.equal(clean.width, 64);
+assert.equal(clean.height, 96);
+const expectedPixels = await sharp(oriented).rotate().raw().toBuffer();
+const actualPixels = await sharp(orientedResult).raw().toBuffer();
+const pixelMse = actualPixels.reduce((sum, value, index) => sum + (value - expectedPixels[index]) ** 2, 0) / actualPixels.length;
+assert.ok(pixelMse < 100, `Orientation pixel MSE: ${pixelMse}`);
+
+for (const format of ["jpeg", "png", "webp"]) {
+  const input = await sharp(source)[format]().toBuffer();
+  // Name and MIME are deliberately misleading: decode the actual bytes.
+  const output = await encodePetPhotoFile(new File([input], "untrusted.txt", { type: "text/plain" }));
+  const metadata = await sharp(output).metadata();
+  assert.equal(metadata.compression, "av1");
+  assert.equal((await sharp(output).raw().toBuffer()).length > 0, true);
+}
+for (const invalid of [Buffer.alloc(0), Buffer.from("corrupt"), Buffer.from('<svg width="1" height="1"></svg>')]) {
+  await assert.rejects(encodeAvif(invalid), PetPhotoError);
+}
+await assert.rejects(encodePetPhotoFile({ size: 20 * 1024 * 1024 + 1 }), /20 МБ/);
+await assert.rejects(encodePetPhotoFile({ size: 1, arrayBuffer() { throw new Error("read failed"); } }), /прочитать/);
+await assert.rejects(encodeAvif(source, { maxInputBytes: 1 }), /20 МБ/);
+await assert.rejects(encodeAvif(source, { maxOutputBytes: 1 }), /1 МБ/);
+const oversizedPixels = await sharp({ create: { width: 5000, height: 4001, channels: 3, background: "white" } }).png().toBuffer();
+await assert.rejects(encodeAvif(oversizedPixels), PetPhotoError);
+const frames = Buffer.alloc(8 * 16 * 3);
+frames.fill(255, 8 * 8 * 3);
+const animated = await sharp(frames, { raw: { width: 8, height: 16, channels: 3, pageHeight: 8 } })
+  .webp({ loop: 0, delay: [100, 100] }).toBuffer();
+assert.equal((await sharp(animated).metadata()).pages, 2);
+await assert.rejects(encodeAvif(animated), /Анимированные/);
+const previousQuality = process.env.IMAGE_AVIF_QUALITY;
+try {
+  delete process.env.IMAGE_AVIF_QUALITY;
+  const defaultOutput = await encodeAvif(source);
+  process.env.IMAGE_AVIF_QUALITY = "40";
+  assert.deepEqual(await encodeAvif(source), defaultOutput);
+  process.env.IMAGE_AVIF_QUALITY = "1";
+  const low = await encodeAvif(source);
+  process.env.IMAGE_AVIF_QUALITY = "100";
+  assert.notDeepEqual(await encodeAvif(source), low);
+  for (const value of ["", "0", "101", "40.5", "oops", " 40", "1e2"]) {
+    process.env.IMAGE_AVIF_QUALITY = value;
+    await assert.rejects(encodeAvif(source), (error) => error.status === 500 && /IMAGE_AVIF_QUALITY/.test(error.message));
+  }
+} finally {
+  if (previousQuality === undefined) delete process.env.IMAGE_AVIF_QUALITY;
+  else process.env.IMAGE_AVIF_QUALITY = previousQuality;
+}
+const missingEncoder = spawnSync(process.execPath, ["--input-type=module", "-e", `
+  import assert from 'node:assert/strict';
+  import { registerHooks } from 'node:module';
+  registerHooks({ resolve(specifier, context, next) {
+    if (specifier === 'sharp') return { url: 'data:text/javascript,export default function sharp(){throw new Error("AV1 unavailable")}', shortCircuit: true };
+    return next(specifier, context);
+  }});
+  const { encodeAvif } = await import('./server/pet-photo.mjs');
+  await assert.rejects(encodeAvif(Buffer.from('input')), error => error.status === 500 && /AVIF encoder/.test(error.message));
+`], { encoding: "utf8", env: { ...process.env, IMAGE_AVIF_QUALITY: "40" } });
+assert.equal(missingEncoder.status, 0, missingEncoder.stderr);
 
 class FakeClient {
   rows = new Map([

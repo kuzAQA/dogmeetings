@@ -5,13 +5,14 @@ import {
   isValidWalkTime,
   isWalkTimeInPast,
   normalizePlaceName,
-  MAX_WALK_META_LENGTH,
+  MAX_WALK_COMMENT_LENGTH,
   MAX_WALK_PLACE_LENGTH
 } from "../domain/walk";
 
 type MutationMode = "create" | "update";
 
 type WalkMutationFields = {
+  notifyTelegram?: boolean;
   petId: string;
   place: string;
   normalizedPlace: string;
@@ -46,6 +47,10 @@ export function parseWalkMutation(payload: unknown, mode: MutationMode): ParseRe
   const comment = cleanComment(stringValue(record, "comment"));
   const scheduleType = stringValue(record, "scheduleType");
   const walkTime = stringValue(record, "walkTime");
+  const notifyTelegram = record?.notifyTelegram;
+  if (notifyTelegram !== undefined && typeof notifyTelegram !== "boolean") {
+    return { ok: false, error: "Некорректная настройка уведомления Telegram." };
+  }
 
   if (mode === "update" && (!/^[0-9a-f-]{36}$/i.test(walkId) || !/^[0-9a-f-]{36}$/i.test(petId))) {
     return { ok: false, error: "Некорректные данные прогулки." };
@@ -59,8 +64,8 @@ export function parseWalkMutation(payload: unknown, mode: MutationMode): ParseRe
   if (!/\p{L}/u.test(place)) {
     return { ok: false, error: "Название места прогулки должно содержать хотя бы одну букву." };
   }
-  if (comment.length > MAX_WALK_META_LENGTH) {
-    return { ok: false, error: `Комментарий должен содержать не более ${MAX_WALK_META_LENGTH} символов.` };
+  if (comment.length > MAX_WALK_COMMENT_LENGTH) {
+    return { ok: false, error: `Комментарий должен содержать не более ${MAX_WALK_COMMENT_LENGTH} символов.` };
   }
   if (!isScheduleType(scheduleType)) {
     return { ok: false, error: "Выберите день прогулки." };
@@ -73,6 +78,7 @@ export function parseWalkMutation(payload: unknown, mode: MutationMode): ParseRe
   }
 
   const value: WalkMutationFields = {
+      notifyTelegram,
       petId,
       place,
       normalizedPlace: normalizePlaceName(place),

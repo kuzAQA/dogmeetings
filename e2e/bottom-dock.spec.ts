@@ -1,6 +1,44 @@
 import { expect, test } from "@playwright/test";
 import { openNearby } from "./fixtures";
 
+test("every dock tab retargets the pill and indicator without a jump", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await openNearby(page);
+  const samples = await page.locator(".bottom-nav").evaluate(async (dock) => {
+    const pill = dock.querySelector<HTMLElement>(".nav-tabs")!;
+    const indicator = dock.querySelector<HTMLElement>(".nav-indicator")!;
+    const result = [];
+    const route = ["plans", "pets", "plans", "nearby", "pets", "nearby"];
+    for (const delay of [30, 120, 550]) {
+      for (const target of route) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        const existing = new Set(dock.getAnimations({ subtree: true }));
+        for (const animation of existing) {
+          const time = animation.currentTime;
+          animation.pause();
+          animation.currentTime = time;
+        }
+        const before = { pill: pill.getBoundingClientRect().x, indicator: indicator.getBoundingClientRect().x };
+        dock.querySelector<HTMLButtonElement>(`.dock-item--${target}`)!.click();
+        await Promise.resolve();
+        for (const animation of dock.getAnimations({ subtree: true })) {
+          if (!existing.has(animation)) {
+            animation.pause();
+            animation.currentTime = 0;
+          }
+        }
+        result.push({ target, delay, pillJump: Math.abs(pill.getBoundingClientRect().x - before.pill), indicatorJump: Math.abs(indicator.getBoundingClientRect().x - before.indicator) });
+        dock.getAnimations({ subtree: true }).forEach((animation) => animation.play());
+      }
+    }
+    return result;
+  });
+  for (const sample of samples) {
+    expect(sample.pillJump, JSON.stringify(sample)).toBeLessThanOrEqual(0.5);
+    expect(sample.indicatorJump, JSON.stringify(sample)).toBeLessThanOrEqual(0.5);
+  }
+});
+
 test("liquid dock keeps its width, gap and clear content on mobile", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   for (const width of [320, 375, 430]) {
@@ -48,7 +86,7 @@ test("liquid dock keeps its width, gap and clear content on mobile", async ({ pa
     await expect(dock.locator(".dock-add")).toHaveAttribute("aria-label", "Добавить питомца");
     expect((await pill.boundingBox())!.x).toBeCloseTo(after.x, 1);
     expect((await dock.locator(".dock-add").boundingBox())!.x).toBeCloseTo(add.x, 1);
-    expect(await dock.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
+    await expect.poll(() => dock.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
     await dock.getByRole("button", { name: "Рядом", exact: true }).click();
     await expect(dock.locator(".dock-add")).toBeDisabled();
     await expect(dock).toHaveAttribute("data-moving", "false");
@@ -70,8 +108,8 @@ test("liquid dock preserves durations when production CSS uses seconds", async (
   });
   for (const [tab, duration] of [["Мои планы", 347.2], ["Рядом", 268.8]] as const) {
     await dock.getByRole("button", { name: tab, exact: true }).click();
-    const durations = await dock.evaluate((element) => element.getAnimations({ subtree: true }).map((animation) => animation.effect!.getTiming().duration));
-    expect(durations).toHaveLength(5);
+    const durations = await dock.evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => !(animation instanceof CSSTransition)).map((animation) => animation.effect!.getTiming().duration));
+    expect(durations).toHaveLength(6);
     for (const actual of durations) expect(Number(actual)).toBeCloseTo(duration, 4);
     await expect(dock).toHaveAttribute("data-moving", "false");
   }

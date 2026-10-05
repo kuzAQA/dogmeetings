@@ -42,6 +42,7 @@ import {
 } from "../features/admin/model";
 import { createLoginProof, createPasswordProof } from "../features/admin/login-proof";
 import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../features/shared/validation";
+import { preparePetPhoto } from "../features/shared/prepare-pet-photo";
 import { DogmeetState } from "../components/ui/DogmeetState";
 import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 import { SingleLineInput } from "../components/ui/SingleLineInput";
@@ -310,7 +311,7 @@ export default function AdminPage() {
       return;
     }
     if (file.size > MAX_SOURCE_PHOTO_SIZE) {
-      setError("Исходная фотография должна быть меньше 10 МБ.");
+      setError("Исходная фотография должна быть меньше 20 МБ.");
       return;
     }
     if (petPhotoObjectUrl) URL.revokeObjectURL(petPhotoObjectUrl);
@@ -367,7 +368,7 @@ export default function AdminPage() {
       formData.set("ownerName", ownerName);
       formData.set("breed", breed);
       if (petPhoto) {
-        formData.set("photo", petPhoto, petPhoto.name);
+        formData.set("photo", await preparePetPhoto(petPhoto));
       }
 
       const savedPet = await saveAdminPetRequest(formData);
@@ -622,7 +623,7 @@ export default function AdminPage() {
       })}
     </>}
     {phase === "edit-pet" && petBeingEdited && <>
-      {photoOpen ? <><DogmeetHeader admin onBack={() => setPhotoOpen(false)} /><h1>Фотография</h1><Image className="photo-preview" src={petPhotoPreview} alt="Предпросмотр фотографии" width={346} height={346} unoptimized /><label className="upload"><Camera /><strong>Выбрать файл</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAdminPhoto} /></label><p>JPG, PNG или WebP до 10 МБ. Сохраним в AVIF без потери пикселей; AVIF-файл должен быть не больше 1 МБ.</p>{error && <p className="field-error" role="alert">{error}</p>}<button type="button" className="button" onClick={() => setPhotoOpen(false)}>Использовать фото</button></> : <>
+      {photoOpen ? <><DogmeetHeader admin onBack={() => setPhotoOpen(false)} /><h1>Фотография</h1><Image className="photo-preview" src={petPhotoPreview} alt="Предпросмотр фотографии" width={346} height={346} unoptimized /><label className="upload"><Camera /><strong>Выбрать файл</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAdminPhoto} /></label><p>JPG, PNG или WebP до 20 МБ. Сожмём в AVIF; AVIF-файл должен быть не больше 1 МБ.</p>{error && <p className="field-error" role="alert">{error}</p>}<button type="button" className="button" onClick={() => setPhotoOpen(false)}>Использовать фото</button></> : <>
       {sectionHeading("Правка питомца", "Актуальные данные помогут узнать вас на прогулке.")}
       {submitting && !petPendingDelete ? <DogmeetState state="loading" title="Сохраняем…" /> : <><form autoComplete="off" onSubmit={saveAdminPet} noValidate>
         <button className="photo-editor" type="button" onClick={() => setPhotoOpen(true)}><Image src={petPhotoPreview} alt="Фотография" width={86} height={86} unoptimized /><span><Camera />Изменить фотографию</span></button>

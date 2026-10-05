@@ -135,29 +135,30 @@ cd /opt/dogmeet
 
 ## Конвертация фотографий питомцев в AVIF
 
-Новые и существующие фотографии кодируются в AVIF с качеством 55 и максимальным усилием, без уменьшения размеров. Кодирование с потерями уменьшает размер, но пиксели могут немного отличаться; прозрачный канал сохраняется.
+План перевода всех существующих фотографий на resize 1600 → AVIF: [docs/pet-photo-migration-plan.md](docs/pet-photo-migration-plan.md). Старый скрипт ниже не выполняет этот resize и пропускает уже сохранённые AVIF.
+
+Новые фотографии кодируются общим обработчиком `server/pet-photo.mjs` в AVIF: `IMAGE_AVIF_QUALITY=40` по умолчанию (целое число 1–100), `effort=2`, `chromaSubsampling=4:2:0`. Сервер исправляет ориентацию, удаляет EXIF/GPS и сохраняет прозрачность без resize. В пользовательском интерфейсе и админке большие фотографии перед отправкой уменьшаются в браузере до 1600 px по длинной стороне с сохранением пропорций и кодируются в WebP (quality 0.85). Изображения до 1600 px отправляются без изменений. В PostgreSQL сохраняются только AVIF-байты и MIME `image/avif`, URL остаётся прежним; имя при выдаче — `<id>.avif`. Лимиты: вход 20 МБ, 20 млн пикселей, результат 1 МБ; таймаут кодирования 60 секунд. При первом использовании выполняется пробное AV1-кодирование; при ошибках конфигурации или encoder API возвращает 500 без сохранения исходника. Журнал `console.info` содержит только размеры, экономию и время. AVIF может оказаться больше исходника. Старые фото не преобразуются при загрузке новых; существующая миграция ниже сохранена и при этой замене не запускалась.
 
 Из каталога `/opt/dogmeet` перед первым запуском на VDS с существующими фотографиями сделайте резервную копию:
 
+Ручной инструмент `scripts/migrate-pet-photo-algorithm.mjs` включает JPEG/PNG/WebP и уже сохранённые AVIF. Он уменьшает большую сторону до 1600 px, использует промежуточный WebP quality 85 для больших фото и общий AVIF encoder quality 40. Старый `migrate-pet-photos` доступен только через профиль `legacy-photo-migration` и не запускается при обычном деплое.
+
+Перед прогоном создать приватный каталог вне ротации и полный дамп БД, проверить его восстановление в изолированной БД. Пример с уже подготовленным каталогом `/root/dogmeet-photo-migration-20261004`:
+
 ```bash
-./scripts/backup.sh
+docker compose --env-file .env.production -f compose.production.yml run --rm --no-deps --user 0 -v /root/dogmeet-photo-migration-20261004:/migration -e IMAGE_AVIF_QUALITY=40 app node scripts/migrate-pet-photo-algorithm.mjs dry-run /migration/sample 10
+docker compose --env-file .env.production -f compose.production.yml run --rm --no-deps --user 0 -v /root/dogmeet-photo-migration-20261004:/migration -e IMAGE_AVIF_QUALITY=40 app node scripts/migrate-pet-photo-algorithm.mjs dry-run /migration/full
 ```
 
-Затем остановите приложение и планировщик, запустите SQL- и фото-миграции, после чего поднимите сервисы:
+Каждый dry-run требует нового каталога, сохраняет исходники, кандидаты и `manifest.json`, БД не меняет. Перед записью проверить отчёт и минимум 10 пар изображений, затем получить разрешение на конкретные замены и остановку сервиса.
 
 ```bash
 docker compose --env-file .env.production -f compose.production.yml stop app scheduler
-docker compose --env-file .env.production -f compose.production.yml run --build --rm migrate-pet-photos
-docker compose --env-file .env.production -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml run --rm --no-deps --user 0 -v /root/dogmeet-photo-migration-20261004:/migration app node scripts/migrate-pet-photo-algorithm.mjs apply /migration/full
+docker compose --env-file .env.production -f compose.production.yml up -d --no-deps app scheduler
 ```
 
-При обычном развёртывании `migrate-pet-photos` выполняется после SQL-миграций и до приложения и планировщика. Уже преобразованные фото пропускаются, поэтому повторный запуск безопасен. Каждая запись меняется целиком в транзакции; при ошибке исходное фото остаётся, а приложение и планировщик не запускаются. После исправления причины запустите тот же шаг снова — успешные записи будут пропущены.
-
-Проверить размеры и ошибки можно в журнале:
-
-```bash
-docker compose --env-file .env.production -f compose.production.yml logs --tail=100 migrate-pet-photos
-```
+Запись применяет сохранённые кандидаты, сравнивает SHA-256 под блокировкой строки, пропускает применённые записи и не затирает новые фото. Итоги — `apply-report.json`. Для выборочного отката использовать тот же вызов с `rollback` вместо `apply`, остановив приложение и scheduler; исходник восстанавливается только при совпадении текущего hash с кандидатом. Итоги — `rollback-report.json`. Ошибки и конфликты требуют проверки, резервные материалы сохраняются до отдельного подтверждения на удаление.
 
 В `og.png` остаётся PNG: его использует `og:image`, а поддержка AVIF у внешних превью-кроулеров неоднородна. Остальные реально используемые растровые изображения сайта хранятся в AVIF.
 

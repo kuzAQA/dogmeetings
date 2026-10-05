@@ -257,16 +257,20 @@ export function useTelegramMenuHint(canShow: boolean) {
 
 export type TelegramMenuHint = ReturnType<typeof useTelegramMenuHint>;
 
+export function TelegramHintBubble({ children, onDismiss, className = "", id }: { children: ReactNode; onDismiss: () => void; className?: string; id?: string }) {
+  return <div id={id} className={className ? `telegram-menu-hint ${className}` : "telegram-menu-hint"} role="status">
+    <BellRing className="telegram-menu-hint-bell" aria-hidden="true" />
+    <span>{children}</span>
+    <button type="button" className="telegram-menu-hint-close" aria-label="Закрыть подсказку" onClick={onDismiss}><X aria-hidden="true" /></button>
+  </div>;
+}
+
 function TelegramMenuButton({ onOpen, hint }: { onOpen: () => void; hint?: TelegramMenuHint }) {
   return (
     <div className="header-menu">
       <button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={() => { hint?.dismiss(); onOpen(); }}><MoreHorizontal aria-hidden="true" /></button>
       {hint?.visible && (
-        <div className="telegram-menu-hint" role="status">
-          <BellRing className="telegram-menu-hint-bell" aria-hidden="true" />
-          <span>Откройте меню, чтобы получать уведомления о прогулках <em>в Telegram</em></span>
-          <button type="button" className="telegram-menu-hint-close" aria-label="Закрыть подсказку" onClick={hint.dismiss}><X aria-hidden="true" /></button>
-        </div>
+      <TelegramHintBubble onDismiss={hint.dismiss}>Откройте меню, чтобы получать уведомления о прогулках <em>в Telegram</em></TelegramHintBubble>
       )}
     </div>
   );

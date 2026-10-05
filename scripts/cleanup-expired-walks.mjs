@@ -245,8 +245,9 @@ async function retryWalkTelegramNotifications() {
             AND notification.failed_at IS NULL
             AND notification.next_attempt_at <= CURRENT_TIMESTAMP
             AND subscription.active = true
+            AND walk.notify_telegram = true
           ORDER BY notification.created_at ASC
-          FOR UPDATE OF notification, subscription SKIP LOCKED
+          FOR UPDATE OF notification, subscription, walk SKIP LOCKED
           LIMIT 1
         `);
         const notification = rows[0];
