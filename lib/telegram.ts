@@ -1,3 +1,5 @@
+import { recordTelegramMessage } from "../scripts/cleanup-expired-walks.mjs";
+
 type LocationRequestNotification = {
   id: string;
   city?: string | null;
@@ -89,8 +91,31 @@ export async function telegramBotRequest(method: string, body: Record<string, un
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(5_000)
     });
-    const payload = await response.json() as { ok?: boolean; description?: string };
+    const payload = await response.json() as { ok?: boolean; description?: string; result?: true | { message_id: number; date: number; chat: { id: number } } };
     if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
+    if (method === "deleteMessage" && payload.result !== true) throw new Error("Telegram не подтвердил удаление.");
+    if (method === "sendMessage") {
+      try {
+        if (!payload.result || payload.result === true) throw new Error("Telegram не вернул отправленное сообщение.");
+        const { withDb } = await import("../db");
+        const message = payload.result;
+        await withDb((db) => recordTelegramMessage(db.$client, message));
+      } catch (error) {
+        // The send succeeded: a tracking failure must not cause duplicate delivery.
+        console.error("[telegram] Сообщение отправлено, но не сохранено для очистки.", error);
+      }
+    }
+    if (method === "deleteMessage" && payload.result === true) {
+      try {
+        const { withDb } = await import("../db");
+        await withDb((db) => db.$client.query(
+          "DELETE FROM telegram_bot_messages WHERE chat_id = $1 AND message_id = $2",
+          [String(body.chat_id), body.message_id]
+        ));
+      } catch (error) {
+        console.error("[telegram] Сообщение удалено, но запись очистки не обновлена.", error);
+      }
+    }
     return true;
   } catch (error) {
     console.error(`[telegram] Не удалось вызвать ${method}.`, error);

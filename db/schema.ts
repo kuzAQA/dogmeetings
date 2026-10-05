@@ -240,6 +240,15 @@ export const walks = pgTable(
   ]
 );
 
+export const telegramBotMessages = pgTable("telegram_bot_messages", {
+  chatId: varchar("chat_id", { length: 20 }).notNull(),
+  messageId: integer("message_id").notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull()
+}, (table) => [
+  primaryKey({ columns: [table.chatId, table.messageId] }),
+  index("telegram_bot_messages_sent_at_idx").on(table.sentAt)
+]);
+
 export const telegramWalkNotifications = pgTable(
   "telegram_walk_notifications",
   {

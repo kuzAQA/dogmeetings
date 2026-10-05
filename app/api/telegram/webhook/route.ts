@@ -10,6 +10,7 @@ import {
   telegramUnsubscribeSubscriptionId
 } from "../../../../lib/telegram-subscription-protocol";
 import { PUBLIC_ORIGIN } from "../../../../server/infrastructure/public-origin";
+import { telegramRetentionBoundary } from "../../../../scripts/cleanup-expired-walks.mjs";
 import { DELETE, PATCH } from "../../dogsfather/location-requests/route";
 
 type Action = "approve" | "reject";
@@ -129,6 +130,9 @@ export async function POST(request: Request) {
 
   const startMessage = isRecord(update) && isRecord(update.message) ? update.message : null;
   if (startMessage) {
+    if (typeof startMessage.date === "number" && startMessage.date * 1000 < telegramRetentionBoundary().getTime()) {
+      return Response.json({ ok: true });
+    }
     try {
       await handleTelegramStart(startMessage);
     } catch (error) {
@@ -148,6 +152,11 @@ export async function POST(request: Request) {
   const messageId = message?.message_id;
   if (!message || !chat || !chatId || !Number.isSafeInteger(messageId)) {
     await callbackAnswer(callbackId, "Неизвестное действие.", true);
+    return Response.json({ ok: true });
+  }
+
+  if (typeof message.date === "number" && message.date * 1000 < telegramRetentionBoundary().getTime()) {
+    await callbackAnswer(callbackId, "Сообщение устарело. Откройте новую ссылку из приложения.", true);
     return Response.json({ ok: true });
   }
 
