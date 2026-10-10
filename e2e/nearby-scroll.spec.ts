@@ -41,7 +41,7 @@ test("nearby removes overflow after filtering a long timeline", async ({ page })
   await page.setViewportSize({ width: 390, height: 844 });
   await openNearby(page, { nearby: Array.from({ length: 8 }, (_, index) => ({ ...walk, id: `nearby-${index}` })), mine: [] });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
-  await page.getByRole("button", { name: "Весь день", exact: true }).click();
+  await page.locator(".filter-trigger").click();
   await page.getByRole("dialog", { name: "Время прогулки" }).getByRole("button", { name: /^Утро/ }).click();
   await page.getByRole("button", { name: "Показать прогулки", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Здесь пока тихо", exact: true })).toBeVisible();
@@ -111,7 +111,7 @@ test("mobile page allows native refresh while bottom sheets preserve the page an
   await expect(page.locator("body")).toHaveCSS("overscroll-behavior-y", "auto");
   await page.evaluate(() => scrollTo(0, 180));
   const before = await page.locator(".phone").evaluate((element) => element.getBoundingClientRect().top);
-  await page.getByRole("button", { name: "Весь день", exact: true }).click();
+  await page.locator(".filter-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await expect(dialog).toBeVisible();
   await expect.poll(() => page.locator(".phone").evaluate((element) => element.getBoundingClientRect().top)).toBe(before);

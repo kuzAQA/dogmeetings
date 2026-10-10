@@ -6,7 +6,7 @@ test("mobile sheets use the full available width", async ({ page }) => {
   for (const width of [320, 375, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Весь день", exact: true }).click();
+    await page.locator(".filter-trigger").click();
 
     const dialog = page.getByRole("dialog", { name: "Время прогулки" });
     await expect(dialog).toBeVisible();
@@ -24,7 +24,7 @@ test("mobile sheets use the full available width", async ({ page }) => {
   for (const width of [768, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Весь день", exact: true }).click();
+    await page.locator(".filter-trigger").click();
     await expect(page.getByRole("dialog", { name: "Время прогулки" })).toHaveCSS("max-width", "374px");
   }
 });

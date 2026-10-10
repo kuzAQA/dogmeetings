@@ -481,7 +481,7 @@ test("motion, interruption, keyboard focus and compact viewport", async ({ page 
   await expect(page.locator(".page-header")).toHaveCSS("view-transition-name", "dogmeet-header");
   await expect(page.locator("main")).toHaveCSS("view-transition-name", "dogmeet-production-page");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-old(dogmeet-header)").opacity)).toBe("0");
-  const filter = page.getByRole("button", { name: "Весь день", exact: true });
+  const filter = page.locator(".filter-trigger");
   await filter.click();
   await expect(page.getByRole("dialog").getByRole("button", { name: "Весь день", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");

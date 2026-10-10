@@ -44,6 +44,7 @@ import { useHomeSession } from "./features/home/use-home-session";
 import { bootstrapSession } from "./features/home/session";
 import { filterWalksByPeriod, locationOptions, walksById } from "./features/home/selectors";
 import { useWalkForm } from "./features/home/use-walk-form";
+import { useNearbyPeriod } from "./features/home/use-nearby-period";
 import { WalkAnnouncementForm } from "./features/home/components/WalkAnnouncementForm";
 import { PetCollection, WalkCollection } from "./features/home/components/Collections";
 import { HomeDialogs } from "./features/home/components/HomeDialogs";
@@ -81,7 +82,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   const [locationRequestSaving, setLocationRequestSaving] = useState(false);
   const [locationRequestError, setLocationRequestError] = useState("");
   const [locationRequestSent, setLocationRequestSent] = useState(false);
-  const [period, setPeriod] = useState<Period>("Все");
+  const [period, setPeriod] = useNearbyPeriod();
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
@@ -364,7 +365,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   }
 
   function selectPeriod(nextPeriod: Period) {
-    if (nextPeriod === period) return;
     setPeriod(nextPeriod);
   }
 

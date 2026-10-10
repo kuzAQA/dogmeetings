@@ -136,7 +136,7 @@ test("locks the page scroll while a sheet is open", async ({ page }) => {
 
 test("keeps a sheet mounted during an action close animation", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Весь день" }).click();
+  await page.locator(".filter-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await expect(dialog).toBeVisible();
   await page.evaluate(() => {
@@ -209,11 +209,12 @@ test("returns to nearby without a page snapshot", async ({ page }) => {
 });
 
 test("filters the timeline through the mockup bottom sheet", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-10T19:00:00+03:00"));
   await openNearby(page);
-  await page.getByRole("button", { name: "Весь день" }).click();
+  await page.locator(".filter-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Весь день" }).locator("svg.lucide-check")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Вечер/ }).locator("svg.lucide-check")).toBeVisible();
   await dialog.getByRole("button", { name: /Вечер/ }).click();
   await expect(dialog.getByRole("button", { name: /Вечер/ }).locator("svg.lucide-check")).toBeVisible();
   await dialog.getByRole("button", { name: "Показать прогулки" }).click();
@@ -222,7 +223,7 @@ test("filters the timeline through the mockup bottom sheet", async ({ page }) =>
 
 test("keeps the filter visible when it finds no walks", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Весь день" }).click();
+  await page.locator(".filter-trigger").click();
   const dialog = page.getByRole("dialog", { name: "Время прогулки" });
   await dialog.getByRole("button", { name: /^Утро/ }).click();
   await dialog.getByRole("button", { name: "Показать прогулки" }).click();
