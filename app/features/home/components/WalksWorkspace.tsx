@@ -135,7 +135,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
       {!hasTodayWalks && <div className="day-divider" aria-hidden="true" />}
       {showWalkControls && <>
         {visibleWalks.length > 0 && <div className="daily-summary">
-          <span className="stacked-faces">{savedWalks.slice(0, 3).map((walk) => <Image key={walk.id} src={walk.image} alt="" width={32} height={32} unoptimized={walk.image.startsWith("/api/")} />)}</span>
+          <span className="stacked-faces">{visibleWalks.slice(0, 3).map((walk) => <Image key={walk.id} src={walk.image} alt="" width={32} height={32} unoptimized={walk.image.startsWith("/api/")} />)}</span>
           <p>Знакомьтесь во дворе.<br /><strong>У каждого есть время для прогулки.</strong></p>
         </div>}
         <div className={`section-line${visibleWalks.length === 0 ? " section-line--empty" : ""}`}><h2>Сегодня рядом</h2><button className="filter-trigger" type="button" onClick={() => { setTempPeriod(period); setFiltersOpen(true); }}><SlidersHorizontal aria-hidden="true" />{period === "Все" ? "Весь день" : period}</button></div>

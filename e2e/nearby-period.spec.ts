@@ -46,3 +46,27 @@ test('manual choice survives a cutoff and returning to Nearby', async ({ page })
   await page.getByRole('button', { name: 'Рядом', exact: true }).click();
   await expect(page.locator('.filter-trigger')).toHaveText('Весь день');
 });
+
+test('summary portraits follow the active filter and keep the three portrait limit', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.setFixedTime(new Date('2026-10-10T15:05:00+03:00'));
+  const walks = ['11:00', '15:00', '19:00', '19:30'].map((walkTime, index) => ({
+    ...walk, id: String(index), walkTime, image: `/api/pet-photo?id=portrait-${index}`,
+  }));
+  await openNearby(page, { nearby: walks });
+  const portraits = page.locator('.stacked-faces img');
+  await expect(portraits).toHaveCount(1);
+  await expect(portraits.first()).toHaveAttribute('src', walks[1].image);
+  for (const [period, images] of [
+    ['Вечер', walks.slice(2).map((item) => item.image)],
+    ['Весь день', walks.slice(0, 3).map((item) => item.image)],
+  ] as const) {
+    await page.locator('.filter-trigger').click();
+    await page.getByRole('dialog', { name: 'Время прогулки' }).getByRole('button', { name: new RegExp(`^${period}`) }).click();
+    await page.getByRole('button', { name: 'Показать прогулки', exact: true }).click();
+    await expect(portraits).toHaveCount(images.length);
+    for (const [index, src] of images.entries()) {
+      await expect(portraits.nth(index)).toHaveAttribute('src', src);
+    }
+  }
+});
