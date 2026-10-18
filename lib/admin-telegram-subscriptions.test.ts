@@ -50,7 +50,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
     const { GET } = await import("../app/api/dogsfather/telegram-subscriptions/route");
     const { createAdminSessionCookie, revokeAdminSession } = await import("./admin-auth");
     const { createClientSession, getClientSession, sessionCookie } = await import("./session");
-    const { prepareTelegramComplexSubscription, activateTelegramComplexSubscription, deactivateTelegramComplexSubscription } = await import("./telegram-subscriptions");
+    const { prepareTelegramComplexSubscription, activateTelegramComplexSubscription, deactivateTelegramComplexSubscription, listTelegramComplexSubscriptions } = await import("./telegram-subscriptions");
     const url = "http://localhost:3000/api/dogsfather/telegram-subscriptions";
     const cookie = (await createAdminSessionCookie(new Request(url))).split(";")[0];
     const adminRequest = () => new Request(url, { headers: { cookie } });
@@ -95,6 +95,13 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
 
     await t.test("counts active subscription rows, including multiple complexes per chat, without joins", async () => {
       assert.equal(await count(), 2);
+    });
+    await t.test("my subscriptions lists only active rows owned by this chat", async () => {
+      const subscriptions = await listTelegramComplexSubscriptions("123");
+      assert.deepEqual(subscriptions.map(row => row.complex).sort(), ["Второй ЖК", "Первый ЖК"]);
+      assert.ok(subscriptions.some(row => row.id === firstId));
+      assert.deepEqual(await listTelegramComplexSubscriptions("456"), []);
+      assert.deepEqual(await listTelegramComplexSubscriptions("invalid"), []);
     });
     await t.test("real activation and repeated activation update the count without duplicates", async () => {
       assert.equal((await prepareTelegramComplexSubscription(token, "456")).status, "ready");

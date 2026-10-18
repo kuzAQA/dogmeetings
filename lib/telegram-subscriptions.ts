@@ -145,6 +145,17 @@ export async function activateTelegramComplexSubscription(token: string, chatId:
   }));
 }
 
+export async function listTelegramComplexSubscriptions(chatId: string) {
+  if (!validChatId(chatId)) return [];
+  return withDb(db => db
+    .select({ id: telegramComplexSubscriptions.id, complex: telegramComplexSubscriptions.residentialComplex })
+    .from(telegramComplexSubscriptions)
+    .where(and(
+      eq(telegramComplexSubscriptions.telegramChatId, chatId),
+      eq(telegramComplexSubscriptions.active, true)
+    )));
+}
+
 export async function deactivateTelegramComplexSubscription(subscriptionId: string, chatId: string) {
   if (!validChatId(chatId)) return { status: "inactive" as const };
   const [subscription] = await withDb((db) => db

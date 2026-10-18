@@ -1,6 +1,7 @@
 import { isTelegramWebhookRequest, telegramBotRequest } from "../../../../lib/telegram";
 import {
   activateTelegramComplexSubscription,
+  listTelegramComplexSubscriptions,
   prepareTelegramComplexSubscription,
   deactivateTelegramComplexSubscription
 } from "../../../../lib/telegram-subscriptions";
@@ -125,13 +126,41 @@ async function handleTelegramSubscribeCallback(callbackId: string, chatId: strin
   });
 }
 
-async function handleTelegramUnsubscribeCallback(callbackId: string, chatId: string, subscriptionId: string) {
+async function sendTelegramSubscriptions(chatId: string, messageId?: number) {
+  const subscriptions = await listTelegramComplexSubscriptions(chatId);
+  await telegramBotRequest(messageId === undefined ? "sendMessage" : "editMessageText", {
+    chat_id: chatId,
+    ...(messageId === undefined ? {} : { message_id: messageId }),
+    text: subscriptions.length
+      ? "🏘️ Ваши подписки\nНажмите на нужный ЖК, чтобы отключить его уведомления."
+      : "У вас пока нет активных подписок. Откройте бота с сайта Dogmeet.ru, чтобы подписаться на уведомления вашего ЖК.",
+    reply_markup: {
+      inline_keyboard: subscriptions.map(subscription => [{
+        text: telegramUnsubscribeButtonText(subscription.complex),
+        callback_data: telegramUnsubscribeCallbackData(subscription.id)
+      }])
+    }
+  });
+}
+
+async function handleTelegramSubscriptions(message: Record<string, unknown>) {
+  const chat = isRecord(message.chat) ? message.chat : null;
+  const chatId = telegramChatId(chat);
+  if (!chatId || chat?.type !== "private" || typeof message.text !== "string"
+    || !/^\/subscriptions(?:@[A-Za-z0-9_]{5,32})?\s*$/.test(message.text)) return false;
+  try {
+    await sendTelegramSubscriptions(chatId);
+  } catch (error) {
+    console.error("[telegram] Не удалось загрузить подписки.", error);
+    await telegramBotRequest("sendMessage", { chat_id: chatId, text: "Не удалось загрузить подписки. Повторите /subscriptions." });
+  }
+  return true;
+}
+
+async function handleTelegramUnsubscribeCallback(callbackId: string, chatId: string, subscriptionId: string, messageId: number) {
   const result = await deactivateTelegramComplexSubscription(subscriptionId, chatId);
-  const text = result.status === "unsubscribed"
-    ? "Уведомления этого ЖК отключены."
-    : "Подписка на уведомления этого ЖК уже отключена.";
-  await telegramBotRequest("sendMessage", { chat_id: chatId, text });
   await callbackAnswer(callbackId, result.status === "unsubscribed" ? "Подписка отключена." : "Подписка уже отключена.");
+  await sendTelegramSubscriptions(chatId, messageId);
 }
 
 export async function POST(request: Request) {
@@ -152,7 +181,7 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
     try {
-      await handleTelegramStart(startMessage);
+      if (!await handleTelegramSubscriptions(startMessage)) await handleTelegramStart(startMessage);
     } catch (error) {
       console.error("[telegram] Не удалось обработать /start для подписки ЖК.", error);
     }
@@ -196,8 +225,13 @@ export async function POST(request: Request) {
 
   const subscriptionId = telegramUnsubscribeSubscriptionId(callback.data);
   if (subscriptionId) {
+    const sender = isRecord(callback.from) ? telegramChatId(callback.from) : null;
+    if (chat.type !== "private" || sender !== chatId) {
+      await callbackAnswer(callbackId, "Не удалось обработать подписку в этом чате.", true);
+      return Response.json({ ok: true });
+    }
     try {
-      await handleTelegramUnsubscribeCallback(callbackId, chatId, subscriptionId);
+      await handleTelegramUnsubscribeCallback(callbackId, chatId, subscriptionId, messageId as number);
     } catch (error) {
       console.error("[telegram] Не удалось обработать подписку ЖК.", error);
       await callbackAnswer(callbackId, "Не удалось обработать подписку. Повторите попытку.", true);
