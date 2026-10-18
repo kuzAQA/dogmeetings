@@ -159,7 +159,7 @@ export async function listTelegramComplexSubscriptions(chatId: string) {
 export async function deactivateTelegramComplexSubscription(subscriptionId: string, chatId: string) {
   if (!validChatId(chatId)) return { status: "inactive" as const };
   const [subscription] = await withDb((db) => db
-    .select({ id: telegramComplexSubscriptions.id, active: telegramComplexSubscriptions.active })
+    .select({ id: telegramComplexSubscriptions.id, active: telegramComplexSubscriptions.active, complex: telegramComplexSubscriptions.residentialComplex })
     .from(telegramComplexSubscriptions)
     .where(and(
       eq(telegramComplexSubscriptions.id, subscriptionId),
@@ -172,5 +172,5 @@ export async function deactivateTelegramComplexSubscription(subscriptionId: stri
     .update(telegramComplexSubscriptions)
     .set({ active: false, deactivatedAt: new Date(), updatedAt: new Date() })
     .where(eq(telegramComplexSubscriptions.id, subscription.id)));
-  return { status: "unsubscribed" as const };
+  return { status: "unsubscribed" as const, complex: subscription.complex };
 }

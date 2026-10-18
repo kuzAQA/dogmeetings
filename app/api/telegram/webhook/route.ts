@@ -160,6 +160,12 @@ async function handleTelegramSubscriptions(message: Record<string, unknown>) {
 async function handleTelegramUnsubscribeCallback(callbackId: string, chatId: string, subscriptionId: string, messageId: number) {
   const result = await deactivateTelegramComplexSubscription(subscriptionId, chatId);
   await callbackAnswer(callbackId, result.status === "unsubscribed" ? "Подписка отключена." : "Подписка уже отключена.");
+  if (result.status === "unsubscribed") {
+    await telegramBotRequest("sendMessage", {
+      chat_id: chatId,
+      text: `✅ Подписка на уведомления ЖК «${result.complex}» отменена.`
+    });
+  }
   await sendTelegramSubscriptions(chatId, messageId);
 }
 

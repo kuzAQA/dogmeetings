@@ -111,7 +111,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
       assert.equal(await count(), 3);
     });
     await t.test("real deactivation and repeated deactivation update the count", async () => {
-      assert.equal((await deactivateTelegramComplexSubscription(firstId, "123")).status, "unsubscribed");
+      assert.deepEqual(await deactivateTelegramComplexSubscription(firstId, "123"), { status: "unsubscribed", complex: "Первый ЖК" });
       assert.equal(await count(), 2);
       assert.equal((await deactivateTelegramComplexSubscription(firstId, "123")).status, "inactive");
       assert.equal(await count(), 2);
