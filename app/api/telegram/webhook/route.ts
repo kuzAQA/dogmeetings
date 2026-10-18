@@ -93,10 +93,10 @@ async function handleTelegramStart(message: Record<string, unknown>) {
 
   await telegramBotRequest("sendMessage", {
     chat_id: chatId,
-    text: `Привет! 🐾 Я помогу узнавать о новых прогулках в ЖК „${result.complex}“. Нажмите кнопку ниже, чтобы подписаться на уведомления`,
+    text: `Привет! 🐾 Я помогу узнавать о новых прогулках.\n\n🏘️ ЖК «${result.complex}»\nНажмите на кнопку ниже, чтобы подписаться на уведомления.`,
     reply_markup: {
       inline_keyboard: [[{
-        text: `Подписаться на уведомления — ${result.complex}`,
+        text: "Подписаться",
         callback_data: `complex-subscribe:${token}`
       }]]
     }
