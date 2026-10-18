@@ -1,6 +1,31 @@
 import { expect, test } from "@playwright/test";
 import { openNearby } from "./fixtures";
 
+test("pets icon follows the shared dock colors in inactive and active states", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openNearby(page);
+  const pets = page.locator(".dock-item--pets");
+  const expectInheritedColor = async () => {
+    const colors = await pets.evaluate(button => ({
+      button: getComputedStyle(button).color,
+      icon: getComputedStyle(button.querySelector("svg")!).stroke
+    }));
+    expect(colors.icon).toBe(colors.button);
+    return colors.button;
+  };
+  const inactive = await expectInheritedColor();
+  await expect(pets.locator("svg path")).toHaveCount(2);
+  await expect(pets.locator("svg path").first()).toHaveCSS("stroke-width", "46px");
+  await expect(pets.locator("image")).toHaveCount(0);
+  expect(inactive).toBe(await page.locator(".dock-item--plans").evaluate(button => getComputedStyle(button).color));
+  await pets.click();
+  await expect(pets).toHaveAttribute("aria-current", "page");
+  await expectInheritedColor();
+  await pets.focus();
+  await expectInheritedColor();
+  await page.locator(".bottom-nav").screenshot({ path: testInfo.outputPath("pets-icon.png") });
+});
+
 test("every dock tab retargets the pill and indicator without a jump", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await openNearby(page);

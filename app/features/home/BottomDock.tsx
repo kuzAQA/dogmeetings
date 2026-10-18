@@ -9,7 +9,11 @@ const telegramHintSeenKey = "dogmeet.telegramMenuHintSeen.v2";
 let telegramHintShown = false;
 
 function DogProfileIcon(props: React.SVGProps<SVGSVGElement>) {
-  return <svg viewBox="287 262 758 758" {...props}><image href="/icons/dog-profile.png" width="1254" height="1254" /></svg>;
+  return <svg viewBox="287 262 758 758" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path strokeWidth="46" d="M389 874Q432 817 447 775M580 474C598 548 638 682 598 744C557 811 422 770 357 702C294 644 322 590 370 529L444 437C494 374 535 359 607 360C723 347 797 383 831 472C852 551 870 569 941 591L986 606C1028 620 1004 663 998 703L980 742C956 779 927 789 869 789H805C738 791 702 827 686 872L655 921" />
+    <circle cx="745" cy="561" r="35" fill="currentColor" stroke="none" />
+    <path d="M955 601Q1008 585 1009 634Q1004 675 970 659Q935 645 955 601Z" fill="currentColor" stroke="none" />
+  </svg>;
 }
 
 type BottomDockProps = {
