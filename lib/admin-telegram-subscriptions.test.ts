@@ -50,7 +50,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
     const { GET } = await import("../app/api/dogsfather/telegram-subscriptions/route");
     const { createAdminSessionCookie, revokeAdminSession } = await import("./admin-auth");
     const { createClientSession, getClientSession, sessionCookie } = await import("./session");
-    const { activateTelegramComplexSubscription, deactivateTelegramComplexSubscription } = await import("./telegram-subscriptions");
+    const { prepareTelegramComplexSubscription, activateTelegramComplexSubscription, deactivateTelegramComplexSubscription } = await import("./telegram-subscriptions");
     const url = "http://localhost:3000/api/dogsfather/telegram-subscriptions";
     const cookie = (await createAdminSessionCookie(new Request(url))).split(";")[0];
     const adminRequest = () => new Request(url, { headers: { cookie } });
@@ -97,6 +97,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
       assert.equal(await count(), 2);
     });
     await t.test("real activation and repeated activation update the count without duplicates", async () => {
+      assert.equal((await prepareTelegramComplexSubscription(token, "456")).status, "ready");
       assert.equal((await activateTelegramComplexSubscription(token, "456")).status, "subscribed");
       assert.equal(await count(), 3);
       assert.equal((await activateTelegramComplexSubscription(token, "456")).status, "active");

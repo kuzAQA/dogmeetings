@@ -40,3 +40,9 @@ export function telegramUnsubscribeSubscriptionId(data: unknown) {
 export function telegramUnsubscribeButtonText(complex: string) {
   return buttonText("Отписаться: ", complex);
 }
+
+export function telegramSubscribeToken(data: unknown) {
+  if (typeof data !== "string") return null;
+  const match = /^complex-subscribe:([a-f0-9]{32})$/i.exec(data);
+  return match ? match[1]!.toLowerCase() : null;
+}

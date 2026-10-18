@@ -49,7 +49,7 @@ export async function createTelegramSubscriptionLink(location: TelegramSubscript
   return link;
 }
 
-export async function activateTelegramComplexSubscription(token: string, chatId: string) {
+export async function prepareTelegramComplexSubscription(token: string, chatId: string) {
   if (!isTelegramStartToken(token) || !validChatId(chatId)) return { status: "expired" as const };
   const tokenHash = await hashToken(token);
   const now = new Date();
@@ -78,6 +78,27 @@ export async function activateTelegramComplexSubscription(token: string, chatId:
       if (!claimed) return { status: "expired" as const };
       intent = claimed;
     }
+
+    return { status: "ready" as const, complex: intent.residentialComplex };
+  }));
+}
+
+export async function activateTelegramComplexSubscription(token: string, chatId: string) {
+  if (!isTelegramStartToken(token) || !validChatId(chatId)) return { status: "expired" as const };
+  const tokenHash = await hashToken(token);
+  const now = new Date();
+
+  return withDb((db) => db.transaction(async (tx) => {
+    const [intent] = await tx
+      .select()
+      .from(telegramSubscriptionIntents)
+      .where(and(
+        eq(telegramSubscriptionIntents.tokenHash, tokenHash),
+        eq(telegramSubscriptionIntents.usedByChatId, chatId),
+        gt(telegramSubscriptionIntents.expiresAt, now)
+      ))
+      .limit(1);
+    if (!intent) return { status: "expired" as const };
 
     const inserted = await tx
       .insert(telegramComplexSubscriptions)
