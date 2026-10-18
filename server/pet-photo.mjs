@@ -9,7 +9,7 @@ const INPUT_TYPES = new Set(["jpeg", "png", "webp"]);
 const sharpOptions = { failOn: "error", limitInputPixels: MAX_PET_PHOTO_PIXELS, sequentialRead: true };
 let sharpReady;
 // Initialize once on first use; a real AV1 encode also checks the installed libvips.
-const loadSharp = () => sharpReady ??= import(/* @vite-ignore */ "sharp")
+export const loadSharp = () => sharpReady ??= import(/* @vite-ignore */ "sharp")
   .then(async ({ default: sharp }) => {
     const probe = await sharp({ create: { width: 1, height: 1, channels: 3, background: "white" } })
       .avif({ quality: 40, effort: 2, chromaSubsampling: "4:2:0" }).toBuffer();

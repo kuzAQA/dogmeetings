@@ -1,9 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { pets, telegramComplexSubscriptions, telegramWalkNotifications, walks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
-import { telegramBotRequest, telegramWalkChangeMessage } from "../../../lib/telegram";
+import { telegramWalkChangeMessage } from "../../../lib/telegram";
 import { parseWalkMutation } from "../../../server/application/walk-input";
 import { getSavedLocation } from "../../../server/domain/location";
 import {
@@ -13,7 +13,7 @@ import {
   listWalksForOwner,
   type WalkRow
 } from "../../../server/infrastructure/walk-repository";
-import { moscowDate } from "../../../server/domain/walk";
+import { isWalkEditExpired, isWalkTimeInPast, moscowDate, WALK_EDIT_EXPIRED_MESSAGE } from "../../../server/domain/walk";
 import { petPhotoUrl } from "../../../server/domain/pet";
 import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
@@ -111,7 +111,8 @@ export async function POST(request: Request) {
         tx,
         { city, district, residentialComplex },
         place,
-        normalizedPlace
+        normalizedPlace,
+        session.clientId
       );
 
       const [walk] = await tx
@@ -234,6 +235,10 @@ export async function PATCH(request: Request) {
         .for("update", { of: walks })
         .limit(1);
       if (!previous) return null;
+      if (isWalkEditExpired(previous)) return { error: WALK_EDIT_EXPIRED_MESSAGE, status: 409 };
+      if (isWalkTimeInPast(scheduleType, walkTime)) {
+        return { error: "Для сегодняшней прогулки выберите будущее время.", status: 400 };
+      }
 
       const pet = await findWalkPetForClient(tx, petId, session.clientId);
       if (!pet) return null;
@@ -241,7 +246,8 @@ export async function PATCH(request: Request) {
         tx,
         { city, district, residentialComplex },
         place,
-        normalizedPlace
+        normalizedPlace,
+        session.clientId
       );
 
       const [walk] = await tx
@@ -277,51 +283,48 @@ export async function PATCH(request: Request) {
           updatedAt: walks.updatedAt
         });
 
-      // A pending creation card must not duplicate the notification for this save.
-      if (notifyTelegram !== undefined) {
+      const message = walk.notifyTelegram ? telegramWalkChangeMessage(previous, {
+        petId: pet.id,
+        petName: pet.name,
+        ownerName: pet.ownerName,
+        residentialComplex: walk.residentialComplex,
+        place: walk.place,
+        comment: walk.comment,
+        walkTime: walk.walkTime,
+        walkDate: walk.walkDate,
+        scheduleType: walk.scheduleType
+      }, notifyTelegram === true) : null;
+
+      if (!walk.notifyTelegram || message) {
         await tx.delete(telegramWalkNotifications).where(and(
           eq(telegramWalkNotifications.walkId, walk.id),
           isNull(telegramWalkNotifications.sentAt)
         ));
       }
-
-      return { previous, pet, walk };
+      if (message) {
+        const subscriptions = await tx.select({ id: telegramComplexSubscriptions.id })
+          .from(telegramComplexSubscriptions).where(and(
+            eq(telegramComplexSubscriptions.active, true),
+            eq(telegramComplexSubscriptions.city, walk.city),
+            eq(telegramComplexSubscriptions.district, walk.district),
+            eq(telegramComplexSubscriptions.residentialComplex, walk.residentialComplex)
+          ));
+        if (subscriptions.length) {
+          await tx.insert(telegramWalkNotifications).values(subscriptions.map(({ id }) => ({
+            id: crypto.randomUUID(), walkId: walk.id, subscriptionId: id, messageText: message
+          }))).onConflictDoUpdate({
+            target: [telegramWalkNotifications.walkId, telegramWalkNotifications.subscriptionId],
+            set: { id: sql`excluded.id`, messageText: message, sentAt: null, failedAt: null, lastError: null,
+              attemptCount: 0, nextAttemptAt: new Date(), createdAt: new Date() }
+          });
+        }
+      }
+      return { pet, walk };
     }));
 
+    if (result?.error !== undefined) return privateError(result.error, result.status);
     if (!result) {
       return privateError("Прогулка не найдена.", 404);
-    }
-
-    try {
-      const message = telegramWalkChangeMessage(result.previous, {
-        petId: result.pet.id,
-        petName: result.pet.name,
-        ownerName: result.pet.ownerName,
-        residentialComplex: result.walk.residentialComplex,
-        place: result.walk.place,
-        comment: result.walk.comment,
-        walkTime: result.walk.walkTime,
-        walkDate: result.walk.walkDate,
-        scheduleType: result.walk.scheduleType
-      }, notifyTelegram === true);
-      if (result.walk.notifyTelegram && message) {
-        const subscriptions = await withDb((db) => db
-          .select({ chatId: telegramComplexSubscriptions.telegramChatId })
-          .from(telegramComplexSubscriptions)
-          .where(and(
-            eq(telegramComplexSubscriptions.active, true),
-            eq(telegramComplexSubscriptions.city, result.walk.city),
-            eq(telegramComplexSubscriptions.district, result.walk.district),
-            eq(telegramComplexSubscriptions.residentialComplex, result.walk.residentialComplex)
-          )));
-        await Promise.all(subscriptions.map(({ chatId }) => telegramBotRequest("sendMessage", {
-          chat_id: chatId,
-          text: message,
-          parse_mode: "HTML"
-        })));
-      }
-    } catch (error) {
-      console.error("[walk-telegram-notifications] Не удалось отправить изменение прогулки.", error);
     }
 
     return privateJson({
@@ -359,15 +362,10 @@ export async function DELETE(request: Request) {
     }
 
     const deleted = await withDb(async (db) => {
-      const [ownedWalk] = await db
-        .select({ id: walks.id })
-        .from(walks)
+      const rows = await db.delete(walks)
         .where(and(eq(walks.id, walkId), eq(walks.clientId, session.clientId)))
-        .limit(1);
-
-      if (!ownedWalk) return false;
-      await db.delete(walks).where(eq(walks.id, walkId));
-      return true;
+        .returning({ id: walks.id });
+      return rows.length > 0;
     });
 
     if (!deleted) {

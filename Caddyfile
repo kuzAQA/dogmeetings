@@ -8,7 +8,9 @@ www.dogmeet.ru {
 
 dogmeet.ru {
 	encode zstd gzip
-	reverse_proxy app:3000
+	reverse_proxy app:3000 {
+		header_up X-Dogmeet-Client-IP {remote_host}
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

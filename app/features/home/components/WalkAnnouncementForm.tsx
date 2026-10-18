@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Clock3, MapPin, Search } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, CircleAlert, Clock3, MapPin, Search } from "lucide-react";
 import Image from "next/image";
-import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useEffect, useId, useRef, useState } from "react";
+import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useRef, useState } from "react";
 import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
-import { DogmeetDialog, DogmeetHeader, requestDialogClose, TelegramHintBubble } from "../../../components/ui/DogmeetFrame";
+import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { SingleLineInput } from "../../../components/ui/SingleLineInput";
 import { keepActionVisibleAfterFocus } from "../../../components/ui/keyboard-scroll";
@@ -34,6 +34,7 @@ type Props = {
   sharedPlaces: SharedPlace[];
   locationName: string;
   onAddPet: () => void;
+  onOpenMyPlaces: () => void;
   placesLoaded: boolean;
   placesError?: string;
   onRetryPlaces?: () => void;
@@ -44,30 +45,9 @@ type Props = {
   onBack?: () => void;
 };
 
-export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, locationName, onAddPet, placesLoaded, placesError = "", onRetryPlaces, walkForm, walkSaving, editing, onSubmit, onBack }: Props) {
+export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, locationName, onAddPet, onOpenMyPlaces, placesLoaded, placesError = "", onRetryPlaces, walkForm, walkSaving, editing, onSubmit, onBack }: Props) {
   const { dockFormRef, touchedFields, submitError, placeInput, scheduleType, selectedPetId, walkTime, walkComment, placeIsValid, timeIsValid, changeScheduleType, selectPet, updatePlaceInput, chooseSharedPlace, changeWalkTime, changeWalkComment } = walkForm;
   const submitButtonRef = useRef<HTMLButtonElement>(null);
-  const telegramHintRef = useRef<HTMLDivElement>(null);
-  const telegramHintId = useId();
-  const [telegramHintOpen, setTelegramHintOpen] = useState(false);
-  useEffect(() => {
-    if (!telegramHintOpen) return;
-    function onOutsideClick(event: globalThis.MouseEvent) {
-      if (event.target instanceof Node && !telegramHintRef.current?.contains(event.target)) setTelegramHintOpen(false);
-    }
-    function onEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      setTelegramHintOpen(false);
-      telegramHintRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    }
-    document.addEventListener("click", onOutsideClick);
-    document.addEventListener("keydown", onEscape, true);
-    return () => {
-      document.removeEventListener("click", onOutsideClick);
-      document.removeEventListener("keydown", onEscape, true);
-    };
-  }, [telegramHintOpen]);
   const [picker, setPicker] = useState<"pet" | "place" | "time" | null>(null);
   const [timeDraft, setTimeDraft] = useState("");
   const [timePickerError, setTimePickerError] = useState("");
@@ -137,24 +117,20 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
           <span><small>Иду гулять с</small><strong>{selectedPet?.name || "Выберите питомца"}</strong></span>
           <ChevronDown aria-hidden="true" />
         </button>
-        {touchedFields["walk-pet"] && !selectedPetId && <p className="field-error">Выберите питомца</p>}
+        {touchedFields["walk-pet"] && !selectedPetId && <p className="field-error walk-form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />Выберите питомца</p>}
 
-        <div className="field"><span>Когда</span></div><div className="segmented schedule-buttons" role="group" aria-label="Когда">{[["today", "Сегодня"], ["tomorrow", "Завтра"], ["always", "Ежедневно"]].map(([value, label]) => <button key={value} type="button" aria-pressed={scheduleType === value} onClick={() => changeScheduleType(value as "today" | "tomorrow" | "always", inDock)}>{label}</button>)}</div>
+        <div className="field walk-schedule-label"><span>Когда</span></div><div className="segmented schedule-buttons" role="group" aria-label="Когда">{[["today", "Сегодня"], ["tomorrow", "Завтра"], ["always", "Ежедневно"]].map(([value, label]) => <button key={value} type="button" aria-pressed={scheduleType === value} onClick={() => changeScheduleType(value as "today" | "tomorrow" | "always", inDock)}>{label}</button>)}</div>
 
         <div className="walk-settings">
           <button type="button" className="menu-row" onClick={openTimePicker}><Clock3 aria-hidden="true" /><span><strong>Время</strong><small>{walkTime || "Выберите время"}</small></span><ChevronRight aria-hidden="true" /></button>
           <button type="button" className="menu-row" onClick={() => { setQuery(""); setCustomPlace(""); setSelectedPlace(null); setPicker("place"); }}><MapPin aria-hidden="true" /><span><strong>Место встречи</strong><small>{placeInput || "Выберите место"}</small></span><ChevronRight aria-hidden="true" /></button>
         </div>
-        {touchedFields["walk-time"] && !timeIsValid && <p className="field-error">Выберите время</p>}
-        {touchedFields["walk-place"] && !placeIsValid && <p className="field-error">Укажите место прогулки</p>}
+        {((touchedFields["walk-time"] && !timeIsValid) || (touchedFields["walk-place"] && !placeIsValid)) && <p className="field-error walk-form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />Укажите место и время прогулки</p>}
+        {walkForm.placeNotice && <p className="field-error" role="status">{walkForm.placeNotice}</p>}
 
         <label className="field walk-comment-field"><span>Комментарий <small>необязательно</small></span><textarea id="walk-comment" name="comment" value={walkComment} maxLength={MAX_WALK_COMMENT_LENGTH} placeholder="Например, возьмём мячик" onFocus={scrollWalkFormAfterKeyboard} onChange={(event) => changeWalkComment(event.target.value, inDock)} /><small className="counter">{walkComment.length}/{MAX_WALK_COMMENT_LENGTH}</small></label>
         <div className="walk-telegram-row">
           <label className="walk-telegram-label"><input type="checkbox" name="notifyTelegram" checked={walkForm.notifyTelegram} onChange={(event) => walkForm.changeNotifyTelegram(event.target.checked, inDock)} /><span>Отправить уведомление в бота Telegram</span></label>
-          <div className="walk-telegram-info-wrap" ref={telegramHintRef}>
-            <button type="button" className="walk-telegram-info-trigger" aria-label="Об уведомлениях в Telegram" aria-expanded={telegramHintOpen} aria-controls={telegramHintId} onClick={() => setTelegramHintOpen((open) => !open)}><svg className="walk-telegram-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 11v6M12 7h.01" /></svg></button>
-            {telegramHintOpen && <TelegramHintBubble id={telegramHintId} className="walk-telegram-hint" onDismiss={() => { setTelegramHintOpen(false); telegramHintRef.current?.querySelector<HTMLButtonElement>("button")?.focus(); }}>О вашей прогулке будет отправлено уведомление в бота <em>Telegram</em>, чтобы его увидели другие владельцы собак вашего ЖК.</TelegramHintBubble>}
-          </div>
         </div>
         <div className="note"><MapPin aria-hidden="true" />Прогулка появится в районе {locationName}.</div>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
@@ -181,6 +157,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         {placesError && <button className="button" type="button" onClick={onRetryPlaces}>Повторить</button>}
         <form className="place-picker-footer" autoComplete="off" onSubmit={applyPlace}>
           <label className="field"><span>Или своё место встречи</span><SingleLineInput autoComplete="off" enterKeyHint="done" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onPointerDown={focusCustomPlace} onChange={(event) => { setSelectedPlace(null); setCustomPlace(event.target.value); }} /></label>
+          <p className="small-note places-help">Вы можете управлять местами для прогулок <a href="#my-places" onClick={event => { event.preventDefault(); onOpenMyPlaces(); }}>здесь</a></p>
           <button className="button" type="submit" disabled={!selectedPlace && !/[\p{L}]/u.test(customPlace.trim())}>Выбрать место</button>
         </form>
       </>}>

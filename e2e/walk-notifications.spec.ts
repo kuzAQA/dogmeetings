@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { openNearby, walk } from './fixtures';
+import { moscowDate } from '../server/domain/walk';
 
 for (const mode of ['create', 'edit']) {
   for (const enabled of [true, false]) {
     test(`${mode} saves and restores Telegram preference ${enabled}`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      let stored = { ...walk, scheduleType: 'tomorrow', notifyTelegram: !enabled };
+      let stored = { ...walk, walkDate: moscowDate(1), scheduleType: 'tomorrow', notifyTelegram: !enabled };
       let saves = 0;
       await openNearby(page, { mine: mode === 'edit' ? [stored] : [] });
       await page.route('**/api/walks?*', route => route.fulfill({ json: { walks: [stored] } }));
@@ -17,7 +18,7 @@ for (const mode of ['create', 'edit']) {
         stored = { ...stored, notifyTelegram: body.notifyTelegram, point: body.place, walkTime: body.walkTime };
         await route.fulfill({ json: { walk: stored } });
       });
-      await page.getByRole('button', { name: 'Мои планы', exact: true }).click();
+      await page.getByRole('button', { name: 'Планы', exact: true }).click();
       if (mode === 'edit') {
         await page.getByRole('button', { name: 'Управлять', exact: true }).click();
         await page.getByRole('button', { name: 'Изменить прогулку', exact: true }).click();
@@ -54,7 +55,7 @@ test('failed save retains preference and sends only the save request', async ({ 
     expect(route.request().postDataJSON().notifyTelegram).toBe(false);
     await route.fulfill({ status: 500, json: { error: 'Тестовая ошибка сохранения' } });
   });
-  await page.getByRole('button', { name: 'Мои планы', exact: true }).click();
+  await page.getByRole('button', { name: 'Планы', exact: true }).click();
   await page.getByRole('button', { name: 'Управлять', exact: true }).click();
   await page.getByRole('button', { name: 'Изменить прогулку', exact: true }).click();
   const checkbox = page.getByRole('checkbox', { name: 'Отправить уведомление в бота Telegram', exact: true });

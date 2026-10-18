@@ -47,7 +47,7 @@ test("liquid dock keeps its width, gap and clear content on mobile", async ({ pa
     const dock = page.locator(".bottom-nav");
     const pill = dock.locator(".nav-tabs");
     const before = (await pill.boundingBox())!;
-    await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await dock.getByRole("button", { name: "Планы", exact: true }).click();
     await expect(dock).toHaveAttribute("data-moving", "true");
     const frames = await dock.evaluate(async (element) => {
       const samples = [];
@@ -106,7 +106,7 @@ test("liquid dock preserves durations when production CSS uses seconds", async (
     style.setProperty("--dock-enter", ".3472s");
     style.setProperty("--dock-exit", ".2688s");
   });
-  for (const [tab, duration] of [["Мои планы", 347.2], ["Рядом", 268.8]] as const) {
+  for (const [tab, duration] of [["Планы", 347.2], ["Рядом", 268.8]] as const) {
     await dock.getByRole("button", { name: tab, exact: true }).click();
     const durations = await dock.evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => !(animation instanceof CSSTransition)).map((animation) => animation.effect!.getTiming().duration));
     expect(durations).toHaveLength(6);
@@ -186,11 +186,11 @@ test("liquid dock blocks input until completion, transfers focus and cleans up o
   await openNearby(page);
   const dock = page.locator(".bottom-nav");
   const add = dock.locator(".dock-add");
-  await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
   await expect(add).toBeDisabled();
   await expect(add).toHaveAttribute("tabindex", "-1");
   await add.evaluate((button) => (button as HTMLButtonElement).click());
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await expect(add).toBeEnabled();
   await add.focus();
   await dock.locator(".dock-item--nearby").evaluate((button) => (button as HTMLButtonElement).click());
@@ -228,6 +228,8 @@ test("reduced motion settles immediately, including when enabled mid-transition"
   const nextControl = browserName === "webkit" ? "Alt+Tab" : "Tab";
   await page.keyboard.press(nextControl);
   await expect(page.locator(".dock-item--pets")).toBeFocused();
+  await page.keyboard.press(nextControl);
+  await expect(page.getByRole("button", { name: "Telegram", exact: true })).toBeFocused();
   await page.keyboard.press(nextControl);
   await expect(page.locator(".dock-add")).toBeFocused();
   await page.keyboard.press("Enter");

@@ -80,7 +80,7 @@ test("preloads plan avatars before opening my plans", async ({ page }) => {
 
   await page.goto("/");
   await avatarLoaded;
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
 
   const avatar = page.getByAltText("Собака Луна");
   await expect(avatar).toBeVisible();
@@ -109,8 +109,8 @@ test("does not request fallback avatars again when returning nearby", async ({ p
     mine: [walkWithFallback]
   });
 
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Кто сегодня/ })).toBeVisible();

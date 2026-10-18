@@ -38,6 +38,7 @@ function readLegacySessionData(): LegacySessionData {
 }
 
 export function clearLegacySessionData() {
+  // Не используем localStorage.clear(): отметка просмотра подсказки Telegram должна сохраняться.
   try {
     window.localStorage.removeItem(CLIENT_ID_KEY);
     window.localStorage.removeItem(STORAGE_KEY);

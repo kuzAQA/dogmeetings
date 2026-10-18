@@ -4,11 +4,13 @@ import { Check, ChevronRight, MapPin, MessageCircle, Share2 } from "lucide-react
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import type { ApiWalk } from "../../../../lib/walks";
-import { DogmeetHeader, type TelegramMenuHint } from "../../../components/ui/DogmeetFrame";
+import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
 import type { Pet } from "../model";
 import { WalkActionsDialog } from "./WalkActionsDialog";
+import { isWalkEditExpired } from "../../../../server/domain/walk";
+import { useWalkEditClock } from "../use-walk-edit-clock";
 
-type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () => void; onBack?: () => void; telegramMenuHint?: TelegramMenuHint };
+type HeaderProps = { location?: string; onLocation?: () => void; onProfile?: () => void; onBack?: () => void };
 
 type WalkCollectionProps = HeaderProps & {
   walks: ApiWalk[];
@@ -25,15 +27,16 @@ type WalkCollectionProps = HeaderProps & {
   onDeleteWalk: (walk: ApiWalk) => void;
 };
 
-export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack, telegramMenuHint }: WalkCollectionProps) {
+export function WalkCollection({ walks, fromDock, loaded, error, onRetry, openWalkActionsId, onStartWalk, onToggleWalkActions, onCloseWalkActions, onEditWalk, onDeleteWalk, location, onLocation, onProfile, onBack }: WalkCollectionProps) {
+  const now = useWalkEditClock(walks);
   return (
     <div className="screen collection-screen my-walks-screen">
-      <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
-      <h1>Мои планы</h1>
+      <DogmeetHeader {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
+      <h1>Планы</h1>
       <div data-dock-panel>
       {loaded && !error && walks.length > 0 && <p>Ваши встречи сегодня, завтра<br />и маленькие ежедневные традиции.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : walks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (
-      <div className="timeline">{walks.map((walk) => <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.walkTime.slice(0, 5)}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary"><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}<button className="text-link" type="button" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>Управлять<ChevronRight aria-hidden="true" /></button></div>{openWalkActionsId === walk.id && <WalkActionsDialog walk={walk} owned={walk} onClose={onCloseWalkActions} onEdit={onEditWalk} onDelete={onDeleteWalk} />}</div>)}</div>
+      <div className="timeline">{walks.map((walk) => <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.walkTime.slice(0, 5)}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary"><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><span className="walk-name-row"><strong>{walk.pet}</strong>{isWalkEditExpired(walk, now) && <span className="walk-expired-label">Устарело</span>}</span><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}<button className="text-link" type="button" aria-expanded={openWalkActionsId === walk.id} onClick={() => onToggleWalkActions(walk.id)}>Управлять<ChevronRight aria-hidden="true" /></button></div>{openWalkActionsId === walk.id && <WalkActionsDialog walk={walk} owned={walk} onClose={onCloseWalkActions} onEdit={onEditWalk} onDelete={onDeleteWalk} />}</div>)}</div>
       )}
       </div>
     </div>
@@ -55,10 +58,10 @@ type PetCollectionProps = HeaderProps & {
   onRetry: () => void;
 };
 
-export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId, onDismissHighlight, onEdit, onOpen, onAdd, onRetry, location, onLocation, onProfile, onBack, telegramMenuHint }: PetCollectionProps) {
+export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId, onDismissHighlight, onEdit, onOpen, onAdd, onRetry, location, onLocation, onProfile, onBack }: PetCollectionProps) {
   return (
     <div className={`screen collection-screen pets-screen ${fromDock ? "collection-screen--dock" : ""}`} onPointerDownCapture={() => { if (highlightedPetId) onDismissHighlight(); }}>
-      <DogmeetHeader telegramMenuHint={telegramMenuHint} {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
+      <DogmeetHeader {...(fromDock && location ? { location, onLocation, onProfile } : { onBack })} />
       <h1>Мои питомцы</h1>
       <div data-dock-panel>
       {loaded && !error && pets.length > 0 && <p>Те, ради кого мы выходим<br />из дома в любую погоду.</p>}

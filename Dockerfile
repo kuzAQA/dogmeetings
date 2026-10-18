@@ -28,6 +28,9 @@ COPY --from=builder --chown=node:node /app/scripts/migrate-pet-photos.mjs ./scri
 COPY --from=builder --chown=node:node /app/scripts/migrate-pet-photo-algorithm.mjs ./scripts/migrate-pet-photo-algorithm.mjs
 COPY --from=builder --chown=node:node /app/server/pet-photo-migration.mjs ./server/pet-photo-migration.mjs
 COPY --from=builder --chown=node:node /app/server/pet-photo.mjs ./server/pet-photo.mjs
+COPY --from=builder --chown=node:node /app/server/telegram-walk-photo.mjs ./server/telegram-walk-photo.mjs
+COPY --from=builder --chown=node:node /app/server/telegram-walk-deletion.mjs ./server/telegram-walk-deletion.mjs
+COPY --from=builder --chown=node:node /app/server/telegram-api.mjs ./server/telegram-api.mjs
 COPY --from=builder --chown=node:node /app/server/domain/pet-photo-limits.mjs ./server/domain/pet-photo-limits.mjs
 
 USER node

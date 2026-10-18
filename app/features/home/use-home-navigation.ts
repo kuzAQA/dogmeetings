@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { directionFor, skipPageTransition, transitionPage } from "../../components/ui/motion.mjs";
 
-export type Screen = "walk-detail" | "contact" | "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets";
+export type Screen = "walk-detail" | "contact" | "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets" | "my-places";
 export type PrimaryDockSection = "nearby" | "profile";
 export type DockSection = PrimaryDockSection | "walk" | "pets";
 export type DockPanelSection = "nearby" | "walk" | "profile";

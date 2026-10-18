@@ -1,6 +1,18 @@
 export const MAX_WALK_META_LENGTH = 40;
 export const MAX_WALK_COMMENT_LENGTH = 50;
 export const MAX_WALK_PLACE_LENGTH = MAX_WALK_META_LENGTH;
+export const WALK_EDIT_EXPIRED_MESSAGE = "Прогулка устарела для изменения. Вы можете удалить её или создать новую.";
+
+export function walkEditDeadline(walk: { walkDate: string; walkTime: string }) {
+  const hour = Number(walk.walkTime.slice(0, 2));
+  return hour < 18
+    ? new Date(`${walk.walkDate}T${hour < 12 ? "12" : "18"}:00:00+03:00`).getTime()
+    : Infinity;
+}
+
+export function isWalkEditExpired(walk: { walkDate: string; walkTime: string }, now = Date.now()) {
+  return now >= walkEditDeadline(walk);
+}
 
 const scheduleTypes = new Set(["today", "tomorrow", "always"]);
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, CircleAlert, PawPrint } from "lucide-react";
+import { PawIcon } from "./PawIcon";
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 
 export function DogmeetState({ state, title, message, action, onAction, children, onBack }: {
@@ -13,7 +14,7 @@ export function DogmeetState({ state, title, message, action, onAction, children
   children?: ReactNode;
 }) {
   return <div className={`state-block ${state === "success" ? "success" : ""}`} role={state === "error" ? "alert" : state === "empty" ? undefined : "status"} aria-busy={state === "loading"}>
-    {state === "loading" ? <div className="loader" /> : state === "error" ? <CircleAlert className="state-icon" /> : state === "success" ? <CheckCircle2 className="state-icon" /> : <PawPrint className="state-icon" />}
+    {state === "loading" ? <div className="loader" /> : state === "error" ? <CircleAlert className="state-icon" /> : state === "success" ? <CheckCircle2 className="state-icon" /> : <PawIcon className="state-icon" />}
     <h2>{title ?? (state === "loading" ? "Загружаем…" : state === "error" ? "Не получилось загрузить" : state === "empty" ? "Здесь пока тихо" : "Готово")}</h2>
     <p>{message ?? (state === "loading" ? "Подождите, это займёт несколько секунд." : state === "error" ? "Проверьте соединение и попробуйте ещё раз. Ваши изменения не потеряны." : state === "empty" ? "Сообщите, когда пойдёте гулять. Компания начинается с вас." : "Изменения сохранены.")}</p>
     {state === "loading" && <><div className="skeleton" /><div className="skeleton short" /></>}

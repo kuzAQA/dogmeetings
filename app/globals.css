@@ -1,5 +1,9 @@
 @import "./prototype.css";
 
+.production .dock-tabs .nav-indicator { width: calc((100% - 6px) / 4); }
+.production .bottom-nav .nav-tabs button { font-size: 9px; }
+.production .bottom-nav .nav-tabs button svg { width: 19px; height: 19px; }
+
 @media (max-width: 480px) {
   .production .react-modal-sheet-container.sheet { max-width: none !important; }
 }
@@ -90,16 +94,16 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .page-header .location-switch span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .header-menu { position: relative; flex-shrink: 0; }
 .page-header .header-menu .icon-button { margin-left: 0; }
-.telegram-menu-hint {
-  position: absolute;
-  z-index: 10;
-  top: calc(100% + 4px);
-  right: -8px;
+.walk-edit-warning {
+  position: fixed;
+  z-index: 100;
+  bottom: 100px;
+  right: 16px;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  width: min(230px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 32px));
   padding: 12px 34px 12px 14px;
   border-radius: 16px;
   background: #fff9ef;
@@ -108,12 +112,11 @@ html, body { min-height: 100%; background: #e5e5e2; }
   font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
-  /* Grow from the pointer beneath the menu button. */
   transform-origin: calc(100% - 30px) -12px;
-  animation: telegram-menu-hint-in 620ms var(--ease-in-out) both;
+  animation: walk-edit-warning-in 620ms var(--ease-in-out) both;
 }
-/* CSS spring approximation for this once-per-session entrance. */
-@keyframes telegram-menu-hint-in {
+/* CSS spring approximation for the warning entrance. */
+@keyframes walk-edit-warning-in {
   0% {
     opacity: 0;
     transform: translateY(-10px) scale(0.35);
@@ -124,20 +127,10 @@ html, body { min-height: 100%; background: #e5e5e2; }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .telegram-menu-hint { animation: none; }
+  .walk-edit-warning { animation: none; }
 }
-.telegram-menu-hint::before {
-  content: "";
-  position: absolute;
-  top: -12px;
-  right: 22px;
-  border-inline: 8px solid transparent;
-  border-bottom: 12px solid #fff9ef;
-  pointer-events: none;
-}
-.telegram-menu-hint-bell { width: 28px; height: 28px; color: var(--orange); }
-.telegram-menu-hint em { white-space: nowrap; }
-.telegram-menu-hint-close {
+.walk-edit-warning-bell { width: 28px; height: 28px; color: var(--orange); }
+.walk-edit-warning-close {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -151,16 +144,74 @@ html, body { min-height: 100%; background: #e5e5e2; }
   background: transparent;
   color: var(--muted);
 }
-.telegram-menu-hint-close svg { width: 14px; height: 14px; }
+.walk-edit-warning-close svg { width: 14px; height: 14px; }
 .production .page-header .brand { view-transition-name: dogmeet-brand; }
 .production .header-back { view-transition-name: dogmeet-back; }
 .production .contact-screen .page-header,
 .production .contact-screen .page-header .brand,
 .production .contact-screen .header-back { view-transition-name: none; }
 .production main { view-transition-name: dogmeet-production-page; }
+.telegram-menu-hint {
+  position: absolute;
+  z-index: 10;
+  bottom: calc(100% + 14px);
+  right: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 34px 12px 14px;
+  border-radius: 16px;
+  background: #fff9ef;
+  box-shadow: 0 5px 20px #70543226;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  transform-origin: calc(87.5% - 3px) calc(100% + 12px);
+  animation: telegram-menu-hint-in 620ms var(--ease-in-out) both;
+}
+@keyframes telegram-menu-hint-in {
+  0% { opacity: 0; transform: scale(0.35); }
+  25% { opacity: 1; }
+  55% { transform: scale(1.08); }
+  78% { transform: scale(0.975); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .telegram-menu-hint { animation: none; }
+}
+.telegram-menu-hint::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: calc(12.5% - 5px);
+  border-inline: 8px solid transparent;
+  border-top: 12px solid #fff9ef;
+  pointer-events: none;
+}
+.telegram-menu-hint-bell { width: 28px; height: 28px; color: var(--orange); }
+.telegram-menu-hint em { white-space: nowrap; }
+.bottom-nav .nav-tabs button.telegram-menu-hint-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+.telegram-menu-hint-close svg { width: 14px; height: 14px; }
 .production .sheet { overflow: hidden; }
-.production .sheet-content-shell { flex: 1 1 auto; min-height: 0; }
-.production .sheet-content { min-height: 0; overscroll-behavior: contain; }
+.production .sheet-content-shell { flex: 1 1 auto; min-height: 0; margin-inline: calc(0px - var(--space-2)); }
+.production .sheet-content { min-height: 0; padding-inline: var(--space-2); overscroll-behavior: contain; }
 .production .sheet-footer { flex: none; }
 .production .sheet-footer > .button { margin-top: 0; }
 .production .sheet-footer > p { margin: 0; }
@@ -173,7 +224,7 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .sheet--place-picker .option-list > button { min-height: 60px; padding-block: 14px; }
 .production .sheet--place-picker .option-list > button > span { min-width: 0; overflow-wrap: anywhere; }
 .production .place-picker-footer { flex: none; }
-.production .place-picker-footer .field { margin: 0 6px 12px; }
+.production .place-picker-footer .field { margin: 0; }
 .production .place-picker-footer .button { margin-top: 0; }
 
 .production .sheet--location-sent .state-icon { width: 40px; height: 40px; margin: 0 0 var(--space-5); }
@@ -184,6 +235,10 @@ html, body { min-height: 100%; background: #e5e5e2; }
 .production .sheet--result .state-icon { width: 48px; height: 48px; margin: 0 0 var(--space-2); }
 .production .sheet--result .state-block .button { margin-top: var(--space-2); }
 .production .sheet--walk-actions .menu-row { min-height: 64px; padding-block: 15px; }
+.production .sheet--walk-actions .menu-row[aria-disabled="true"] { color: var(--muted); }
+.production .walk-name-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.production .walk-name-row strong { min-width: 0; overflow-wrap: anywhere; }
+.production .walk-expired-label { flex-shrink: 0; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--muted); font-size: 10px; font-weight: 700; line-height: 1.4; }
 
 ::view-transition-group(dogmeet-production-page) { animation: none; }
 ::view-transition-old(dogmeet-production-page) { animation: production-screen-out var(--motion-fast) var(--ease-out) both; mix-blend-mode: normal; }
@@ -221,3 +276,16 @@ to { transform: translateX(calc(-1 * var(--motion-screen-offset))); }
  .production:has(.state-block.success):has(.page-header .header-back) .page-header .header-back { transform: none; }
  .production:has(.state-block.success):has(.page-header .header-back) .page-header .brand { transform: none; }
 }
+
+.production .site-share-heading { display: flex; align-items: flex-start; gap: var(--space-3); }
+.production .site-share-heading h2 { flex: 1; margin: 0; }
+.production .site-share-heading .icon-button { flex-shrink: 0; }
+.production .site-share-qr { display: block; width: min(100%, 300px, 45dvh); height: auto; margin: var(--space-3) auto 0; }
+
+.production .places-help { text-align: center; }
+.production .places-help a { color: #ba322b; text-decoration: underline; text-underline-offset: 3px; }
+.production .my-places-list { list-style: none; margin: 24px 0; padding: 0; }
+.production .my-places-list li { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.production .my-places-list li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.production .my-places-list li > svg { width: 20px; flex: none; }
+.production .my-places-list .icon-button { flex: none; min-width: 44px; min-height: 44px; }

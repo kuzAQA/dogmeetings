@@ -54,7 +54,7 @@ test.describe("mobile single-line fields", () => {
 
 test("keeps the comment field multiline", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
 
   const comment = page.getByLabel("Комментарий", { exact: false });
@@ -70,7 +70,7 @@ test("place picker confirms only its selected shared place", async ({ page }) =>
   await page.route("**/api/places?*", (route) => route.fulfill({ json: { places: [{ id: walk.placeId, name: walk.point }, { id: "place-2", name: "У детской площадки" }] } }));
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await page.getByRole("button", { name: /^Место встречи/ }).click();
 
@@ -196,7 +196,7 @@ test("walk deletion refreshes once after the success sheet closes", async ({ pag
   await expect(page.locator(".walks-screen")).toContainText(walk.pet);
 
   await page.getByRole("button", { name: "Посмотреть мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await expect(page.locator(".my-walks-screen")).not.toContainText(walk.pet);
   await page.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect(page.locator(".walks-screen")).not.toContainText(walk.pet);
@@ -205,7 +205,7 @@ test("walk deletion refreshes once after the success sheet closes", async ({ pag
 
 test("walk pickers preserve payload and create, edit and delete actions", async ({ page }, info) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await capture(page, info, "announce");
   await page.getByRole("button", { name: "Питомец", exact: true }).click();
@@ -335,7 +335,7 @@ test("collections expose empty and error states with working retry", async ({ pa
   await page.getByRole("button", { name: "Питомцы", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Пока ни одного питомца" })).toBeVisible();
   await capture(page, info, "pets-empty");
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await capture(page, info, "plans-empty");
   await page.route("**/api/walks?*", (route) => route.fulfill({ status: 503, json: { error: "Проверка недоступного расписания" } }));
   await page.reload();
@@ -486,7 +486,7 @@ test("motion, interruption, keyboard focus and compact viewport", async ({ page 
   await expect(page.getByRole("dialog").getByRole("button", { name: "Весь день", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(filter).toBeFocused();
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Питомцы", exact: true }).click();
   await page.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?" })).toBeVisible();

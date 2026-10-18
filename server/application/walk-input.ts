@@ -73,7 +73,7 @@ export function parseWalkMutation(payload: unknown, mode: MutationMode): ParseRe
   if (!isValidWalkTime(walkTime)) {
     return { ok: false, error: "Укажите корректное время прогулки." };
   }
-  if (isWalkTimeInPast(scheduleType, walkTime)) {
+  if (mode === "create" && isWalkTimeInPast(scheduleType, walkTime)) {
     return { ok: false, error: "Для сегодняшней прогулки выберите будущее время." };
   }
 

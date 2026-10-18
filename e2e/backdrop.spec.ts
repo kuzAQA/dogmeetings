@@ -3,7 +3,7 @@ import { openNearby } from "./fixtures";
 
 test("shared backdrop transitions during sheet open and close", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   const trigger = page.getByRole("button", { name: /^Время/ });
   await page.evaluate(() => {

@@ -1,0 +1,6 @@
+- main [ref=e2]:
+  - region [ref=e3]:
+    - heading "This request was blocked" [level=1] [ref=e4]
+    - generic "HTTP status, error code, and request ID" [ref=e5]:
+      - paragraph [ref=e6]: 403 Forbidden
+      - paragraph [ref=e7]: fra1::wd5gf-1791050411044-0d3111b40a73

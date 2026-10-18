@@ -1,5 +1,6 @@
 "use client";
 
+import { PawIcon } from "../components/ui/PawIcon";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -7,7 +8,6 @@ import {
   Camera,
   ChevronRight,
   Compass,
-  PawPrint,
   Search,
   LogOut,
   MapPin,
@@ -573,7 +573,7 @@ export default function AdminPage() {
       <nav aria-label="Разделы панели администратора">
         <button className="menu-row" type="button" onClick={openRequests}><MapPin /><span><strong>Заявки жителей</strong><small>Добавление новых локаций</small></span><span className="count">{requests.length}</span></button>
         <button className="menu-row" type="button" onClick={openLocations}><MapPin /><span><strong>Локации</strong><small>Города, районы, ЖК и места для прогулок</small></span><ChevronRight /></button>
-        <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawPrint /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
+        <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawIcon /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setPhase("telegram-notifications"); void loadTelegramSubscriptions(); }}><Bell /><span><strong>Уведомления в Telegram</strong><small>Активные подписки</small></span><ChevronRight /></button>
         <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
         <button className="menu-row" type="button" onClick={() => setSignOutPending(true)}><LogOut /><span><strong>Выйти</strong></span><ChevronRight /></button>

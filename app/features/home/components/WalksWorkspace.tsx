@@ -1,21 +1,22 @@
 "use client";
 
-import { CalendarDays, Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, PawPrint, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
+import { Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, Share2, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
 import Image from "next/image";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { type FormEvent, type RefObject, useMemo, useState } from "react";
 import type { ApiWalk, Period, Walk } from "../../../../lib/walks";
-import { DogmeetDialog, DogmeetHeader, requestDialogClose, type TelegramMenuHint } from "../../../components/ui/DogmeetFrame";
+import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import type { Location, Pet, SharedPlace } from "../model";
 import type { DockSection } from "../use-home-navigation";
 import type { WalkFormState } from "../use-walk-form";
 import { WalkAnnouncementForm } from "./WalkAnnouncementForm";
 import { WalkActionsDialog } from "./WalkActionsDialog";
+import { isWalkEditExpired } from "../../../../server/domain/walk";
+import { useWalkEditClock } from "../use-walk-edit-clock";
 
 const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
 type Props = {
-  telegramMenuHint?: TelegramMenuHint;
   dockSection: DockSection;
   location: Location;
   period: Period;
@@ -45,10 +46,8 @@ type Props = {
   onRetryPlaces: () => void;
   profileHeadingRef: RefObject<HTMLHeadingElement | null>;
   onOpenLocationEditor: () => void;
-  onOpenTelegramSubscription: () => Promise<string>;
-  highlightTelegram: boolean;
-  onOpenMyWalks: () => void;
-  onOpenMyPets: () => void;
+  onOpenMyPlaces: () => void;
+  onShareSite: () => void;
   onOpenProfile: () => void;
   onBack: () => void;
   detailOpen: boolean;
@@ -59,14 +58,13 @@ type Props = {
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenTelegramSubscription, highlightTelegram, onOpenMyWalks, onOpenMyPets, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk, telegramMenuHint }: Props) {
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+  const now = useWalkEditClock(visibleWalks.map((walk) => ({ walkDate: walk.walkDate, walkTime: walk.time })));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
   const [contactCopied, setContactCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
   const [actionsWalk, setActionsWalk] = useState<Walk | null>(null);
-  const [telegramOpening, setTelegramOpening] = useState(false);
-  const [telegramError, setTelegramError] = useState("");
   const active = dockSection === "profile" ? "profile" : dockSection === "walk" ? "walk" : "nearby";
   const today = useMemo(() => new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).formatToParts(new Date()), []);
   const day = today.find((part) => part.type === "day")?.value ?? "";
@@ -81,14 +79,14 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
     return (
       <div className="screen form-screen announce-screen">
         <DogmeetHeader onBack={onBack} />
-        <WalkAnnouncementForm guidedWalkFlow={guidedWalkFlow} savedPets={savedPets} sharedPlaces={sharedPlaces} locationName={location.complex} onAddPet={onAddPet} placesLoaded={placesLoaded} placesError={placesError} onRetryPlaces={onRetryPlaces} walkForm={walkForm} walkSaving={walkSaving} editing={editingWalk} onSubmit={onWalkSubmit} />
+        <WalkAnnouncementForm onOpenMyPlaces={onOpenMyPlaces} guidedWalkFlow={guidedWalkFlow} savedPets={savedPets} sharedPlaces={sharedPlaces} locationName={location.complex} onAddPet={onAddPet} placesLoaded={placesLoaded} placesError={placesError} onRetryPlaces={onRetryPlaces} walkForm={walkForm} walkSaving={walkSaving} editing={editingWalk} onSubmit={onWalkSubmit} />
       </div>
     );
   }
 
   if (active === "profile") {
     return (
-      <div className={`screen profile-screen${highlightTelegram ? " telegram-spotlight" : ""}`}>
+      <div className="screen profile-screen">
         <DogmeetHeader onBack={onBack} />
         <h1 id="menu-title" ref={profileHeadingRef} tabIndex={-1}>Мой район<br />и настройки</h1>
         <div className="profile-banner">
@@ -97,10 +95,8 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
-        <button className="menu-row telegram-subscribe" type="button" disabled={telegramOpening} onClick={async () => { setTelegramOpening(true); setTelegramError(""); try { window.location.assign(await onOpenTelegramSubscription()); } catch (error) { setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram."); setTelegramOpening(false); } }}><ExternalLink aria-hidden="true" /><span><strong>{telegramOpening ? "Открываем Telegram…" : "Получать уведомления в Telegram"}</strong><small>Новые прогулки в ЖК «{location.complex}»</small></span><ChevronRight aria-hidden="true" /></button>
-        {telegramError && <p className="field-error" role="alert">{telegramError}</p>}
-        <button className="menu-row" type="button" onClick={onOpenMyWalks}><CalendarDays aria-hidden="true" /><span><strong>Мои планы</strong><small>Разовые и ежедневные прогулки</small></span><ChevronRight aria-hidden="true" /></button>
-        <button className="menu-row" type="button" onClick={onOpenMyPets}><PawPrint aria-hidden="true" /><span><strong>Мои питомцы</strong><small>Свои и общие</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onShareSite}><Share2 aria-hidden="true" /><span><strong>Поделиться сайтом</strong><small>QR-код для ваших друзей</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onOpenMyPlaces}><MapPin aria-hidden="true" /><span><strong>Мои места</strong><small>Места для прогулок, добавленные вами</small></span><ChevronRight aria-hidden="true" /></button>
         <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
       </div>
@@ -129,7 +125,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
 
   return (
     <div className="screen walks-screen">
-      <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} telegramMenuHint={telegramMenuHint} />
+      <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} />
       <div className="day-heading"><h1>Кто сегодня<br /><em>на прогулку?</em></h1><span className="date-stamp"><strong>{day}</strong>{month}<br />{weekday}</span></div>
       <div data-dock-panel>
       {!hasTodayWalks && <div className="day-divider" aria-hidden="true" />}
@@ -143,7 +139,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
       {!walksLoaded ? <DogmeetState state="loading" /> : walksError ? <DogmeetState state="error" message={walksError} onAction={onRetryWalks} /> : visibleWalks.length === 0 ? <DogmeetState state="empty" action="Сообщить о прогулке" onAction={onStartWalk} /> : (
         <div className="timeline">{visibleWalks.map((walk) => {
           const owned = ownedWalksById.get(walk.id);
-          return <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.time}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary" role="button" tabIndex={0} onClick={() => { onSelectWalk(walk); onOpenDetail(); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectWalk(walk); onOpenDetail(); } }}><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><strong>{walk.pet}</strong><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}{owned && <button className="text-link" type="button" onClick={(event) => { event.stopPropagation(); telegramMenuHint?.dismiss(); setActionsWalk(walk); }}>Управлять<ChevronRight aria-hidden="true" /></button>}</div></div>;
+          return <div className="walk-row" key={walk.id}><div className="time-column"><strong>{walk.time}</strong><span>{walk.scheduleType === "always" ? "Каждый день" : walk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span><i aria-hidden="true" /></div><div className="walk-summary" role="button" tabIndex={0} onClick={() => { onSelectWalk(walk); onOpenDetail(); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectWalk(walk); onOpenDetail(); } }}><Image className="pet-face" src={walk.image} alt={`Собака ${walk.pet}`} width={48} height={48} unoptimized={walk.image.startsWith("/api/")} /><span className="walk-person"><span className="walk-name-row"><strong>{walk.pet}</strong>{isWalkEditExpired({ walkDate: walk.walkDate, walkTime: walk.time }, now) && <span className="walk-expired-label">Устарело</span>}</span><small>{walk.owner} · {walk.breed}</small></span><span className="walk-place"><MapPin aria-hidden="true" />{walk.point}</span>{walk.comment && <span className="walk-comment"><MessageCircle aria-hidden="true" />{walk.comment}</span>}{owned && <button className="text-link" type="button" onClick={(event) => { event.stopPropagation(); setActionsWalk(walk); }}>Управлять<ChevronRight aria-hidden="true" /></button>}</div></div>;
         })}</div>
       )}
       </div>

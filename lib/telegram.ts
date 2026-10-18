@@ -1,3 +1,4 @@
+import { requestTelegramApi } from "../server/telegram-api.mjs";
 import { recordTelegramMessage } from "../scripts/cleanup-expired-walks.mjs";
 
 type LocationRequestNotification = {
@@ -80,21 +81,14 @@ export function telegramLocationRequestMessage(location: LocationRequestNotifica
   ].join("\n");
 }
 
-export async function telegramBotRequest(method: string, body: Record<string, unknown>, fetcher: typeof fetch = fetch) {
+export async function telegramBotRequest(method: string, body: Record<string, unknown> | FormData, fetcher: typeof fetch = fetch, returnResult = false) {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) return false;
 
   try {
-    const response = await fetcher(`https://api.telegram.org/bot${token}/${method}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(5_000)
-    });
-    const payload = await response.json() as { ok?: boolean; description?: string; result?: true | { message_id: number; date: number; chat: { id: number } } };
-    if (!response.ok || !payload.ok) throw new Error(payload.description || `Telegram API returned ${response.status}`);
-    if (method === "deleteMessage" && payload.result !== true) throw new Error("Telegram не подтвердил удаление.");
-    if (method === "sendMessage") {
+    const result = await requestTelegramApi(token, method, body, fetcher);
+    const payload = { result };
+    if (!returnResult && (method === "sendMessage" || method === "sendPhoto")) {
       try {
         if (!payload.result || payload.result === true) throw new Error("Telegram не вернул отправленное сообщение.");
         const { withDb } = await import("../db");
@@ -105,7 +99,7 @@ export async function telegramBotRequest(method: string, body: Record<string, un
         console.error("[telegram] Сообщение отправлено, но не сохранено для очистки.", error);
       }
     }
-    if (method === "deleteMessage" && payload.result === true) {
+    if (!returnResult && method === "deleteMessage" && payload.result === true && !(body instanceof FormData)) {
       try {
         const { withDb } = await import("../db");
         await withDb((db) => db.$client.query(
@@ -116,8 +110,9 @@ export async function telegramBotRequest(method: string, body: Record<string, un
         console.error("[telegram] Сообщение удалено, но запись очистки не обновлена.", error);
       }
     }
-    return true;
+    return returnResult ? payload.result ?? false : true;
   } catch (error) {
+    if (returnResult) throw error;
     console.error(`[telegram] Не удалось вызвать ${method}.`, error);
     return false;
   }

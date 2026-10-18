@@ -1,7 +1,6 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { type Database, withDb } from "../../db";
 import { petCollaborators, pets, places, walks } from "../../db/schema";
-import { capitalizePlaceName } from "../domain/walk";
 
 type WalkTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
@@ -83,7 +82,8 @@ export async function findOrCreateSharedPlace(
   tx: WalkTransaction,
   location: { city: string; district: string; residentialComplex: string },
   name: string,
-  normalizedName: string
+  normalizedName: string,
+  clientId: string
 ) {
   const insertedPlaces = await tx
     .insert(places)
@@ -91,14 +91,15 @@ export async function findOrCreateSharedPlace(
       id: crypto.randomUUID(),
       ...location,
       name,
-      normalizedName
+      normalizedName,
+      createdBy: clientId
     })
     .onConflictDoNothing({
       target: [places.city, places.district, places.residentialComplex, places.normalizedName]
     })
     .returning({ id: places.id, name: places.name });
 
-  let [sharedPlace] = insertedPlaces.length > 0 ? insertedPlaces : await tx
+  const [sharedPlace] = insertedPlaces.length > 0 ? insertedPlaces : await tx
     .select({ id: places.id, name: places.name })
     .from(places)
     .where(and(
@@ -109,15 +110,6 @@ export async function findOrCreateSharedPlace(
     ))
     .limit(1);
   if (!sharedPlace) throw new Error("Не удалось сохранить место прогулки.");
-
-  const capitalizedName = capitalizePlaceName(sharedPlace.name);
-  if (sharedPlace.name !== capitalizedName) {
-    [sharedPlace] = await tx
-      .update(places)
-      .set({ name: capitalizedName })
-      .where(eq(places.id, sharedPlace.id))
-      .returning({ id: places.id, name: places.name });
-  }
 
   return sharedPlace;
 }

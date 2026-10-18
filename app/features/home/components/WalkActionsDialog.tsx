@@ -2,6 +2,8 @@
 
 import { DogmeetDialog, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import type { ApiWalk, Walk } from "../../../../lib/walks";
+import { isWalkEditExpired } from "../../../../server/domain/walk";
+import { useWalkEditClock } from "../use-walk-edit-clock";
 
 type Props = {
   walk: ApiWalk | Walk;
@@ -20,10 +22,12 @@ function scheduleLabel(walk: ApiWalk | Walk) {
 }
 
 export function WalkActionsDialog({ walk, owned, onClose, onEdit, onDelete }: Props) {
+  const now = useWalkEditClock([owned]);
+  const expired = isWalkEditExpired(owned, now);
   return (
     <DogmeetDialog className="sheet--walk-actions" title="Управление прогулкой" onDismiss={onClose} footer={<button className="button quiet" type="button" onClick={(event) => requestDialogClose(event.currentTarget, onClose)}>Закрыть</button>}>
       <div className="receipt"><strong>{walkTime(walk)} · {scheduleLabel(walk)}</strong><span>{walk.point}</span><small>{walk.pet}</small></div>
-      <button className="menu-row" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onEdit(owned))}><Pencil aria-hidden="true" /><span><strong>Изменить прогулку</strong></span></button>
+      <button className="menu-row" type="button" aria-disabled={expired} onClick={(event) => requestDialogClose(event.currentTarget, () => onEdit(owned))}><Pencil aria-hidden="true" /><span><strong>Изменить прогулку</strong></span></button>
       <button className="menu-row danger-text" type="button" onClick={(event) => requestDialogClose(event.currentTarget, () => onDelete(owned))}><Trash2 aria-hidden="true" /><span><strong>Удалить прогулку</strong></span></button>
     </DogmeetDialog>
   );

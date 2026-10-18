@@ -66,12 +66,14 @@ export function useHomeResources(
     }
   }, [city, complex, district]);
 
-  const retryPlaces = useCallback(async () => {
-    if (!city || !district || !complex) return;
+  const retryPlaces = useCallback(async (location: Location = { city, district, complex }) => {
+    if (!location.city || !location.district || !location.complex) return;
     setPlacesLoaded(false);
     setPlacesError("");
     try {
-      setSharedPlaces(await listPlaces({ city, district, complex }));
+      const places = await listPlaces(location);
+      setSharedPlaces(places);
+      return places;
     } catch (error) {
       setPlacesError(errorMessage(error, "Не удалось загрузить места."));
     } finally {

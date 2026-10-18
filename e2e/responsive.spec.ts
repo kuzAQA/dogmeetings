@@ -1,5 +1,53 @@
 import { expect, test } from "@playwright/test";
-import { openNearby } from "./fixtures";
+import { openNearby, pet } from "./fixtures";
+
+test("missing walk pet scrolls to the top and shows an error icon", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: page.viewportSize()!.width, height: 600 });
+  await openNearby(page, { pets: [pet, { ...pet, id: "00000000-0000-4000-8000-000000000002", name: "Боня" }] });
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+
+  const submit = page.getByRole("button", { name: "Сообщить о прогулке", exact: true });
+  await submit.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await submit.click();
+
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  const error = page.locator(".field-error").filter({ hasText: "Выберите питомца" });
+  await expect(error).toBeVisible();
+  await expect(error.locator("svg")).toBeVisible();
+  await expect(error.locator("svg")).toHaveCSS("color", await error.evaluate((element) => getComputedStyle(element).color));
+
+  await page.getByRole("button", { name: "Питомец", exact: true }).click();
+  await page.getByRole("button", { name: /Луна.*Корги/ }).click();
+  await expect(error).toHaveCount(0);
+});
+
+for (const filledField of ["neither", "place", "time"]) {
+  test(`missing walk details scroll to When with ${filledField} filled`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: page.viewportSize()!.width, height: 480 });
+    await openNearby(page);
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+    if (filledField === "place") {
+      await page.getByRole("button", { name: /^Место встречи/ }).click();
+      await page.getByLabel("Или своё место встречи").fill("У входа в сквер");
+      await page.getByRole("button", { name: "Выбрать место", exact: true }).click();
+    }
+    if (filledField === "time") {
+      await page.getByRole("button", { name: "Завтра", exact: true }).click();
+      await page.getByRole("button", { name: /^Время/ }).click();
+      await page.getByRole("button", { name: "Готово", exact: true }).click();
+    }
+    await page.getByRole("button", { name: "Сообщить о прогулке", exact: true }).click();
+    const error = page.getByRole("alert").filter({ hasText: "Укажите место и время прогулки" });
+    await expect(error).toBeVisible();
+    await expect(error.locator("svg")).toBeVisible();
+    await expect(page.getByText("Когда", { exact: true })).toBeInViewport();
+  });
+}
 
 test("mobile sheets use the full available width", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -34,7 +82,7 @@ test("reference widths 360, 375 and 430 keep forms and sheets accessible", async
   for (const width of [360, 375, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
     await expect(page.getByLabel("Комментарий", { exact: false })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
@@ -59,7 +107,7 @@ test("back arrow slides in while the logo shifts after add and profile actions",
 
   for (const action of ["Создать прогулку", "Мой район и настройки"]) {
     if (action === "Создать прогулку") {
-      await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+      await page.getByRole("button", { name: "Планы", exact: true }).click();
       await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {}))));
     }
     await page.addStyleTag({ content: ":root { --motion-screen: 2s; --motion-shared: 2s; }" });
@@ -95,8 +143,8 @@ test.describe("Android header entry", () => {
 
     for (const action of ["Создать прогулку", "Мой район и настройки"]) {
       if (action === "Создать прогулку") {
-        await page.getByRole("button", { name: "Мои планы", exact: true }).click();
-        await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "Планы", exact: true }).click();
+        await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
       } else {
         await page.goto("/");
         await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
@@ -121,13 +169,13 @@ test.describe("Android header exit", () => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 390, height: 844 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
     await page.addStyleTag({ content: ":root { --motion-screen: 2s; --motion-shared: 2s; }" });
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
     await expect(page.getByRole("button", { name: "Назад" })).toBeVisible();
     await page.getByRole("button", { name: "Назад" }).click();
-    await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
 
     const animations = await page.evaluate(() => ({
       back: document.querySelector<HTMLElement>(".motion-header-back-exit")?.getAnimations().map((animation) => animation.effect?.getTiming().duration),
@@ -148,7 +196,7 @@ test("place sheet keeps its footer visible, supports top-edge drag, and releases
     json: { places: Array.from({ length: 18 }, (_, index) => ({ id: `place-${index}`, name: index ? `Место встречи ${index + 1}` : `За чёрным домом у стройки${"ыва".repeat(20)}` })) }
   }));
   await page.reload();
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await page.getByRole("button", { name: /^Место встречи/ }).click();
 
@@ -209,7 +257,7 @@ test("place sheet keeps its footer visible, supports top-edge drag, and releases
 test("place sheet does not autofocus search or add keyboard padding to its list", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await page.getByRole("button", { name: /^Место встречи/ }).click();
 
@@ -249,7 +297,7 @@ test.describe("Android place picker", () => {
   test("keeps results visible and stable while moving focus to a custom place", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 700 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
     await page.getByRole("button", { name: /^Место встречи/ }).click();
 
@@ -305,7 +353,7 @@ test.describe("Android place picker", () => {
   test("keeps place inputs focused while their values change", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 700 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
     await page.getByRole("button", { name: /^Место встречи/ }).click();
 
@@ -329,11 +377,49 @@ test.describe("Android place picker", () => {
 test.describe("Android walk form", () => {
   test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
 
+  test("resizes the page for the keyboard without adding blank scroll space", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 390, height: 700 });
+    await openNearby(page);
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute("content", /interactive-widget=resizes-content/);
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
+    await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
+
+    const comment = page.getByLabel("Комментарий", { exact: false });
+    const submit = page.getByRole("button", { name: "Сообщить о прогулке", exact: true });
+    const form = page.locator(".announce-form");
+    const originalPadding = await form.evaluate((element) => element.style.paddingBottom);
+    await comment.evaluate((input) => (input as HTMLTextAreaElement).focus({ preventScroll: true }));
+    await page.setViewportSize({ width: 390, height: 400 });
+    await page.evaluate(() => window.visualViewport!.dispatchEvent(new Event("resize")));
+    await expect(comment).toBeFocused();
+    await expect.poll(() => submit.evaluate((button) => {
+      const bounds = button.getBoundingClientRect();
+      const viewport = window.visualViewport!;
+      return bounds.top >= viewport.offsetTop && bounds.bottom <= viewport.offsetTop + viewport.height - 11;
+    })).toBe(true);
+    expect(await form.evaluate((element) => element.style.paddingBottom)).toBe(originalPadding);
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" }));
+    const bottomGap = await submit.evaluate((button) => innerHeight - button.getBoundingClientRect().bottom);
+    expect(bottomGap).toBeGreaterThanOrEqual(12);
+    expect(bottomGap).toBeLessThanOrEqual(40);
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new PointerEvent("pointerdown"));
+      window.scrollTo({ top: 0, behavior: "auto" });
+      window.visualViewport!.dispatchEvent(new Event("resize"));
+    });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await comment.evaluate((input) => input.blur());
+    expect(await form.evaluate((element) => element.style.paddingBottom)).toBe(originalPadding);
+  });
+
   test("keeps the walk action visible after comment focus and keyboard resize", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 390, height: 700 });
     await openNearby(page);
-    await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+    await page.getByRole("button", { name: "Планы", exact: true }).click();
     await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
 
     const comment = page.getByLabel("Комментарий", { exact: false });
@@ -405,7 +491,7 @@ test.describe("Android location request", () => {
 
 test("backdrop close does not refocus the place picker input", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await page.getByRole("button", { name: /^Место встречи/ }).click();
 

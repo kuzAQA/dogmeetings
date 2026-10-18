@@ -1,5 +1,8 @@
+import { requestTelegramApi } from "../server/telegram-api.mjs";
 import pg from "pg";
 import { pathToFileURL } from "node:url";
+import { replaceTelegramWalkNotification } from "../server/telegram-walk-photo.mjs";
+import { cleanupDeletedWalkMessages, deferTelegramMessageDeletion } from "../server/telegram-walk-deletion.mjs";
 
 const { Client } = pg;
 
@@ -37,7 +40,7 @@ export async function cleanupTelegramMessages(client, request, now = new Date())
   await client.query("DELETE FROM telegram_walk_notifications WHERE created_at < $1", [boundary]);
   const { rows } = await client.query(`
     SELECT chat_id, message_id, sent_at FROM telegram_bot_messages
-    WHERE sent_at < $1 ORDER BY sent_at
+    WHERE sent_at < $1 AND (delete_next_attempt_at IS NULL OR delete_next_attempt_at <= CURRENT_TIMESTAMP) ORDER BY sent_at
   `, [boundary]);
   for (const message of rows) {
     try {
@@ -51,6 +54,7 @@ export async function cleanupTelegramMessages(client, request, now = new Date())
     } catch (error) {
       if (now.getTime() - new Date(message.sent_at).getTime() < 48 * 60 * 60 * 1000) retryNeeded = true;
       // Keep only IDs/dates for failed deletions; never report these as deleted.
+      await deferTelegramMessageDeletion(client, message, error);
       console.error(`[telegram-cleanup] Не удалено сообщение ${message.chat_id}/${message.message_id}.`, error);
     }
   }
@@ -68,6 +72,11 @@ const runOnce = process.argv.includes("--run-once");
 
 let timer;
 let notificationTimer;
+let notificationRetryRunning = false;
+let notificationRetryRequested = false;
+let notificationRetryAt = Infinity;
+let notificationListener;
+let notificationListenerTimer;
 let callbackTimer;
 let messageCleanupTimer;
 let telegramUpdateOffset = 0;
@@ -165,19 +174,15 @@ function telegramUpdateHandlerUrl() {
 }
 
 async function telegramBotRequest(token, method, body, timeoutMs = 5_000, client, trackingInTransaction = false) {
-  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs)
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.ok) {
-    const error = new Error(payload.description || `Telegram API returned ${response.status}`);
-    error.telegramStatus = response.status;
+  let result;
+  try {
+    result = await requestTelegramApi(token, method, body, fetch, timeoutMs);
+  } catch (error) {
+    if (error.retryAfter) notificationRetryAt = Math.min(notificationRetryAt, Date.now() + error.retryAfter * 1000);
     throw error;
   }
-  if (method === "sendMessage" && client) {
+  const payload = { result };
+  if ((method === "sendMessage" || method === "sendPhoto") && client) {
     try {
       if (trackingInTransaction) await client.query("SAVEPOINT telegram_message_tracking");
       await recordTelegramMessage(client, payload.result);
@@ -290,12 +295,15 @@ async function retryWalkTelegramNotifications() {
   await client.connect();
 
   try {
+    await cleanupDeletedWalkMessages(client, (method, body) => telegramBotRequest(configuration.token, method, body));
     while (true) {
       await client.query("BEGIN");
       try {
         const { rows } = await client.query(`
           SELECT
             notification.id AS notification_id,
+            notification.message_text,
+            walk.id AS walk_id,
             subscription.id AS subscription_id,
             subscription.telegram_chat_id,
             walk.residential_complex,
@@ -304,7 +312,8 @@ async function retryWalkTelegramNotifications() {
             walk.walk_time,
             walk.schedule_type,
             pet.name AS pet_name,
-            pet.owner_name
+            pet.owner_name,
+            pet.photo AS pet_photo
           FROM telegram_walk_notifications AS notification
           INNER JOIN telegram_complex_subscriptions AS subscription ON subscription.id = notification.subscription_id
           INNER JOIN walks AS walk ON walk.id = notification.walk_id
@@ -325,12 +334,23 @@ async function retryWalkTelegramNotifications() {
           return;
         }
 
+        // Claim durably, then release walk/queue locks before contacting Telegram.
+        await client.query(`
+          UPDATE telegram_walk_notifications
+          SET next_attempt_at = CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+          WHERE id = $1
+        `, [notification.notification_id]);
+        await client.query("COMMIT");
+        await client.query("BEGIN");
+
+        let rateLimited = false;
         try {
-          await telegramBotRequest(configuration.token, "sendMessage", {
+          await replaceTelegramWalkNotification(client, notification.walk_id, {
             chat_id: notification.telegram_chat_id,
-            text: walkNotificationMessage(notification),
+            text: notification.message_text ?? walkNotificationMessage(notification),
             parse_mode: "HTML"
-          }, 5_000, client, true);
+          }, async () => notification.pet_photo,
+          (method, body) => telegramBotRequest(configuration.token, method, body, 5_000, client, true));
           await client.query(`
             UPDATE telegram_walk_notifications
             SET sent_at = CURRENT_TIMESTAMP, last_error = NULL
@@ -351,17 +371,19 @@ async function retryWalkTelegramNotifications() {
             `, [notification.notification_id, notificationError(error)]);
             console.info(`[walk-telegram-notifications] Подписка ${notification.subscription_id} отключена: бот заблокирован.`);
           } else {
+            rateLimited = Boolean(error.retryAfter);
             await client.query(`
               UPDATE telegram_walk_notifications
               SET attempt_count = attempt_count + 1,
-                  next_attempt_at = CURRENT_TIMESTAMP + INTERVAL '1 minute',
+                  next_attempt_at = CURRENT_TIMESTAMP + ($3 * INTERVAL '1 second'),
                   last_error = $2
               WHERE id = $1
-            `, [notification.notification_id, notificationError(error)]);
+            `, [notification.notification_id, notificationError(error), error.retryAfter || 60]);
             console.error(`[walk-telegram-notifications] Не удалось отправить уведомление ${notification.notification_id}.`, error);
           }
         }
         await client.query("COMMIT");
+        if (rateLimited) return;
       } catch (error) {
         await client.query("ROLLBACK").catch(() => undefined);
         throw error;
@@ -424,6 +446,14 @@ async function runAndSchedule() {
 }
 
 async function runNotificationRetry() {
+  if (notificationRetryRunning) {
+    notificationRetryRequested = true;
+    return;
+  }
+  notificationRetryRunning = true;
+  notificationRetryRequested = false;
+  if (notificationRetryAt <= Date.now()) notificationRetryAt = Infinity;
+  if (notificationTimer) clearTimeout(notificationTimer);
   try {
     await retryLocationRequestNotifications();
   } catch (error) {
@@ -434,7 +464,33 @@ async function runNotificationRetry() {
   } catch (error) {
     console.error("[walk-telegram-notifications] Не удалось обработать повторные отправки.", error);
   } finally {
-    notificationTimer = setTimeout(runNotificationRetry, NOTIFICATION_RETRY_DELAY_MS);
+    notificationRetryRunning = false;
+    notificationTimer = setTimeout(runNotificationRetry, notificationRetryRequested ? 0 : Math.min(NOTIFICATION_RETRY_DELAY_MS, Math.max(0, notificationRetryAt - Date.now())));
+  }
+}
+
+async function startTelegramQueueListener() {
+  const client = new Client({ connectionString: connectionString(), connectionTimeoutMillis: 5000 });
+  notificationListener = client;
+  const reconnect = (error) => {
+    if (notificationListener !== client) return;
+    notificationListener = null;
+    void client.end().catch(() => undefined);
+    console.error("[walk-telegram-queue] Слушатель отключён; переподключение через 5 секунд.", error);
+    notificationListenerTimer = setTimeout(startTelegramQueueListener, 5000);
+  };
+  try {
+    client.on("error", reconnect);
+    client.on("end", () => reconnect(new Error("Соединение закрыто.")));
+    client.on("notification", (event) => {
+      if (event.channel === "dogmeet_walk_telegram") void runNotificationRetry();
+    });
+    await client.connect();
+    await client.query("LISTEN dogmeet_walk_telegram");
+    console.info("[walk-telegram-queue] Слушатель подключён: очередь обрабатывается по событию.");
+    void runNotificationRetry();
+  } catch (error) {
+    reconnect(error);
   }
 }
 
@@ -471,6 +527,10 @@ async function runMessageCleanup() {
 function shutdown(signal) {
   if (timer) clearTimeout(timer);
   if (notificationTimer) clearTimeout(notificationTimer);
+  if (notificationListenerTimer) clearTimeout(notificationListenerTimer);
+  const listener = notificationListener;
+  notificationListener = null;
+  if (listener) void listener.end().catch(() => undefined);
   if (callbackTimer) clearTimeout(callbackTimer);
   if (messageCleanupTimer) clearTimeout(messageCleanupTimer);
   console.info(`[walk-cleanup] Получен ${signal}, планировщик остановлен.`);
@@ -495,6 +555,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
   if (!runOnce) {
     void runMessageCleanup();
+    void startTelegramQueueListener();
     void runNotificationRetry();
     void runTelegramCallbackPolling();
   }

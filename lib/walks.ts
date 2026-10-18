@@ -8,6 +8,7 @@ export type Walk = {
   breed: string;
   owner: string;
   time: string;
+  walkDate: string;
   point: string;
   comment: string;
   period: Exclude<Period, "Все">;
@@ -54,6 +55,7 @@ export function apiWalkToCard(walk: ApiWalk): Walk {
     comment: walk.comment?.trim() ?? "",
     period,
     scheduleType: walk.scheduleType,
+    walkDate: walk.walkDate,
     image: walk.image,
     time: `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`
   };

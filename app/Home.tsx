@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { DogmeetState } from "./components/ui/DogmeetState";
+import { requestJson } from "./features/api/client";
 import { ChangeEvent, FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createLocationRequest,
@@ -47,20 +48,29 @@ import { useWalkForm } from "./features/home/use-walk-form";
 import { useNearbyPeriod } from "./features/home/use-nearby-period";
 import { WalkAnnouncementForm } from "./features/home/components/WalkAnnouncementForm";
 import { PetCollection, WalkCollection } from "./features/home/components/Collections";
+import { SiteShareDialog } from "./features/home/components/SiteShareDialog";
 import { HomeDialogs } from "./features/home/components/HomeDialogs";
+import { MyPlaces } from "./features/home/components/MyPlaces";
 import { LocationEditor, LocationRequestForm } from "./features/home/components/LocationFlow";
 import { PetForm } from "./features/home/components/PetForm";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
 import { apiWalkToCard, isWalkScheduledForToday, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
-import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose, useTelegramMenuHint } from "./components/ui/DogmeetFrame";
+import { DogmeetBrand, DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose, WalkEditWarning } from "./components/ui/DogmeetFrame";
 import { animateHeaderExit } from "./components/ui/motion.mjs";
+import { isWalkEditExpired, WALK_EDIT_EXPIRED_MESSAGE } from "../server/domain/walk";
 
 type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
 type FormScreen = "pet" | "announce";
 
 export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }) {
+  const [walkEditWarning, setWalkEditWarning] = useState(0);
+  useEffect(() => {
+    if (!walkEditWarning) return;
+    const timer = setTimeout(() => setWalkEditWarning(0), 5000);
+    return () => clearTimeout(timer);
+  }, [walkEditWarning]);
   const welcomeContinued = useRef(false);
   const [selectedWalk, setSelectedWalk] = useState<Walk | null>(null);
   const [result, setResultState] = useState<{ title: string; message: string; action?: string; sheet?: string; receipt?: { title: string; place: string; pet: string }; onContinue: () => void } | null>(null);
@@ -75,7 +85,8 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [locationsError, setLocationsError] = useState("");
   const [hasLocation, setHasLocation] = useState(false);
-  const [highlightTelegram, setHighlightTelegram] = useState(false);
+  const [telegramOpening, setTelegramOpening] = useState(false);
+  const [telegramError, setTelegramError] = useState("");
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSubmitError, setLocationSubmitError] = useState("");
   const [locationRequestDraft, setLocationRequestDraft] = useState<Location>(defaultLocation);
@@ -151,8 +162,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     const initialScreen: Screen = sharedPetNavigation.sharedPetId || sharedPetNavigation.sharedPetAlreadyAddedId
       ? "my-pets"
       : data.hasLocation && data.location ? "walks" : "welcome";
-    const showTelegramMenu = fromTelegram && initialScreen === "walks";
-    const initialNavigation = createNavigationState(initialScreen, { menuOpen: showTelegramMenu });
+    const initialNavigation = createNavigationState(initialScreen);
 
     setHighlightedPetId("");
     setPendingSharedPetHighlightId(sharedPetNavigation.sharedPetId);
@@ -160,7 +170,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     setLocation(restoredLocation);
     setLocationDraft((current) => data.hasLocation && data.location ? restoredLocation : current);
     setHasLocation(Boolean(data.hasLocation && data.location));
-    setHighlightTelegram(showTelegramMenu);
 
     if (sharedPetNavigation.sharedPetId || sharedPetNavigation.sharedPetAlreadyAddedId) {
       initializeNavigation(initialNavigation, createNavigationState(data.hasLocation && data.location ? "walks" : "welcome"));
@@ -194,12 +203,28 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     retryPlaces,
     retryMyWalks
   } = useHomeResources(sessionReady, location, hasLocation || screen === "location" || screen === "my-pets", hasLocation);
-  const telegramMenuHint = useTelegramMenuHint(screen === "walks" && dockSection === "nearby" && walksLoaded);
   const walkForm = useWalkForm(savedPets, sharedPlaces, placesLoaded);
+  useEffect(() => {
+    if (!sessionReady || !(screen === "announce" || (screen === "walks" && (menuOpen || dockWalkOpen)))) return;
+    void requestJson("/api/places?scope=mine").catch(() => undefined);
+  }, [sessionReady, screen, menuOpen, dockWalkOpen]);
+  const wasInMyPlaces = useRef(false);
+  useEffect(() => {
+    if (screen === "my-places") {
+      wasInMyPlaces.current = true;
+    } else if (wasInMyPlaces.current) {
+      wasInMyPlaces.current = false;
+      void retryPlaces(walkBeingEdited ? { city: walkBeingEdited.city, district: walkBeingEdited.district, complex: walkBeingEdited.complex } : undefined)
+        .then(places => { if (places) walkForm.refreshSelectedPlace(places); });
+      void retryWalks();
+      void retryMyWalks();
+    }
+  }, [screen, retryPlaces, retryWalks, retryMyWalks, walkForm, walkBeingEdited]);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const informationButtonRef = useRef<HTMLButtonElement>(null);
   const locationRequestButtonRef = useRef<HTMLButtonElement>(null);
   const shareDoneButtonRef = useRef<HTMLButtonElement>(null);
+  const [siteShareOpen, setSiteShareOpen] = useState(false);
   const profileHeadingRef = useRef<HTMLHeadingElement>(null);
   const pendingWalkRefreshRef = useRef<{ deletedId: string; request: Promise<ApiWalk[]> } | null>(null);
   const closingDeletedWalkResultRef = useRef(false);
@@ -259,14 +284,14 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     if (!walkPendingDelete && !petPendingDelete && !(screen === "walks" && menuOpen)) return;
     if (walkPendingDelete || petPendingDelete) deleteCancelRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || walkPendingDelete || petPendingDelete) return;
+      if (event.key !== "Escape" || walkPendingDelete || petPendingDelete || siteShareOpen) return;
       if (screen === "walks" && menuOpen) {
         replaceNavigation("walks", { menuOpen: false, dockWalkOpen: false, dockReturnSection: "nearby" });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen, petPendingDelete, replaceNavigation, screen, walkPendingDelete]);
+  }, [menuOpen, petPendingDelete, replaceNavigation, screen, siteShareOpen, walkPendingDelete]);
 
   useEffect(() => {
     if (screen === "walks" && menuOpen) profileHeadingRef.current?.focus();
@@ -499,8 +524,19 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     openFormScreen("pet");
   }
 
+  async function openTelegramSubscription() {
+    if (telegramOpening) return;
+    setTelegramOpening(true);
+    setTelegramError("");
+    try {
+      window.location.assign(await requestTelegramSubscriptionLink());
+    } catch (error) {
+      setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram.");
+      setTelegramOpening(false);
+    }
+  }
+
   function openPet(pet: Pet) {
-    telegramMenuHint.dismiss();
     setPhotoUrl(pet.photoUrl);
     setPetNameInput(pet.name);
     setOwnerNameInput(pet.ownerName);
@@ -581,6 +617,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   }
 
   function prepareNewWalkAnnouncement() {
+    void retryPlaces();
     setWalkBeingEdited(null);
     setGuidedWalkFlow(false);
     walkForm.prepareNewWalk();
@@ -591,7 +628,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       setShowPetRequiredPopup(true);
       return;
     }
-    telegramMenuHint.dismiss();
     prepareNewWalkAnnouncement();
     openFormScreen("announce");
   }
@@ -602,7 +638,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       return;
     }
     if (dockWalkOpen) return;
-    telegramMenuHint.dismiss();
     const returnSection: PrimaryDockSection = dockSection === "nearby" || dockSection === "profile" ? dockSection : dockReturnSection;
     prepareNewWalkAnnouncement();
     pushNavigation("walks", { dockWalkOpen: true, dockReturnSection: returnSection });
@@ -615,10 +650,15 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   }
 
   function editWalk(walk: ApiWalk, returnTarget: WalkEditReturnTarget = "my-walks") {
+    if (isWalkEditExpired(walk)) {
+      setWalkEditWarning((current) => current + 1);
+      return;
+    }
     setWalkBeingEdited(walk);
     setWalkEditReturnTarget(returnTarget);
     setGuidedWalkFlow(false);
     walkForm.prepareWalkEdit(walk);
+    void retryPlaces({ city: walk.city, district: walk.district, complex: walk.complex });
     openFormScreen("announce");
   }
 
@@ -758,6 +798,10 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     event.preventDefault();
     const form = event.currentTarget;
     const editedWalk = walkBeingEdited;
+    if (editedWalk && isWalkEditExpired(editedWalk)) {
+      setWalkEditWarning((current) => current + 1);
+      return;
+    }
     const formData = new FormData(form);
     const submission = walkForm.readSubmission(formData);
     if (!submission) return;
@@ -805,7 +849,11 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       replaceNavigation("my-walks");
       } });
     } catch (error) {
-      walkForm.setSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
+      if (error instanceof Error && error.message === WALK_EDIT_EXPIRED_MESSAGE) {
+        setWalkEditWarning((current) => current + 1);
+      } else {
+        walkForm.setSubmitError(error instanceof Error ? error.message : "Не удалось сохранить прогулку.");
+      }
       setWalkSaving(false);
     }
   }
@@ -924,8 +972,11 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
             onWalkClick={startWalkAnnouncement}
             onAddPet={addPet}
             onPetsClick={() => { if (dockSection !== "pets") openCollectionScreen("my-pets", "dock"); }}
+            telegramOpening={telegramOpening}
+            onTelegramClick={openTelegramSubscription}
           />
         )}
+        {telegramError && <p className="field-error" role="alert">{telegramError}</p>}
         {screen === "welcome" && welcomeScreen}
 
         {screen === "browser-guide" && (
@@ -982,13 +1033,12 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
 
         {(screen === "walks" || screen === "walk-detail" || screen === "contact") && (
           <WalksWorkspace
-            telegramMenuHint={telegramMenuHint}
             selectedWalk={selectedWalk}
             onSelectWalk={setSelectedWalk}
             dockSection={dockSection}
             detailOpen={screen === "walk-detail"}
             contactOpen={screen === "contact"}
-            onOpenDetail={() => { telegramMenuHint.dismiss(); pushNavigation("walk-detail"); }}
+            onOpenDetail={() => pushNavigation("walk-detail")}
             onOpenContact={() => pushNavigation("contact")}
             location={location}
             period={period}
@@ -1000,7 +1050,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
             ownedWalksById={ownedWalksById}
             openWalkActionsId={openWalkActionsId}
             onPeriodChange={selectPeriod}
-            onToggleWalkActions={(id) => { telegramMenuHint.dismiss(); setOpenWalkActionsId((currentId) => currentId === id ? null : id); }}
+            onToggleWalkActions={(id) => setOpenWalkActionsId((currentId) => currentId === id ? null : id)}
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
@@ -1010,18 +1060,16 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
             onAddPet={continueToRequiredPet}
             placesLoaded={placesLoaded}
             placesError={placesError}
-            onRetryPlaces={() => { void retryPlaces(); }}
+            onRetryPlaces={() => { void retryPlaces(walkBeingEdited ? { city: walkBeingEdited.city, district: walkBeingEdited.district, complex: walkBeingEdited.complex } : undefined); }}
             walkForm={walkForm}
             walkSaving={walkSaving}
             editingWalk={Boolean(walkBeingEdited)}
             onWalkSubmit={saveWalk}
             onStartWalk={startWalkAnnouncement}
             profileHeadingRef={profileHeadingRef}
+            onOpenMyPlaces={() => pushNavigation("my-places")}
             onOpenLocationEditor={openLocationEditor}
-            onOpenTelegramSubscription={requestTelegramSubscriptionLink}
-            highlightTelegram={highlightTelegram}
-            onOpenMyWalks={() => openCollectionScreen("my-walks", "profile")}
-            onOpenMyPets={() => openCollectionScreen("my-pets", "profile")}
+            onShareSite={() => setSiteShareOpen(true)}
             onOpenProfile={() => selectDockSection("profile")}
             onBack={screen === "walk-detail" || screen === "contact" ? returnThroughHistory : dockWalkOpen ? closeDockWalkAnnouncement : () => selectDockSection("nearby")}
           />
@@ -1030,7 +1078,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
 
         {screen === "my-walks" && (
           <WalkCollection
-            telegramMenuHint={telegramMenuHint}
             walks={myWalks}
             fromDock={plansSource !== "profile"}
             loaded={myWalksLoaded}
@@ -1039,7 +1086,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
             petsLoaded={petsLoaded}
             openWalkActionsId={openWalkActionsId}
             onStartWalk={startWalkAnnouncement}
-            onToggleWalkActions={(id) => { telegramMenuHint.dismiss(); setOpenWalkActionsId((currentId) => currentId === id ? null : id); }}
+            onToggleWalkActions={(id) => setOpenWalkActionsId((currentId) => currentId === id ? null : id)}
             onCloseWalkActions={() => setOpenWalkActionsId(null)}
             onEditWalk={(walk) => { setOpenWalkActionsId(null); editWalk(walk, "my-walks"); }}
             onDeleteWalk={(walk) => { setOpenWalkActionsId(null); setWalkDeleteError(""); setWalkPendingDelete(walk); }}
@@ -1052,7 +1099,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
 
         {screen === "my-pets" && (
           <PetCollection
-            telegramMenuHint={telegramMenuHint}
             pets={savedPets}
             fromDock={petsSource === "dock"}
             loaded={petsLoaded}
@@ -1102,9 +1148,12 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
           />
         )}
 
+        {screen === "my-places" && <MyPlaces onBack={returnThroughHistory} />}
+
         {screen === "announce" && (
           <div className="screen form-screen announce-screen">
             <WalkAnnouncementForm
+              onOpenMyPlaces={() => pushNavigation("my-places")}
               guidedWalkFlow={guidedWalkFlow}
               savedPets={savedPets}
               sharedPlaces={sharedPlaces}
@@ -1112,7 +1161,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
               onAddPet={continueToRequiredPet}
               placesLoaded={placesLoaded}
               placesError={placesError}
-              onRetryPlaces={() => { void retryPlaces(); }}
+              onRetryPlaces={() => { void retryPlaces(walkBeingEdited ? { city: walkBeingEdited.city, district: walkBeingEdited.district, complex: walkBeingEdited.complex } : undefined); }}
               walkForm={walkForm}
               walkSaving={walkSaving}
               editing={Boolean(walkBeingEdited)}
@@ -1123,6 +1172,9 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
         )}
 
         {result?.sheet && <DogmeetDialog className="sheet--result" aria-label={result.title} onDismiss={closeResultSheet} footer={<button className="button" type="button" onClick={(event) => requestDialogClose(event.currentTarget, closeResultSheet)}>{result.action ?? "Готово"}</button>}><DogmeetState state="success" title={result.title} message={result.message} /></DogmeetDialog>}
+        {walkEditWarning > 0 && <WalkEditWarning onDismiss={() => setWalkEditWarning(0)}>{WALK_EDIT_EXPIRED_MESSAGE}</WalkEditWarning>}
+        {siteShareOpen && <SiteShareDialog onDismiss={() => setSiteShareOpen(false)} />}
+
         <HomeDialogs
           showPetRequired={showPetRequiredPopup}
           onDismissPetRequired={() => setShowPetRequiredPopup(false)}

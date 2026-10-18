@@ -1,7 +1,8 @@
 function keepElementVisibleInViewport(element: HTMLElement, viewport: VisualViewport) {
   const bounds = element.getBoundingClientRect();
-  const bottom = viewport.height - 12;
-  const offset = bounds.bottom > bottom ? bounds.bottom - bottom : bounds.top < 0 ? bounds.top : 0;
+  const top = viewport.offsetTop;
+  const bottom = top + viewport.height - 12;
+  const offset = bounds.bottom > bottom ? bounds.bottom - bottom : bounds.top < top ? bounds.top - top : 0;
   if (!offset) return;
   window.scrollBy({ top: offset, behavior: "auto" });
 }

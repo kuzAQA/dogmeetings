@@ -79,6 +79,7 @@ services:
       HTTPS_PROXY: ${TELEGRAM_PROXY_URL}
       NODE_USE_ENV_PROXY: "1"
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
+      API_TRUST_PROXY: "1"
       TZ: Europe/Moscow
     depends_on:
       migrate:

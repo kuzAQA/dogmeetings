@@ -67,7 +67,7 @@ test("centers the nearby menu and keeps the add action stable between plans and 
   await expect(add).toHaveCSS("opacity", "0");
   await expect.poll(centered).toBeLessThan(1);
 
-  await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
   await expect(add).toHaveCSS("opacity", "1");
   await expect.poll(() => add.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41)).toBe(0);
   const plansX = await add.evaluate((element) => element.getBoundingClientRect().x);
@@ -103,7 +103,7 @@ test("matches the requested typography and transition fixes", async ({ page }) =
   await expect(page.locator(".contact-screen .page-header")).toHaveCSS("view-transition-name", "none");
 
   await openNearby(page, { pets: [], mine: [] });
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   const requiredPet = page.getByRole("dialog", { name: "Сначала питомец" });
   await expect(requiredPet.locator(".sheet-header")).toHaveCount(0);
@@ -178,8 +178,8 @@ test("keeps dock tab and screen changes inert", async ({ page }) => {
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(0);
 
-  await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(0);
   await expect(page.locator(".dock-add")).toBeEnabled();
   expect(await page.locator(".dock-add").evaluate((element) => element.getAnimations().length)).toBe(0);
@@ -187,7 +187,7 @@ test("keeps dock tab and screen changes inert", async ({ page }) => {
   await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(transitions);
-  await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as Window & { transitionStarts?: number }).transitionStarts)).toBe(transitions);
   await dock.getByRole("button", { name: "Рядом", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
@@ -195,8 +195,8 @@ test("keeps dock tab and screen changes inert", async ({ page }) => {
 
 test("returns to nearby without a page snapshot", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await page.evaluate(() => {
     const state = window as Window & { transitionStarts?: number };
     state.transitionStarts = 0;
@@ -251,9 +251,9 @@ test("keeps the filter visible when it finds no walks", async ({ page }) => {
 test("opens plans and pets from the new dock", async ({ page }) => {
   await openNearby(page);
   const dock = page.getByRole("navigation", { name: "Основная навигация" });
-  await dock.getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
-  await expect(dock.getByRole("button", { name: "Мои планы", exact: true })).toHaveAttribute("aria-current", "page");
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
+  await expect(dock.getByRole("button", { name: "Планы", exact: true })).toHaveAttribute("aria-current", "page");
   await dock.getByRole("button", { name: "Питомцы", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
   expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -271,7 +271,7 @@ test("opens the pet passport and preserves its actions", async ({ page }) => {
 
 test("opens the walk form with the time wheels and preserved fields", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Сообщить о прогулке", exact: true })).toBeVisible();
   await expect(page.getByLabel("Питомец")).toBeVisible();
@@ -283,18 +283,18 @@ test("opens the walk form with the time wheels and preserved fields", async ({ p
   await expect(page.getByLabel("Комментарий", { exact: false })).toHaveAttribute("maxlength", "50");
 });
 
-test("plans opened from the profile return there without the bottom dock", async ({ page }) => {
+test("profile menu omits plans and pets", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("navigation", { name: "Основная навигация" }).getByRole("button", { name: "Мои планы", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Назад", exact: true })).toHaveCount(0);
+  const dock = page.getByRole("navigation", { name: "Основная навигация" });
+  await dock.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Мой район и настройки", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Мой район и настройки", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /^Мои планы/ }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Основная навигация" })).toHaveCount(0);
+  await expect(page.locator(".menu-row")).toHaveCount(2);
+  await expect(page.locator(".menu-row").filter({ hasText: "Планы" })).toHaveCount(0);
+  await expect(page.locator(".menu-row").filter({ hasText: "питомцы" })).toHaveCount(0);
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мой район и настройки", exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Основная навигация" })).toHaveCount(0);
+  await expect(dock.getByRole("button", { name: "Планы", exact: true })).toBeVisible();
+  await expect(dock.getByRole("button", { name: "Питомцы", exact: true })).toBeVisible();
 });
 
 test("failed refresh after deleting a walk shows a recoverable error in my plans", async ({ page }) => {
@@ -308,7 +308,7 @@ test("failed refresh after deleting a walk shows a recoverable error in my plans
   await page.getByRole("alertdialog").getByRole("button", { name: "Удалить прогулку", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Прогулка удалена", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Посмотреть мои планы", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
   await expect(page.getByRole("alert")).toContainText("Не удалось обновить прогулки.");
   await expect(page.getByRole("button", { name: "Повторить", exact: true })).toBeVisible();
   expect(errors).toEqual([]);
@@ -316,7 +316,7 @@ test("failed refresh after deleting a walk shows a recoverable error in my plans
 
 test("reopens walk pickers on the first click after closing", async ({ page }) => {
   await openNearby(page);
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
 
   for (const [triggerName, dialogName] of [["Время", "Встречаемся сегодня"], ["Место встречи", "Место встречи"]]) {
@@ -337,7 +337,7 @@ test("reopens walk pickers on the first click after closing", async ({ page }) =
 
 test("blocks a walk until a pet is added", async ({ page }) => {
   await openNearby(page, { pets: [], mine: [] });
-  await page.getByRole("button", { name: "Мои планы", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Сначала питомец" });
   await expect(dialog).toBeVisible();

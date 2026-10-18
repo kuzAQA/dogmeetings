@@ -42,7 +42,7 @@ test('manual choice survives a cutoff and returning to Nearby', async ({ page })
   await expect(page.locator('.walk-row')).toHaveCount(3);
   await page.clock.setSystemTime(new Date('2026-10-10T18:00:00+03:00'));
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-  await page.getByRole('button', { name: 'Мои планы', exact: true }).click();
+  await page.getByRole('button', { name: 'Планы', exact: true }).click();
   await page.getByRole('button', { name: 'Рядом', exact: true }).click();
   await expect(page.locator('.filter-trigger')).toHaveText('Весь день');
 });

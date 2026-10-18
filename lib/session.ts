@@ -64,11 +64,11 @@ function mapSession(
     token,
     tokenHash: row.tokenHash,
     clientId: row.clientId,
-    location: hasCompleteLocation
+    location: row.hasLocation && row.city
       ? {
           city: row.city!,
-          district: row.district!,
-          complex: row.residentialComplex!
+          district: row.district ?? "",
+          complex: row.residentialComplex ?? ""
         }
       : null,
     hasLocation: hasCompleteLocation,

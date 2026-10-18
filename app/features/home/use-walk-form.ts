@@ -28,6 +28,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [submitError, setSubmitError] = useState("");
   const [placeInput, setPlaceInput] = useState("");
+  const [selectedPlaceId, setSelectedPlaceId] = useState("");
+  const [placeNotice, setPlaceNotice] = useState("");
   const [placeMenuOpen, setPlaceMenuOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("today");
   const [selectedPetId, setSelectedPetId] = useState("");
@@ -74,6 +76,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     const normalizedInput = normalizePlaceForComparison(value);
     const existingPlace = sharedPlaces.find((place) => normalizePlaceForComparison(place.name) === normalizedInput);
     const hasMatches = !normalizedInput || sharedPlaces.some((place) => normalizePlaceForComparison(place.name).includes(normalizedInput));
+    setSelectedPlaceId(existingPlace?.id ?? "");
+    setPlaceNotice("");
     setPlaceInput(existingPlace?.name ?? value);
     setSubmitError("");
     setPlaceMenuOpen(hasMatches);
@@ -81,6 +85,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
 
   function chooseSharedPlace(place: SharedPlace, inDock = false) {
     markDirty(inDock);
+    setSelectedPlaceId(place.id);
+    setPlaceNotice("");
     setPlaceInput(place.name);
     setPlaceMenuOpen(false);
   }
@@ -105,6 +111,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setTouchedFields({});
     setSubmitError("");
     setSelectedPetId(savedPets.length === 1 ? savedPets[0].id : "");
+    setSelectedPlaceId("");
+    setPlaceNotice("");
     setPlaceInput("");
     setPlaceMenuOpen(false);
     setScheduleType("today");
@@ -118,6 +126,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setTouchedFields({});
     setSubmitError("");
     setSelectedPetId(walk.petId);
+    setSelectedPlaceId(walk.placeId);
+    setPlaceNotice("");
     setPlaceInput(walk.point);
     setPlaceMenuOpen(false);
     setScheduleType(walk.scheduleType);
@@ -130,6 +140,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
   function resetWalkForm() {
     setTouchedFields({});
     setSubmitError("");
+    setSelectedPlaceId("");
+    setPlaceNotice("");
     setPlaceInput("");
     setPlaceMenuOpen(false);
     setScheduleType("today");
@@ -139,6 +151,16 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     setWalkFormDirty(false);
   }
 
+  function refreshSelectedPlace(places: SharedPlace[]) {
+    if (!selectedPlaceId) return;
+    const selected = places.find(place => place.id === selectedPlaceId);
+    setPlaceInput(selected?.name ?? "");
+    if (!selected) {
+      setSelectedPlaceId("");
+      setPlaceNotice("Выбранное место больше недоступно. Выберите другое место встречи.");
+    }
+  }
+
   function readSubmission(formData: FormData): WalkSubmission | null {
     const petId = formData.get("pet");
     const place = String(formData.get("place") ?? "").trim();
@@ -146,16 +168,16 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     if (typeof petId !== "string" || !petId) {
       touchField("walk-pet");
       setSubmitError("");
+      window.scrollTo({ top: 0, behavior: "instant" });
       return null;
     }
-    if (!containsLetter.test(place) || place.length > MAX_WALK_PLACE_LENGTH) {
-      touchField("walk-place");
+    const invalidPlace = !containsLetter.test(place) || place.length > MAX_WALK_PLACE_LENGTH;
+    const invalidTime = typeof submittedWalkTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(submittedWalkTime) || (scheduleType === "today" && submittedWalkTime < getMinimumWalkTime());
+    if (invalidPlace || invalidTime) {
+      if (invalidPlace) touchField("walk-place");
+      if (invalidTime) touchField("walk-time");
       setSubmitError("");
-      return null;
-    }
-    if (typeof submittedWalkTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(submittedWalkTime) || (scheduleType === "today" && submittedWalkTime < getMinimumWalkTime())) {
-      touchField("walk-time");
-      setSubmitError("");
+      dockFormRef.current?.querySelector(".walk-schedule-label")?.scrollIntoView({ block: "start", behavior: "instant" });
       return null;
     }
     return { petId, place, walkTime: submittedWalkTime };
@@ -166,6 +188,8 @@ export function useWalkForm(savedPets: Pet[], sharedPlaces: SharedPlace[], place
     touchedFields,
     submitError,
     placeInput,
+    placeNotice,
+    refreshSelectedPlace,
     placeMenuOpen,
     scheduleType,
     selectedPetId,

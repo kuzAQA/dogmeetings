@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import test from "node:test";
+import test, { mock } from "node:test";
+import { Client } from "pg";
 import { runInNewContext } from "node:vm";
-import { isTelegramWebhookRequest, sendTelegramLocationRequestNotification, telegramWalkChangeMessage } from "./telegram.ts";
+import { isTelegramWebhookRequest, sendTelegramLocationRequestNotification, telegramBotRequest, telegramWalkChangeMessage } from "./telegram.ts";
 
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -17,7 +18,30 @@ function restoreEnvironment() {
   else delete process.env.TELEGRAM_WEBHOOK_SECRET;
 }
 
-test.afterEach(restoreEnvironment);
+test.beforeEach(() => {
+  mock.method(Client.prototype, "connect", async () => undefined);
+  mock.method(Client.prototype, "end", async () => undefined);
+  mock.method(Client.prototype, "query", async () => ({ rows: [] }));
+});
+test.afterEach(() => { mock.restoreAll(); restoreEnvironment(); });
+
+test("sendPhoto uses multipart and tracking failure never requests another delivery", async () => {
+  process.env.TELEGRAM_BOT_TOKEN = "test-token";
+  const form = new FormData();
+  form.set("chat_id", "123");
+  form.set("photo", new Blob(["mock-photo"], { type: "image/jpeg" }), "walk.jpg");
+  let calls = 0;
+  const fetcher: typeof fetch = async (url, init) => {
+    calls++;
+    assert.equal(url, "https://api.telegram.org/bottest-token/sendPhoto");
+    assert.equal(init?.body, form);
+    assert.equal(init?.headers, undefined);
+    // Missing message metadata tests failed tracking without opening a real DB.
+    return Response.json({ ok: true, result: true });
+  };
+  assert.equal(await telegramBotRequest("sendPhoto", form, fetcher), true);
+  assert.equal(calls, 1);
+});
 
 test("walk edit message includes the full walk card and escapes Telegram HTML", () => {
   const previous = {
@@ -94,7 +118,7 @@ test("walk edit message uses the saved current comment without changing send con
   assert.equal(telegramWalkChangeMessage(previous, { ...previous, comment: "Новый текст" }), null);
 
   const route = await readFile(new URL("../app/api/walks/route.ts", import.meta.url), "utf8");
-  assert.match(route, /telegramWalkChangeMessage\(result\.previous, \{[\s\S]*?comment: result\.walk\.comment,/);
+  assert.match(route, /telegramWalkChangeMessage\(previous, \{[\s\S]*?comment: walk\.comment,/);
 });
 
 test("location request uses Telegram instead of admin push", async () => {
@@ -194,4 +218,17 @@ test("Telegram notification tolerates missing location fields", async () => {
   assert.match(String(body?.text), /Город:<\/b> —/);
   assert.match(String(body?.text), /Район:<\/b> —/);
   assert.match(String(body?.text), /Жилой комплекс:<\/b> —/);
+});
+
+test("walk delivery returns Telegram IDs and propagates API errors without separate tracking", async () => {
+  process.env.TELEGRAM_BOT_TOKEN = "test-token";
+  const message = { message_id: 42, date: 1791450000, chat: { id: 123 } };
+  assert.deepEqual(await telegramBotRequest("sendMessage", { chat_id: "123", text: "walk" },
+    async () => Response.json({ ok: true, result: message }), true), message);
+  assert.equal(await telegramBotRequest("deleteMessage", { chat_id: "123", message_id: 1 },
+    async () => Response.json({ ok: true, result: true }), true), true);
+  await assert.rejects(telegramBotRequest("deleteMessage", { chat_id: "123", message_id: 1 },
+    async () => Response.json({ ok: false, description: "Bad Request: message to delete not found" }, { status: 400 }), true), /message to delete not found/);
+  await assert.rejects(telegramBotRequest("deleteMessage", { chat_id: "123", message_id: 1 },
+    async () => Response.json({ ok: true, result: false }), true), /не подтвердил удаление/);
 });

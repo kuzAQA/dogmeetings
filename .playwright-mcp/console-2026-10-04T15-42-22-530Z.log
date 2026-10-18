@@ -1,0 +1,10 @@
+[     255ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[     357ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://192.168.0.137:3001/api/session:0
+[   80206ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[  278916ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[  299564ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[  324654ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[  357216ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[  549237ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[ 1094938ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://192.168.0.137:3001/node_modules/.vite/deps/react-dom_client.js?v=3066e3ac:14337
+[11419580ms] [LOG] [vite] server connection lost. Polling for restart... @ http://192.168.0.137:3001/@vite/client:968

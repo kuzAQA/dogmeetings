@@ -198,6 +198,7 @@ export const places = pgTable(
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
     name: varchar("name", { length: 100 }).notNull(),
     normalizedName: varchar("normalized_name", { length: 100 }).notNull(),
+    createdBy: uuid("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
@@ -207,7 +208,8 @@ export const places = pgTable(
       table.residentialComplex,
       table.normalizedName
     ),
-    index("places_location_idx").on(table.city, table.district, table.residentialComplex)
+    index("places_location_idx").on(table.city, table.district, table.residentialComplex),
+    index("places_created_by_idx").on(table.createdBy)
   ]
 );
 
@@ -240,13 +242,22 @@ export const walks = pgTable(
   ]
 );
 
+export const telegramApiLimits = pgTable("telegram_api_limits", {
+  scope: text("scope").primaryKey(),
+  nextAt: timestamp("next_at", { withTimezone: true }).notNull().defaultNow(),
+  blockedUntil: timestamp("blocked_until", { withTimezone: true }).notNull().default(sql`'-infinity'::timestamptz`)
+});
+
 export const telegramBotMessages = pgTable("telegram_bot_messages", {
+  deleteNextAttemptAt: timestamp("delete_next_attempt_at", { withTimezone: true }),
+  walkId: uuid("walk_id"),
   chatId: varchar("chat_id", { length: 20 }).notNull(),
   messageId: integer("message_id").notNull(),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull()
 }, (table) => [
   primaryKey({ columns: [table.chatId, table.messageId] }),
-  index("telegram_bot_messages_sent_at_idx").on(table.sentAt)
+  index("telegram_bot_messages_sent_at_idx").on(table.sentAt),
+  index("telegram_bot_messages_walk_chat_idx").on(table.walkId, table.chatId)
 ]);
 
 export const telegramWalkNotifications = pgTable(
@@ -255,6 +266,7 @@ export const telegramWalkNotifications = pgTable(
     id: uuid("id").primaryKey(),
     walkId: uuid("walk_id").notNull().references(() => walks.id, { onDelete: "cascade" }),
     subscriptionId: uuid("subscription_id").notNull().references(() => telegramComplexSubscriptions.id, { onDelete: "cascade" }),
+    messageText: text("message_text"),
     attemptCount: integer("attempt_count").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
     lastError: varchar("last_error", { length: 250 }),

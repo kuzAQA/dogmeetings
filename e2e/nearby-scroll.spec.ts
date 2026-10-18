@@ -95,8 +95,8 @@ test("collection scroll follows content height on every screen", async ({ page }
       await expect.poll(() => page.evaluate(() => scrollY > 0)).toBe(count === 8);
       const bounds = await page.evaluate(() => ({ contentBottom: document.querySelector(".pets-screen")!.getBoundingClientRect().bottom, dockTop: document.querySelector(".bottom-nav")!.getBoundingClientRect().top }));
       expect(bounds.contentBottom).toBeLessThanOrEqual(bounds.dockTop);
-      await page.getByRole("button", { name: "Мои планы", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "Мои планы", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Планы", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Планы", exact: true })).toBeVisible();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(false);
       await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     }
