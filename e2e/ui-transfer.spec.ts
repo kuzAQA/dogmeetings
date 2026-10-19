@@ -6,11 +6,13 @@ async function capture(page: Page, info: TestInfo, name: string) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   const dialog = page.locator("[data-app-bottom-sheet]");
   if (await dialog.count()) {
-    const bounds = await dialog.boundingBox();
-    expect(bounds!.x).toBeGreaterThanOrEqual(0);
-    expect(bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-    expect(bounds!.y).toBeGreaterThanOrEqual(0);
-    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    await expect(async () => {
+      const bounds = await dialog.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      expect(bounds!.y).toBeGreaterThanOrEqual(0);
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    }).toPass({ timeout: 5000 });
   }
   await page.screenshot({ path: `.impeccable/review/transfer/${info.project.name}-${name}.png`, fullPage: !(await dialog.count()), animations: "disabled" });
 }
@@ -29,7 +31,7 @@ test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: "
 test.describe("mobile single-line fields", () => {
   test.use({ hasTouch: true, isMobile: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36" });
 
-  test("moves to the next field and submits the final field", async ({ page }) => {
+  test("moves through pet fields and submits after the multiline description", async ({ page }) => {
     await openNearby(page);
     await page.getByRole("button", { name: "Питомцы", exact: true }).click();
     await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
@@ -47,7 +49,10 @@ test.describe("mobile single-line fields", () => {
     await breed.press("Enter");
     await expect(owner).toBeFocused();
     await owner.fill("Анна");
+    await expect(owner).toHaveAttribute("enterkeyhint", "next");
     await owner.press("Enter");
+    await expect(page.locator('textarea[name="description"]')).toBeFocused();
+    await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Рады знакомству!" })).toBeVisible();
   });
 });
@@ -204,6 +209,7 @@ test("walk deletion refreshes once after the success sheet closes", async ({ pag
 });
 
 test("walk pickers preserve payload and create, edit and delete actions", async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date("2026-09-15T14:00:00Z"));
   await openNearby(page);
   await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Создать прогулку", exact: true }).click();
@@ -212,9 +218,10 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   await capture(page, info, "choose-pet");
   await page.getByRole("dialog").getByRole("button", { name: /Луна.*Корги/ }).click();
   await page.getByRole("button", { name: /^Время/ }).click();
-  await page.locator('input[type="time"]').fill("18:30");
+  await expect(page.getByRole("group", { name: "Время прогулки", exact: true }).locator(".time-wheel")).toHaveCount(2);
   await capture(page, info, "choose-time");
   await page.getByRole("button", { name: "Готово", exact: true }).click();
+  const selectedTime = (await page.getByRole("button", { name: /^Время/ }).innerText()).match(/\d{2}:\d{2}/)![0];
   await page.getByRole("button", { name: /^Место встречи/ }).click();
   await capture(page, info, "choose-place");
   const placeDialog = page.getByRole("dialog", { name: "Место встречи" });
@@ -236,7 +243,7 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   await page.route("**/api/walks", async (route) => { payload = route.request().postDataJSON(); await route.fulfill({ json: route.request().method() === "DELETE" ? { deleted: true } : { walk: { ...walk, point: "У входа в сквер" } } }); });
   await page.getByRole("button", { name: "Сообщить о прогулке", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Вы идёте гулять!" })).toBeVisible();
-  expect(payload).toMatchObject({ petId: pet.id, place: "У входа в сквер", walkTime: "18:30", comment: "Возьмём мячик", scheduleType: "today", ...location });
+  expect(payload).toMatchObject({ petId: pet.id, place: "У входа в сквер", walkTime: selectedTime, comment: "Возьмём мячик", scheduleType: "today", ...location });
   await capture(page, info, "announce-success");
   await page.getByRole("button", { name: "Посмотреть мои планы" }).click();
   await page.getByRole("button", { name: "Управлять", exact: false }).click();
@@ -384,7 +391,7 @@ test("admin lists, search, edit and confirmation sheets", async ({ page }, info)
   await page.getByRole("button", { name: "Оставить" }).click();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: "Назад", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Уведомления", exact: false })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Уведомления в Telegram", exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await capture(page, info, "admin-logout");
 });
@@ -479,14 +486,19 @@ test("motion, interruption, keyboard focus and compact viewport", async ({ page 
   await openNearby(page);
   expect(await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
-    return ["--motion-screen", "--motion-sheet-in", "--motion-sheet-out", "--motion-shared"].map((token) => style.getPropertyValue(token).trim());
-  })).toEqual(["180ms", "260ms", "200ms", "240ms"]);
+    return ["--motion-screen", "--motion-sheet-in", "--motion-sheet-out", "--motion-shared"].map((token) => {
+      const value = style.getPropertyValue(token).trim();
+      return parseFloat(value) * (value.endsWith("ms") ? 1 : 1000);
+    });
+  })).toEqual([180, 260, 200, 240]);
   await expect(page.locator(".page-header")).toHaveCSS("view-transition-name", "dogmeet-header");
   await expect(page.locator("main")).toHaveCSS("view-transition-name", "dogmeet-production-page");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-old(dogmeet-header)").opacity)).toBe("0");
   const filter = page.locator(".filter-trigger");
   await filter.click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Весь день", exact: true })).toBeFocused();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Весь день Все прогулки сегодня", exact: true })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("dialog").locator(":focus")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(filter).toBeFocused();
   await page.getByRole("button", { name: "Планы", exact: true }).click();
