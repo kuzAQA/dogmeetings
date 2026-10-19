@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return privateJson({ error: "Сначала сохраните локацию прогулки." }, { status: 400 });
     }
 
-    return privateJson({ link: await createTelegramSubscriptionLink(location) });
+    return privateJson({ link: await createTelegramSubscriptionLink(location, session.clientId) });
   } catch (error) {
     const message = error instanceof Error && error.message.startsWith("Telegram-")
       ? error.message

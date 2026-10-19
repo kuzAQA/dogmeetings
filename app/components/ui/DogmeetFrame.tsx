@@ -25,6 +25,7 @@ type AppBottomSheetProps = SheetAccessibilityProps & {
   onCloseStart?: () => void;
   title?: string;
   busy?: boolean;
+  dismissible?: boolean;
   className?: string;
   snapPoints?: SheetProps["snapPoints"];
   initialSnap?: SheetProps["initialSnap"];
@@ -62,7 +63,7 @@ export function requestDialogClose(target: EventTarget | null, afterClose?: () =
   return Promise.resolve();
 }
 
-export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, title, busy = false, className = "", snapPoints, initialSnap, detent = "content", ...props }: AppBottomSheetProps) {
+export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, title, busy = false, dismissible = true, className = "", snapPoints, initialSnap, detent = "content", ...props }: AppBottomSheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [dialog, setDialog] = useState<HTMLDivElement | null>(null);
   const setDialogRef = useCallback((element: HTMLDivElement | null) => {
@@ -78,16 +79,16 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
   const afterCloseCallbacks = useRef<(() => void)[]>([]);
   const closeResolvers = useRef<(() => void)[]>([]);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const busyRef = useRef(busy);
+  const busyRef = useRef(busy || !dismissible);
   const onCloseStartRef = useRef(onCloseStart);
   const isPlacePicker = className.includes("sheet--place-picker");
   const mountPoint = typeof document === "undefined" ? undefined : document.querySelector(".production") ?? undefined;
   useVirtualKeyboard({ containerRef: dialogRef, isEnabled: isOpen && isPlacePicker });
 
   useLayoutEffect(() => {
-    busyRef.current = busy;
+    busyRef.current = busy || !dismissible;
     onCloseStartRef.current = onCloseStart;
-  }, [busy, onCloseStart]);
+  }, [busy, dismissible, onCloseStart]);
 
   if (open !== previousOpen) {
     setPreviousOpen(open);
@@ -178,7 +179,7 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
     }
   }
 
-  return <Sheet ref={sheetRef} isOpen={isOpen} onClose={beginDragClose} onCloseEnd={finishClose} avoidKeyboard={!isPlacePicker} disableDismiss={busy} detent={detent} snapPoints={snapPoints} initialSnap={initialSnap} mountPoint={mountPoint}>
+  return <Sheet ref={sheetRef} isOpen={isOpen} onClose={beginDragClose} onCloseEnd={finishClose} avoidKeyboard={!isPlacePicker} disableDismiss={busy || !dismissible} disableDrag={!dismissible} detent={detent} snapPoints={snapPoints} initialSnap={initialSnap} mountPoint={mountPoint}>
     <Sheet.Container ref={setDialogRef} data-app-bottom-sheet className={`sheet ${className}`} role={props.role ?? "dialog"} aria-modal="true" aria-label={props["aria-label"] ?? title} aria-labelledby={props["aria-labelledby"]} tabIndex={-1}>
       <Sheet.Header className="sheet-drag-area" aria-hidden="true"><span className="sheet-grip" /></Sheet.Header>
       <Sheet.Content className="sheet-content-shell" scrollClassName="sheet-content" disableDrag disableScroll={isPlacePicker}>{children}</Sheet.Content>
@@ -221,10 +222,11 @@ type DogmeetHeaderProps = {
   location?: string;
   onLocation?: () => void;
   onProfile?: () => void;
+  unreadCount?: number;
   admin?: boolean;
 };
 
-export function DogmeetHeader({ onBack, location, onLocation, onProfile, admin = false }: DogmeetHeaderProps) {
+export function DogmeetHeader({ onBack, location, onLocation, onProfile, unreadCount = 0, admin = false }: DogmeetHeaderProps) {
   return (
     <header className={`page-header ${location ? "nearby-toolbar" : ""}`}>
       {onBack && <button type="button" className="icon-button header-back" aria-label="Назад" onClick={onBack}><ArrowLeft aria-hidden="true" /></button>}
@@ -234,7 +236,7 @@ export function DogmeetHeader({ onBack, location, onLocation, onProfile, admin =
           <MapPin aria-hidden="true" /><span>{location}</span>
         </button>
       )}
-      {onProfile && <div className="header-menu"><button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={onProfile}><MoreHorizontal aria-hidden="true" /></button></div>}
+      {onProfile && <div className="header-menu"><button type="button" className="icon-button" aria-label="Мой район и настройки" onClick={onProfile}><MoreHorizontal aria-hidden="true" />{unreadCount > 0 && <span className="unread-dot" role="img" aria-label="Есть непрочитанные сообщения" />}</button></div>}
     </header>
   );
 }

@@ -5,14 +5,14 @@ import { ChatError } from "../infrastructure/chat-repository";
 
 export type ChatRouteContext = { params: Promise<{ id: string }> };
 
-export async function chatRequest(request: Request, operation: (clientId: string) => Promise<Response>) {
+export async function chatRequest(request: Request, operation: (clientId: string, sessionHash: string) => Promise<Response>) {
   if (request.method !== "GET" && !isSameOriginRequest(request)) {
     return privateJson({ error: "Запрос отклонён." }, { status: 403 });
   }
   try {
     const session = await getClientSession(request);
     if (!session) return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
-    return await operation(session.clientId);
+    return await operation(session.clientId, session.tokenHash);
   } catch (error) {
     return privateJson({ error: error instanceof ChatError ? error.message
       : databaseErrorMessage(error, "Не удалось выполнить запрос диалога.") },

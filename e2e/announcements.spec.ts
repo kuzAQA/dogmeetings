@@ -1,3 +1,4 @@
+import { pushMock } from "./push-fixtures";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import type { Announcement } from "../lib/announcement-types";
@@ -151,7 +152,7 @@ test("site sharing banner shows the menu example with both separators", async ({
 });
 
 test("first visit waits for ЖК selection and entering the home screen", async ({ page }) => {
-  await mockApp(page, { hasLocation: false });
+  await pushMock(page, false, { permission: "granted" });
   const state = await campaign(page);
   let selected = false;
   await page.route("**/api/session", (route) => {
@@ -169,11 +170,58 @@ test("first visit waits for ЖК selection and entering the home screen", async 
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
   expect(state.gets()).toBe(0);
   await page.getByRole("button", { name: "Продолжить", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Район выбран", exact: true })).toBeVisible();
+  await expect(page.locator(".walks-screen h1")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Получайте сообщения", exact: true })).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
   expect(state.gets()).toBe(0);
-  await page.getByRole("button", { name: "Готово", exact: true }).click();
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: title })).toBeVisible();
+  expect(state.gets()).toBe(1);
+});
+
+test("no pets keeps automatic banners disabled even after focus and polling", async ({ page }) => {
+  const now = new Date("2031-01-01T00:00:00Z");
+  await page.clock.install({ time: now });
+  await page.clock.pauseAt(now);
+  await mockApp(page, { pets: [] });
+  const state = await campaign(page);
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  await page.clock.runFor(65_000);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
+  expect(state.gets()).toBe(0);
+});
+
+test("adding the first pet starts a fresh banner delay on returning home", async ({ page }) => {
+  const now = new Date("2031-01-01T00:00:00Z");
+  await page.clock.install({ time: now });
+  await page.clock.pauseAt(now);
+  await pushMock(page, true, { permission: "granted" });
+  const state = await campaign(page);
+  await page.route("**/api/pets", (route) => route.fulfill({ json: route.request().method() === "POST" ? { pet } : { pets: [] } }));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
+  await page.clock.runFor(5000);
+  await page.getByRole("button", { name: "Питомцы", exact: true }).click();
+  await page.clock.runFor(500);
+  await page.getByRole("button", { name: "Добавить питомца", exact: true }).filter({ hasNot: page.locator("svg") }).click();
+  await page.getByLabel("Имя питомца", { exact: true }).fill(pet.name);
+  await page.getByLabel("Порода", { exact: true }).fill(pet.breed);
+  await page.getByLabel("Имя хозяина", { exact: true }).fill(pet.ownerName);
+  await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
+  await page.getByRole("button", { name: "Готово", exact: true }).click();
+  await page.clock.runFor(500);
+  await page.getByRole("button", { name: "Подключить", exact: true }).click();
+  await page.clock.runFor(5000);
+  await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
+  expect(state.gets()).toBe(0);
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await page.getByRole("button", { name: "Рядом", exact: true }).click();
+  await page.clock.runFor(2999);
+  await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
+  expect(state.gets()).toBe(0);
+  await page.clock.runFor(1);
   await expect(page.getByRole("dialog", { name: title })).toBeVisible();
   expect(state.gets()).toBe(1);
 });

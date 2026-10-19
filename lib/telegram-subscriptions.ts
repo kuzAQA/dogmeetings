@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { withDb } from "../db";
 import { telegramComplexSubscriptions, telegramSubscriptionIntents } from "../db/schema";
 import { telegramBotUsername } from "./telegram";
@@ -30,7 +30,7 @@ function validChatId(chatId: string) {
   return chatIdPattern.test(chatId);
 }
 
-export async function createTelegramSubscriptionLink(location: TelegramSubscriptionLocation) {
+export async function createTelegramSubscriptionLink(location: TelegramSubscriptionLocation, clientId?: string) {
   const username = await telegramBotUsername();
   if (!username) throw new Error("Telegram-бот сейчас недоступен. Повторите позже.");
 
@@ -38,6 +38,7 @@ export async function createTelegramSubscriptionLink(location: TelegramSubscript
   const tokenHash = await hashToken(token);
   await withDb((db) => db.insert(telegramSubscriptionIntents).values({
     tokenHash,
+    clientId,
     city: location.city,
     district: location.district,
     residentialComplex: location.complex,
@@ -99,6 +100,14 @@ export async function activateTelegramComplexSubscription(token: string, chatId:
       ))
       .limit(1);
     if (!intent) return { status: "expired" as const };
+
+    if (intent.clientId) {
+      await tx.execute(sql`INSERT INTO telegram_chat_settings (client_id, telegram_chat_id)
+        VALUES (${intent.clientId}::uuid, ${chatId}) ON CONFLICT (client_id)
+        DO UPDATE SET telegram_chat_id = EXCLUDED.telegram_chat_id,
+          enabled = CASE WHEN telegram_chat_settings.telegram_chat_id = EXCLUDED.telegram_chat_id
+            THEN telegram_chat_settings.enabled ELSE false END`);
+    }
 
     const inserted = await tx
       .insert(telegramComplexSubscriptions)

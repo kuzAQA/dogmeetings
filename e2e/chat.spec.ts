@@ -669,7 +669,7 @@ test("dialogs menu row is first, uses the existing description style and opens d
   await page.getByRole("button", { name: "Мой район и настройки" }).click();
   const rows = page.locator(".profile-screen .menu-row");
   await expect(rows.locator("strong")).toHaveText([
-    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Связь с разработчиком",
+    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Push-уведомления", "Связь с разработчиком",
   ]);
   const description = rows.first().locator("small");
   await expect(description).toHaveText("Сообщите своим друзьям что-то важное");

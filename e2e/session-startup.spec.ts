@@ -166,7 +166,8 @@ test("preloads locations on welcome while session restoration is pending", async
   await expect(page.getByRole("heading", { name: "Сохраняем…", exact: true })).toBeVisible();
   expect(locationSaves).toBe(0);
   releaseSession();
-  await expect(page.getByRole("heading", { name: "Район выбран", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Получайте сообщения", exact: true })).toHaveCount(0);
+  await expect(page.locator(".walks-screen h1")).toBeVisible();
   expect(locationSaves).toBe(1);
 });
 

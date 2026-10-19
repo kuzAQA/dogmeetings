@@ -93,7 +93,7 @@ export async function openDialog(clientId: string, target: { walkId?: string; pe
 export async function listDialogs(clientId: string, cursor?: { at: string; id: string }) {
   return withDb(async db => {
     const result = await db.execute<{
-      id: string; peer_id: string; peer_name: string; expires_at: string; hidden: string;
+      id: string; peer_id: string; peer_name: string; expires_at: string; hidden: string; unread_count: string;
       pet_id: string | null; pet_updated_at: string | null; pet_photo_type: string | null;
       seq: string; request_id: string; text: string; created_at: string; read_at: string | null; sender_client_id: string;
     }>(sql`
@@ -102,7 +102,10 @@ export async function listDialogs(clientId: string, cursor?: { at: string; id: s
         COALESCE(peer.name, 'Собеседник') AS peer_name,
         peer.id AS pet_id, peer.updated_at AS pet_updated_at, peer.photo_type AS pet_photo_type,
         CASE WHEN d.client_low = ${clientId} THEN d.low_hidden_through ELSE d.high_hidden_through END AS hidden,
-        m.seq, m.request_id, m.text, m.created_at, m.read_at, m.sender_client_id
+        m.seq, m.request_id, m.text, m.created_at, m.read_at, m.sender_client_id,
+        (SELECT count(*) FROM dialog_messages unread WHERE unread.dialog_id = d.id
+          AND unread.sender_client_id <> ${clientId} AND unread.read_at IS NULL
+          AND unread.seq > CASE WHEN d.client_low = ${clientId} THEN d.low_hidden_through ELSE d.high_hidden_through END) AS unread_count
       FROM dialogs d
       LEFT JOIN LATERAL (SELECT ${peerName} AS name, ${pets.id} AS id,
         ${pets.updatedAt} AS updated_at, ${pets.photoType} AS photo_type FROM ${pets} WHERE ${pets.clientId} =
@@ -120,7 +123,7 @@ export async function listDialogs(clientId: string, cursor?: { at: string; id: s
       id: row.id, peer: { clientId: row.peer_id, name: row.peer_name,
         photoUrl: row.pet_id && row.pet_updated_at ? petPhotoUrl(row.pet_id, new Date(row.pet_updated_at), row.pet_photo_type) : "/dog-placeholder.webp" },
       expiresAt: new Date(row.expires_at).toISOString(),
-      hiddenThrough: Number(row.hidden), lastMessage: { seq: Number(row.seq), requestId: row.request_id,
+      hiddenThrough: Number(row.hidden), unreadCount: Number(row.unread_count), lastMessage: { seq: Number(row.seq), requestId: row.request_id,
         text: row.text, createdAt: new Date(row.created_at).toISOString(), readAt: row.read_at ? new Date(row.read_at).toISOString() : null,
         mine: row.sender_client_id === clientId }
     }));
@@ -170,10 +173,27 @@ export async function sendMessage(clientId: string, id: string, requestId: strin
       .where(eq(dialogs.id, id)).returning();
     const [message] = await tx.insert(dialogMessages).values({ dialogId: id, seq: updated.lastSeq,
       senderClientId: clientId, requestId, text, createdAt: now }).returning();
+    const recipient = row.clientLow === clientId ? row.clientHigh : row.clientLow;
+    await tx.execute(sql`INSERT INTO chat_push_outbox (dialog_id, message_seq, subscription_id, subscription_version)
+      SELECT ${id}::uuid, ${message.seq}, s.id, s.version FROM push_subscriptions s
+      JOIN client_sessions c ON c.client_id = s.client_id AND c.token_hash = s.session_hash
+      WHERE s.client_id = ${recipient}::uuid AND s.active AND c.expires_at > clock_timestamp()
+      ON CONFLICT DO NOTHING`);
     const dialog = await dialogView(tx, updated, clientId);
     return { message: messageView(message, clientId), dialog,
       serverTime: (await checkDeadline(tx, updated)).toISOString(), duplicate: false };
   }));
+}
+
+export async function unreadStatus(clientId: string) {
+  return withDb(async db => {
+    const result = await db.execute<{ count: string }>(sql`SELECT count(*) FROM dialog_messages m
+      JOIN dialogs d ON d.id = m.dialog_id
+      WHERE (d.client_low = ${clientId}::uuid OR d.client_high = ${clientId}::uuid)
+        AND d.expires_at > clock_timestamp() AND m.sender_client_id <> ${clientId}::uuid AND m.read_at IS NULL
+        AND m.seq > CASE WHEN d.client_low = ${clientId}::uuid THEN d.low_hidden_through ELSE d.high_hidden_through END`);
+    return { unreadCount: Number(result.rows[0].count) };
+  });
 }
 
 export async function updateDialog(clientId: string, id: string, action: "hide" | "read", seqs: number[]) {

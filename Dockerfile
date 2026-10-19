@@ -31,6 +31,8 @@ COPY --from=builder --chown=node:node /app/server/pet-photo.mjs ./server/pet-pho
 COPY --from=builder --chown=node:node /app/server/telegram-walk-photo.mjs ./server/telegram-walk-photo.mjs
 COPY --from=builder --chown=node:node /app/server/telegram-walk-deletion.mjs ./server/telegram-walk-deletion.mjs
 COPY --from=builder --chown=node:node /app/server/telegram-api.mjs ./server/telegram-api.mjs
+COPY --from=builder --chown=node:node /app/server/push-worker.mjs ./server/push-worker.mjs
+COPY --from=builder --chown=node:node /app/server/push-validation.mjs ./server/push-validation.mjs
 COPY --from=builder --chown=node:node /app/server/domain/pet-photo-limits.mjs ./server/domain/pet-photo-limits.mjs
 
 USER node

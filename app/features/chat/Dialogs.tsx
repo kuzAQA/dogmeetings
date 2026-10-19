@@ -91,7 +91,7 @@ export function Dialogs({ onBack, onOpen }: { onBack: () => void; onOpen: (id: s
     {error && <DogmeetState state="error" message={error} onAction={refresh} />}
     {dialogs === null && !error && <DogmeetState state="loading" />}
     {dialogs?.length === 0 && !error && <DogmeetState state="empty" title="Вы еще никому не писали" />}
-    {dialogs?.map(row => <div className={`chat-list-row${selected === row.id ? " is-selected" : ""}`} key={row.id}>
+    {dialogs?.map(row => <div className={`chat-list-row${selected === row.id ? " is-selected" : ""}${row.unreadCount > 0 ? " is-unread" : ""}`} key={row.id}>
       <button className="chat-list-open" type="button" aria-haspopup="menu" aria-expanded={selected === row.id}
         aria-controls={selected === row.id ? menuId : undefined}
         onContextMenu={event => {
@@ -128,7 +128,7 @@ export function Dialogs({ onBack, onOpen }: { onBack: () => void; onOpen: (id: s
           {selected === row.id && <Check className="chat-list-check" aria-label="Выбран диалог" />}
         </span>
         <span><strong>{row.peer.name}</strong><small>{row.lastMessage.text}</small></span>
-        <time dateTime={row.lastMessage.createdAt}>{timeFormat.format(new Date(row.lastMessage.createdAt))}</time>
+        <span className="chat-list-time"><time dateTime={row.lastMessage.createdAt}>{timeFormat.format(new Date(row.lastMessage.createdAt))}</time>{row.unreadCount > 0 && <span className="unread-dot" role="img" aria-label={`${row.unreadCount} непрочитанных сообщений`} />}</span>
       </button>
       {selected === row.id && <div className="chat-menu-panel" id={menuId} role="menu" aria-label={`Действия с диалогом ${row.peer.name}`} ref={menu}>
         <button type="button" role="menuitem" onClick={() => { trigger.current?.focus({ preventScroll: true }); setSelected(null); confirmDelete(row.id); }}><Trash2 aria-hidden="true" />Удалить</button>

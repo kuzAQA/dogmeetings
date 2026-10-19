@@ -1,3 +1,4 @@
+import { notifyTelegramChatMessage } from "../../../../../lib/telegram-chat";
 import { privateJson } from "../../../../../lib/session";
 import { chatText } from "../../../../../server/domain/chat";
 import { ChatError, dialogHistory, sendMessage } from "../../../../../server/infrastructure/chat-repository";
@@ -24,6 +25,7 @@ export function POST(request: Request, context: ChatRouteContext) {
     const text = chatText(payload?.text);
     if (text === null) throw new ChatError(400, "Введите текст от 1 до 2000 символов, не состоящий из пробелов.");
     const result = await sendMessage(clientId, id, chatId(payload?.requestId), text);
+    if (!result.duplicate) await notifyTelegramChatMessage(clientId, id);
     return privateJson(result, { status: result.duplicate ? 200 : 201 });
   });
 }

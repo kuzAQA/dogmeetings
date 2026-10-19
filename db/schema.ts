@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, customType, date, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import type { AnnouncementExclusions, AnnouncementPage, AnnouncementStatus } from "../lib/announcement-types";
 
 export const dialogs = pgTable("dialogs", {
@@ -32,6 +32,36 @@ export const dialogMessages = pgTable("dialog_messages", {
   primaryKey({ columns: [table.dialogId, table.seq] }),
   uniqueIndex("dialog_messages_request_unique").on(table.dialogId, table.senderClientId, table.requestId),
   check("dialog_messages_text_check", sql`char_length(${table.text}) BETWEEN 1 AND 2000`)
+]);
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull(),
+  sessionHash: varchar("session_hash", { length: 64 }).notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  active: boolean("active").notNull().default(true),
+  version: uuid("version").notNull().defaultRandom(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, table => [index("push_subscriptions_client_idx").on(table.clientId).where(sql`${table.active}`)]);
+
+export const chatPushOutbox = pgTable("chat_push_outbox", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  dialogId: uuid("dialog_id").notNull(),
+  messageSeq: bigint("message_seq", { mode: "number" }).notNull(),
+  subscriptionId: uuid("subscription_id").notNull().references(() => pushSubscriptions.id, { onDelete: "cascade" }),
+  subscriptionVersion: uuid("subscription_version").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  availableAt: timestamp("available_at", { withTimezone: true }).notNull().defaultNow(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lease: uuid("lease"),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  outcome: varchar("outcome", { length: 20 })
+}, table => [
+  foreignKey({ columns: [table.dialogId, table.messageSeq], foreignColumns: [dialogMessages.dialogId, dialogMessages.seq] }).onDelete("cascade"),
+  uniqueIndex("chat_push_outbox_message_subscription_unique").on(table.dialogId, table.messageSeq, table.subscriptionId),
+  index("chat_push_outbox_pending_idx").on(table.availableAt).where(sql`${table.doneAt} IS NULL`)
 ]);
 
 export const announcementCampaigns = pgTable("announcement_campaigns", {
@@ -136,10 +166,17 @@ export const clientSessions = pgTable(
   ]
 );
 
+export const telegramChatSettings = pgTable("telegram_chat_settings", {
+  clientId: uuid("client_id").primaryKey(),
+  telegramChatId: varchar("telegram_chat_id", { length: 20 }).notNull(),
+  enabled: boolean("enabled").notNull().default(false)
+});
+
 export const telegramSubscriptionIntents = pgTable(
   "telegram_subscription_intents",
   {
     tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    clientId: uuid("client_id"),
     city: varchar("city", { length: 80 }).notNull(),
     district: varchar("district", { length: 80 }).notNull(),
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),

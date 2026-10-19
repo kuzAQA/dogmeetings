@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
+import { Bell, Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
 import Image from "next/image";
 import { ShareMenuRow } from "../../../components/ui/ShareMenuRow";
 import { MyPlacesMenuRow } from "../../../components/ui/MyPlacesMenuRow";
@@ -20,6 +20,10 @@ import { AnnouncementPreview } from "../../announcements/Announcements";
 const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
 type Props = {
+  unreadCount: number;
+  pushEnabled: boolean;
+  pushChecked: boolean;
+  onNotificationsSettings: () => void;
   announcementPreviewEnabled?: boolean;
   dockSection: DockSection;
   location: Location;
@@ -64,7 +68,7 @@ type Props = {
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, onOpenDialogs, onWrite, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ unreadCount, pushEnabled, pushChecked, onNotificationsSettings, dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, onOpenDialogs, onWrite, selectedWalk, onSelectWalk }: Props) {
   const now = useWalkEditClock(visibleWalks.map((walk) => ({ walkDate: walk.walkDate, walkTime: walk.time })));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
@@ -101,10 +105,11 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
-        <button className="menu-row" type="button" onClick={onOpenDialogs}><MessageCircle aria-hidden="true" /><span><strong>Диалоги</strong><small>Сообщите своим друзьям что-то важное</small></span><ChevronRight aria-hidden="true" /></button>
+        <button className="menu-row" type="button" onClick={onOpenDialogs}><MessageCircle aria-hidden="true" /><span><strong>Диалоги</strong><small>Сообщите своим друзьям что-то важное</small></span>{unreadCount > 0 && <span className="unread-dot" role="img" aria-label="Есть непрочитанные сообщения" />}<ChevronRight aria-hidden="true" /></button>
         <ShareMenuRow kind="site" onClick={onShareSite} />
         <AnnouncementPreview />
         <MyPlacesMenuRow onClick={onOpenMyPlaces} />
+        <button className="menu-row" type="button" onClick={onNotificationsSettings}><Bell aria-hidden="true" /><span><strong>Уведомления</strong><small>Push и Telegram</small></span><small className={!pushEnabled && pushChecked ? "push-disabled" : ""}>Push: {!pushChecked ? "Проверить" : pushEnabled ? "Включено" : "Отключено"}</small></button>
         <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
       </div>
@@ -135,7 +140,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
 
   return (
     <div className="screen walks-screen">
-      <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} />
+      <DogmeetHeader location={location.complex} onLocation={onOpenLocationEditor} onProfile={onOpenProfile} unreadCount={unreadCount} />
       <div className="day-heading"><h1>Кто сегодня<br /><em>на прогулку?</em></h1><span className="date-stamp"><strong>{day}</strong>{month}<br />{weekday}</span></div>
       <div data-dock-panel>
       {!hasTodayWalks && <div className="day-divider" aria-hidden="true" />}

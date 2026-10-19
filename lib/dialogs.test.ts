@@ -37,6 +37,7 @@ test("dialogs preserve privacy, receipts and the original retention deadline in 
     const legacy = (await client.query("INSERT INTO dialogs (client_low,client_high) VALUES ($1,$2) RETURNING id", legacyPair)).rows[0].id;
     const selectionMigration = new URL("../drizzle/0046_dialog_pet_selection.sql", import.meta.url);
     await client.query(await readFile(selectionMigration, "utf8"));
+    await client.query(await readFile(new URL("../drizzle/0047_chat_push.sql", import.meta.url), "utf8"));
     const migrated = (await client.query("SELECT * FROM dialogs WHERE id=$1", [legacy])).rows[0];
     assert.equal(migrated.low_pet_id, null);
     assert.equal(migrated.high_pet_id, null);

@@ -16,7 +16,7 @@ export function chatText(value: unknown): string | null {
 export type ChatPeer = { clientId: string; name: string; photoUrl?: string };
 export type ChatDialog = { id: string; peer: ChatPeer; expiresAt: string | null; hiddenThrough: number };
 export type ChatMessage = { seq: number; requestId: string; text: string; createdAt: string; readAt: string | null; mine: boolean };
-export type DialogSummary = ChatDialog & { lastMessage: ChatMessage };
+export type DialogSummary = ChatDialog & { lastMessage: ChatMessage; unreadCount: number };
 export type ChatHistory = {
   dialog: ChatDialog; messages: ChatMessage[]; receipts: { seq: number; readAt: string | null }[];
   hasOlder: boolean; hasMore: boolean; serverTime: string;

@@ -1,10 +1,11 @@
 import { privateJson } from "../../../lib/session";
-import { ChatError, listDialogs, openDialog } from "../../../server/infrastructure/chat-repository";
+import { ChatError, listDialogs, openDialog, unreadStatus } from "../../../server/infrastructure/chat-repository";
 import { chatId, chatRequest } from "../../../server/transport/chat";
 import { readJsonRecord } from "../../../server/transport/request-json";
 
 export function GET(request: Request) {
   return chatRequest(request, async clientId => {
+    if (new URL(request.url).searchParams.get("unread") === "1") return privateJson(await unreadStatus(clientId));
     const raw = new URL(request.url).searchParams.get("cursor");
     let cursor: { at: string; id: string } | undefined;
     if (raw) {

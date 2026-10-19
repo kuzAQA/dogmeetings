@@ -205,7 +205,7 @@ export function Dialog({ id, walkId, petId, onBack, onResolved }: {
       if (!seqs.length || readBusy.current || document.visibilityState !== "visible") return;
       readBusy.current = true;
       void readChat(dialog.id, seqs, AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]))
-        .then(() => { for (const seq of seqs) readSent.current.add(seq); })
+        .then(() => { for (const seq of seqs) readSent.current.add(seq); window.dispatchEvent(new Event("dogmeet-chat-changed")); })
         .catch(error => { if (!controller.signal.aborted) report(error); })
         .finally(() => { readBusy.current = false; });
     }, { threshold: 0.01 });

@@ -25,8 +25,10 @@ export function postMessage(id: string, attempt: { requestId: string; text: stri
   return requestJson<{ message: ChatMessage; dialog: ChatDialog; serverTime: string }>(`/api/dialogs/${id}/messages`,
     { method: "POST", ...json(attempt), signal: AbortSignal.timeout(15000) });
 }
-export function hideChat(id: string) {
-  return requestJson<{ hiddenThrough: number }>(`/api/dialogs/${id}`, { method: "PATCH", ...json({ action: "hide" }), signal: AbortSignal.timeout(15000) });
+export async function hideChat(id: string) {
+  const result = await requestJson<{ hiddenThrough: number }>(`/api/dialogs/${id}`, { method: "PATCH", ...json({ action: "hide" }), signal: AbortSignal.timeout(15000) });
+  window.dispatchEvent(new Event("dogmeet-chat-changed"));
+  return result;
 }
 export function readChat(id: string, messageSeqs: number[], signal: AbortSignal) {
   return requestJson(`/api/dialogs/${id}`, { method: "PATCH", ...json({ action: "read", messageSeqs }), signal });

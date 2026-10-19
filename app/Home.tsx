@@ -1,6 +1,12 @@
 "use client";
 
+import { NotificationsDialog } from "./features/push/NotificationsDialog";
+
 import Image from "next/image";
+import { uuidPattern } from "../server/domain/pet";
+import { usePushNotifications } from "./features/push/use-push-notifications";
+import { PushDialog } from "./features/push/PushDialog";
+import { useUnread } from "./features/chat/use-unread";
 import { Announcements } from "./features/announcements/Announcements";
 import { DogmeetState } from "./components/ui/DogmeetState";
 import { requestJson } from "./features/api/client";
@@ -187,6 +193,31 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
     if (!welcomeContinued.current) initializeNavigation(initialNavigation);
   }, [initializeNavigation]);
   const { sessionReady, sessionError, retrySession } = useHomeSession(initializeSession);
+  const unreadCount = useUnread(sessionReady);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    function openNotificationDialog(value: unknown) {
+      if (typeof value !== "string" || !uuidPattern.test(value)) return;
+      pushNavigation("dialog", { chatDialogId: value });
+    }
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get("dialog");
+    if (requested) {
+      url.searchParams.delete("dialog"); window.history.replaceState(window.history.state, "", url);
+      openNotificationDialog(requested);
+    }
+    function notification(event: MessageEvent) {
+      if (event.origin && event.origin !== window.location.origin) return;
+      if (event.data?.type === "dogmeet-open-dialog") {
+        openNotificationDialog(event.data.dialogId);
+        event.ports[0]?.postMessage("opened");
+      }
+      if (event.data?.type === "dogmeet-chat-push") window.dispatchEvent(new Event("dogmeet-chat-changed"));
+    }
+    navigator.serviceWorker?.addEventListener("message", notification);
+    return () => navigator.serviceWorker?.removeEventListener("message", notification);
+  }, [sessionReady, pushNavigation]);
   const {
     savedPets,
     setSavedPets,
@@ -213,6 +244,8 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
     retryMyWalks
   } = useHomeResources(sessionReady, location, hasLocation || screen === "location" || screen === "my-pets", hasLocation);
   const ownedPets = savedPets.filter(pet => pet.isOwner);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const push = usePushNotifications(sessionReady, petsLoaded && ownedPets.length > 0);
   function closeChatPetChoice() {
     chatPetRequest.current++;
     setChatPetWalkId(null);
@@ -447,11 +480,15 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
         setSavedWalks([]);
         setPlacesLoaded(false);
         setSharedPlaces([]);
-        setLocation(savedLocation);
       }
+      setLocation(savedLocation);
       setLocationDraft(savedLocation);
       setHasLocation(true);
       setTouchedFields({});
+      if (!hasLocation) {
+        pushNavigation("walks");
+        return;
+      }
       setResult({ title: "Район выбран", message: "Теперь вы видите прогулки соседей.", onContinue: () => {
       if (locationOpenedFromMenu) {
         window.history.go(-2);
@@ -782,6 +819,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
       }
       if (editedPet) formData.set("petId", editedPet.id);
       const savedPet = await savePetRequest(formData, Boolean(editedPet));
+      if (!editedPet && ownedPets.length === 0 && savedPet.isOwner) push.offer();
 
       setSavedPets((current) => [savedPet, ...current.filter((pet) => pet.id !== savedPet.id)]);
       setSavedWalks((current) => current.map((walk) => walk.petId === savedPet.id ? {
@@ -987,7 +1025,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
 
   return (
     <DogmeetFrame className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) ? "floating-nav" : ""}>
-      <main className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen ? "with-nav" : ""}>
+      <main inert={Boolean(push.mode || notificationsOpen)} className={(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen ? "with-nav" : ""}>
       <section className={`app-shell screen-${screen}`} aria-label="Сервис совместных прогулок">
         {(screen === "walks" || (screen === "my-walks" && plansSource !== "profile") || (screen === "my-pets" && petsSource === "dock")) && !menuOpen && !dockWalkOpen && (
           <BottomDock
@@ -1063,6 +1101,10 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
         {(screen === "walks" || screen === "walk-detail" || screen === "contact") && (
           <WalksWorkspace
             announcementPreviewEnabled={announcementPreviewEnabled}
+            unreadCount={unreadCount}
+            pushEnabled={push.enabled}
+            pushChecked={push.checked}
+            onNotificationsSettings={() => setNotificationsOpen(true)}
             selectedWalk={selectedWalk}
             onSelectWalk={setSelectedWalk}
             dockSection={dockSection}
@@ -1250,7 +1292,9 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
         />
       </section>
       </main>
-      <Announcements enabled={sessionReady && hasLocation && screen === "walks" && !menuOpen && !dockWalkOpen} />
+      <Announcements enabled={sessionReady && hasLocation && petsLoaded && savedPets.length > 0 && screen === "walks" && !menuOpen && !dockWalkOpen && !push.mode && !notificationsOpen} />
+      {notificationsOpen && <NotificationsDialog push={push} onDismiss={() => setNotificationsOpen(false)} />}
+      <PushDialog push={push} />
     </DogmeetFrame>
   );
 }
