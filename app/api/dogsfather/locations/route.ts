@@ -3,6 +3,7 @@ import { withDb } from "../../../../db";
 import { clientSessions, locations, places, walks } from "../../../../db/schema";
 import { clearAdminLoginChallengeCookie, verifyAdminPasswordProof } from "../../../../lib/admin-auth";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
+import { syncAnnouncementLocations } from "../../../../lib/announcements";
 import { databaseErrorMessage } from "../../../../lib/database-error";
 import { privateJson } from "../../../../lib/session";
 import { readJsonRecord } from "../../../../server/transport/request-json";
@@ -131,6 +132,7 @@ export async function PATCH(request: Request) {
       await tx.update(walks).set(values).where(walkWhere(target));
       await tx.update(places).set(values).where(placeWhere(target));
       await tx.update(locations).set(values).where(locationWhere(target));
+      await syncAnnouncementLocations(tx, target, name);
       return "updated";
     }));
 
@@ -165,6 +167,7 @@ export async function DELETE(request: Request) {
       await tx.delete(places).where(placeWhere(target));
       await tx.update(clientSessions).set({ city: null, district: null, residentialComplex: null, hasLocation: false, updatedAt: new Date() }).where(sessionWhere(target));
       await tx.delete(locations).where(locationWhere(target));
+      await syncAnnouncementLocations(tx, target);
       return true;
     }));
 

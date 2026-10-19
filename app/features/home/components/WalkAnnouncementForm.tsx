@@ -7,6 +7,7 @@ import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
 import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { SingleLineInput } from "../../../components/ui/SingleLineInput";
+import { PlacesHelp } from "../../../components/ui/PlacesHelp";
 import { keepActionVisibleAfterFocus } from "../../../components/ui/keyboard-scroll";
 import type { Pet, SharedPlace } from "../model";
 import { MAX_WALK_COMMENT_LENGTH, MAX_WALK_PLACE_LENGTH } from "../model";
@@ -157,7 +158,7 @@ export function WalkAnnouncementForm({ inDock = false, savedPets, sharedPlaces, 
         {placesError && <button className="button" type="button" onClick={onRetryPlaces}>Повторить</button>}
         <form className="place-picker-footer" autoComplete="off" onSubmit={applyPlace}>
           <label className="field"><span>Или своё место встречи</span><SingleLineInput autoComplete="off" enterKeyHint="done" value={customPlace} maxLength={MAX_WALK_PLACE_LENGTH} placeholder="Например, у входа в сквер" onPointerDown={focusCustomPlace} onChange={(event) => { setSelectedPlace(null); setCustomPlace(event.target.value); }} /></label>
-          <p className="small-note places-help">Вы можете управлять местами для прогулок <a href="#my-places" onClick={event => { event.preventDefault(); onOpenMyPlaces(); }}>здесь</a></p>
+          <PlacesHelp onOpen={onOpenMyPlaces} />
           <button className="button" type="submit" disabled={!selectedPlace && !/[\p{L}]/u.test(customPlace.trim())}>Выбрать место</button>
         </form>
       </>}>

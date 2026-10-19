@@ -38,16 +38,21 @@ test.describe("mobile single-line fields", () => {
     const name = page.getByLabel("Имя питомца", { exact: true });
     const owner = page.getByLabel("Имя хозяина", { exact: true });
     const breed = page.getByLabel("Порода", { exact: true });
+    const contact = page.getByLabel("Контакт", { exact: true });
     await expect(name).toHaveAttribute("enterkeyhint", "next");
-    await expect(breed).toHaveAttribute("enterkeyhint", "done");
+    await expect(contact).toHaveAttribute("enterkeyhint", "done");
     await name.fill("Боня");
     await name.press("Enter");
-    await expect(owner).toBeFocused();
-    await owner.fill("Анна");
-    await owner.press("Enter");
     await expect(breed).toBeFocused();
     await breed.fill("Корги");
     await breed.press("Enter");
+    await expect(owner).toBeFocused();
+    await owner.fill("Анна");
+    await owner.press("Enter");
+    await expect(page.getByLabel("Тип контакта", { exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(contact).toBeFocused();
+    await contact.press("Enter");
     await expect(page.getByRole("heading", { name: "Рады знакомству!" })).toBeVisible();
   });
 });
@@ -261,7 +266,7 @@ test("walk pickers preserve payload and create, edit and delete actions", async 
   expect(payload).toEqual({ walkId: walk.id });
 });
 
-test("passport, edit, share, rotate confirmation and delete preserve permissions", async ({ page }, info) => {
+test("passport, edit, share, immediate rotation and delete preserve permissions", async ({ page }, info) => {
   await openNearby(page);
   let rotations = 0;
   await page.route("**/api/pet-shares", async (route) => { if (route.request().method() === "PATCH") rotations++; await route.fulfill({ json: { link: `http://localhost:3000/share/test-${rotations}` } }); });
@@ -280,16 +285,19 @@ test("passport, edit, share, rotate confirmation and delete preserve permissions
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: /Собака Луна/ }).click();
   await page.getByRole("button", { name: "Поделиться питомцем", exact: false }).click();
-  await expect(page.getByLabel("Одноразовая ссылка")).toHaveValue(/share\/test-0/);
+  await expect(page.getByRole("img", { name: "Одноразовый QR-код" })).toHaveAttribute("data-value", "http://localhost:3000/share/test-0");
+  const firstQr = await page.locator(".pet-share-qr path").getAttribute("d");
   await capture(page, info, "share");
-  await page.getByRole("button", { name: "Получить новую ссылку", exact: false }).click();
-  await expect(page.getByRole("heading", { name: "Заменить ссылку?" })).toBeVisible();
-  expect(rotations).toBe(0);
-  await capture(page, info, "rotate-link");
-  await page.getByRole("button", { name: "Получить новую ссылку", exact: true }).click();
-  await expect(page.getByLabel("Одноразовая ссылка")).toHaveValue(/share\/test-1/);
+  await page.getByRole("button", { name: "Получить новый QR-код", exact: false }).click();
+  await expect(page.getByRole("heading", { name: "Заменить QR-код?" })).toHaveCount(0);
+  await expect(page.getByRole("img", { name: "Одноразовый QR-код" })).toHaveAttribute("data-value", "http://localhost:3000/share/test-1");
+  expect(await page.locator(".pet-share-qr path").getAttribute("d")).not.toBe(firstQr);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Удалить питомца", exact: false }).click();
+  await expect.poll(async () => {
+    const bounds = (await page.locator("[data-app-bottom-sheet]").boundingBox())!;
+    return bounds.y + bounds.height <= page.viewportSize()!.height + 1;
+  }).toBe(true);
   await capture(page, info, "delete-pet");
   await page.getByRole("button", { name: "Оставить", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Паспорт питомца" })).toBeVisible();

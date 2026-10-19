@@ -79,6 +79,30 @@ let notificationListener;
 let notificationListenerTimer;
 let callbackTimer;
 let messageCleanupTimer;
+let bannerCleanupTimer;
+
+/** Expired campaigns leave active queries; retain their content and receipts. */
+export async function cleanupExpiredBanners(client) {
+  const { rows } = await client.query(`
+    SELECT LEAST(60000, GREATEST(1, COALESCE(EXTRACT(EPOCH FROM (MIN(ends_at) - clock_timestamp())) * 1000, 60000))) AS delay
+    FROM announcement_campaigns WHERE ends_at > CURRENT_TIMESTAMP
+  `);
+  return Number(rows[0]?.delay ?? 60000);
+}
+
+async function runBannerCleanup() {
+  const client = new Client({ connectionString: connectionString(), connectionTimeoutMillis: 5000 });
+  let delay = 60000;
+  try {
+    await client.connect();
+    delay = await cleanupExpiredBanners(client);
+  } catch (error) {
+    console.error("[banner-cleanup] Не удалось удалить истёкшие баннеры. Повтор через 60 секунд.", error);
+  } finally {
+    await client.end().catch(() => undefined);
+    bannerCleanupTimer = setTimeout(runBannerCleanup, delay);
+  }
+}
 let telegramUpdateOffset = 0;
 let telegramCallbackPollingReady = false;
 
@@ -533,6 +557,7 @@ function shutdown(signal) {
   if (listener) void listener.end().catch(() => undefined);
   if (callbackTimer) clearTimeout(callbackTimer);
   if (messageCleanupTimer) clearTimeout(messageCleanupTimer);
+  if (bannerCleanupTimer) clearTimeout(bannerCleanupTimer);
   console.info(`[walk-cleanup] Получен ${signal}, планировщик остановлен.`);
   process.exit(0);
 }
@@ -554,6 +579,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
 
   if (!runOnce) {
+    void runBannerCleanup();
     void runMessageCleanup();
     void startTelegramQueueListener();
     void runNotificationRetry();

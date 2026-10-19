@@ -23,9 +23,16 @@ test("Telegram disables repeat clicks while loading and allows retry after an er
   });
   await page.goto("/");
   const telegram = page.getByRole("button", { name: "Telegram", exact: true });
+  const activeColor = await page.locator(".dock-item--nearby").evaluate((button) => getComputedStyle(button).color);
   await telegram.click();
   await expect(telegram).toBeDisabled();
   await expect(telegram).toHaveAttribute("aria-busy", "true");
+  await expect(telegram).toHaveClass(/is-active/);
+  await expect(telegram).toHaveAttribute("aria-current", "true");
+  await expect(telegram).toHaveCSS("color", activeColor);
+  await expect(telegram).toHaveCSS("opacity", "1");
+  await expect(telegram.locator("svg")).toHaveCSS("fill", activeColor);
+  await expect(page.locator(".dock-tabs")).toHaveAttribute("data-active", "telegram");
   finishRequest();
   await expect(page.getByRole("alert").filter({ hasText: "Временная ошибка." })).toBeVisible();
   await expect(telegram).toBeEnabled();
@@ -34,6 +41,42 @@ test("Telegram disables repeat clicks while loading and allows retry after an er
   await page.route("https://t.me/**", (route) => route.fulfill({ body: "Telegram" }));
   await telegram.click();
   await expect(page).toHaveURL("https://t.me/dogmeet_test_bot?start=retry");
+});
+
+test("Telegram finishes selecting before opening and restores Nearby in the background", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await mockApp(page);
+  await page.route("**/api/telegram/subscription-link", (route) => route.fulfill({ json: { link: "https://t.me/dogmeet_test_bot?start=subscription" } }));
+  await page.addInitScript(() => {
+    window.addEventListener("beforeunload", (event) => {
+      const tabs = document.querySelector<HTMLElement>(".dock-tabs")!;
+      const indicator = tabs.querySelector<HTMLElement>(".nav-indicator")!;
+      sessionStorage.setItem("telegram-selection-at-open", JSON.stringify({ active: tabs.dataset.active, progress: new DOMMatrix(getComputedStyle(indicator).transform).m41 / indicator.getBoundingClientRect().width }));
+      event.preventDefault();
+      event.returnValue = "";
+    });
+  });
+  page.on("dialog", (dialog) => dialog.dismiss());
+  await page.route("https://t.me/**", (route) => route.abort());
+  await page.goto("/");
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await page.getByRole("button", { name: "Telegram", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem("telegram-selection-at-open"))).not.toBeNull();
+  const selectionAtOpen = await page.evaluate(() => JSON.parse(sessionStorage.getItem("telegram-selection-at-open")!));
+  expect(selectionAtOpen?.active).toBe("telegram");
+  expect(selectionAtOpen?.progress).toBeCloseTo(3, 1);
+  const telegram = page.getByRole("button", { name: "Telegram", exact: true });
+  await expect(telegram).toHaveClass(/is-active/);
+  await expect(telegram).toBeDisabled();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  const nearby = page.getByRole("button", { name: "Рядом", exact: true });
+  await expect(nearby).toHaveAttribute("aria-current", "page");
+  await expect(nearby).toBeFocused();
+  await expect(page.getByRole("button", { name: "Telegram", exact: true })).toBeEnabled();
+  await expect(page.locator(".nav-indicator")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
 });
 
 test("notification settings no longer contain the old Telegram entry", async ({ page }) => {

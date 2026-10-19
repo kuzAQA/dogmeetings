@@ -1,3 +1,4 @@
+import { contactError, normalizeContact, type ContactType } from "../../lib/pet-contact";
 import { containsLetter, MAX_BREED_LENGTH, normalizeName, uuidPattern } from "../domain/pet";
 import { MAX_SOURCE_PHOTO_SIZE } from "../domain/pet-photo-limits.mjs";
 
@@ -8,6 +9,8 @@ type PetFields = {
   breed: string;
   ownerName: string;
   photo: File | null;
+  contactType?: ContactType | null;
+  contact?: string | null;
 };
 
 type CreatePetInput = PetFields;
@@ -58,7 +61,16 @@ export function parsePetMutation(formData: FormData, mode: MutationMode): ParseR
   const invalidPhoto = photoError(photo);
   if (invalidPhoto) return { ok: false, error: invalidPhoto };
 
-  const value: PetFields = { name, breed, ownerName, photo };
+  const contactFields: Pick<PetFields, "contactType" | "contact"> = {};
+  if (formData.has("contactType") || formData.has("contact")) {
+    const type = String(formData.get("contactType") ?? "");
+    const contact = String(formData.get("contact") ?? "");
+    const error = contactError(type, contact);
+    if (error) return { ok: false, error };
+    contactFields.contact = normalizeContact(type as ContactType, contact) || null;
+    contactFields.contactType = contactFields.contact ? type as ContactType : null;
+  }
+  const value: PetFields = { name, breed, ownerName, photo, ...contactFields };
   return mode === "update"
     ? { ok: true, value: { ...value, petId } }
     : { ok: true, value };

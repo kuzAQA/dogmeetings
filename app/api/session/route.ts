@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { withDb } from "../../../db";
-import { locations } from "../../../db/schema";
+import { locations, petShareLinks } from "../../../db/schema";
 import { databaseErrorMessage } from "../../../lib/database-error";
 import {
   createClientSession,
@@ -73,8 +73,24 @@ export async function POST(request: Request) {
 
   try {
     const current = await getClientSession(request);
+    const payload = await readJsonRecord(request);
+    let invitationLocation: SessionLocation | null = null;
+    if (!current?.hasLocation && payload?.shareToken) {
+      const token = String(payload.shareToken);
+      if (!/^[0-9a-f]{20}$/i.test(token)) {
+        return privateJson({ error: "Ссылка недействительна." }, { status: 404 });
+      }
+      const [invitation] = await withDb((db) => db.select({
+        city: petShareLinks.city, district: petShareLinks.district, complex: petShareLinks.residentialComplex
+      }).from(petShareLinks).where(eq(petShareLinks.token, token)).limit(1));
+      if (!invitation) return privateJson({ error: "Ссылка уже использована или заменена.", inactive: true }, { status: 410 });
+      invitationLocation = normalizeLocation(invitation);
+      if (!invitationLocation || !await knownLocation(invitationLocation)) {
+        return privateJson({ error: "В приглашении нет доступной локации. Попросите владельца получить новый QR-код." }, { status: 400 });
+      }
+    }
     if (current) {
-      const refreshed = await refreshClientSession(current);
+      const refreshed = invitationLocation ? await updateSessionLocation(current, invitationLocation) : await refreshClientSession(current);
       return privateJson(
         sessionPayload(refreshed),
         {},
@@ -82,7 +98,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = await readJsonRecord(request);
     const legacyClientId = String(payload?.legacyClientId ?? "").trim();
     if (legacyClientId && !uuidPattern.test(legacyClientId)) {
       return privateJson({ error: "Некорректные данные переноса сессии." }, { status: 400 });
@@ -96,8 +111,8 @@ export async function POST(request: Request) {
 
     const session = await createClientSession({
       clientId,
-      location: migrateLocation ? legacyLocation : null,
-      hasLocation: migrateLocation,
+      location: invitationLocation ?? (migrateLocation ? legacyLocation : null),
+      hasLocation: Boolean(invitationLocation) || migrateLocation,
       replaceExisting: migratingLegacyClient
     });
     return privateJson(

@@ -33,6 +33,7 @@ export const walk = {
 };
 
 export async function mockApp(page: Page, options: { pets?: Array<typeof pet>; nearby?: Array<typeof walk>; mine?: Array<typeof walk>; hasLocation?: boolean } = {}) {
+  await page.route("**/api/announcements", (route) => route.fulfill({ json: { serverTime: new Date().toISOString(), banners: [] } }));
   const pets = options.pets ?? [pet];
   const nearby = options.nearby ?? [walk];
   const mine = options.mine ?? [walk];

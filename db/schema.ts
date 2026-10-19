@@ -1,5 +1,21 @@
 import { sql } from "drizzle-orm";
-import { boolean, customType, date, index, integer, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, customType, date, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import type { AnnouncementExclusions, AnnouncementPage } from "../lib/announcement-types";
+
+export const announcementCampaigns = pgTable("announcement_campaigns", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  permanent: boolean("permanent").notNull().default(false),
+  pages: jsonb("pages").$type<AnnouncementPage[]>().notNull(),
+  exclusions: jsonb("exclusions").$type<AnnouncementExclusions>().notNull().default({ cities: [], districts: [], complexes: [] })
+}, (table) => [index("announcement_campaigns_ends_at_idx").on(table.endsAt)]);
+
+export const announcementReceipts = pgTable("announcement_receipts", {
+  clientId: uuid("client_id").notNull(),
+  bannerId: varchar("banner_id", { length: 100 }).notNull(),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [primaryKey({ columns: [table.clientId, table.bannerId] })]);
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {
@@ -15,6 +31,8 @@ export const pets = pgTable(
     name: varchar("name", { length: 40 }).notNull(),
     breed: varchar("breed", { length: 80 }).notNull(),
     ownerName: varchar("owner_name", { length: 60 }).notNull(),
+    contactType: varchar("contact_type", { length: 10 }),
+    contact: varchar("contact", { length: 120 }),
     photo: bytea("photo"),
     photoType: varchar("photo_type", { length: 50 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -49,6 +67,9 @@ export const petShareLinks = pgTable(
   {
     token: varchar("token", { length: 64 }).primaryKey(),
     petId: uuid("pet_id").notNull().references(() => pets.id, { onDelete: "cascade" }),
+    city: varchar("city", { length: 80 }),
+    district: varchar("district", { length: 80 }),
+    residentialComplex: varchar("residential_complex", { length: 120 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -229,7 +250,7 @@ export const walks = pgTable(
     scheduleType: varchar("schedule_type", { length: 10 }).notNull().default("today"),
     walkDate: date("walk_date", { mode: "string" }).notNull().default(sql`CURRENT_DATE`),
     walkTime: time("walk_time").notNull().default("12:00:00"),
-    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },

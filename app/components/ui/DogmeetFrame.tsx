@@ -36,7 +36,22 @@ const dialogDismissers = new WeakMap<HTMLElement, DialogDismissHandler>();
 const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function focusableChildren(element: HTMLElement) {
-  return Array.from(element.querySelectorAll<HTMLElement>(focusableSelector)).filter((child) => !child.hidden && child.getClientRects().length > 0);
+  return Array.from(element.querySelectorAll<HTMLElement>(focusableSelector)).filter((child) => child.tabIndex >= 0 && !child.hidden && !child.closest("[inert]") && child.getClientRects().length > 0);
+}
+
+export function trapDialogTab(event: Pick<KeyboardEvent, "key" | "shiftKey" | "preventDefault">, dialog: HTMLElement) {
+  if (event.key !== "Tab") return;
+  const focusable = focusableChildren(dialog);
+  if (!focusable.length) {
+    event.preventDefault();
+    dialog.focus({ preventScroll: true });
+    return;
+  }
+  const active = document.activeElement;
+  if (event.shiftKey ? active === focusable[0] || !dialog.contains(active) : active === focusable.at(-1) || !dialog.contains(active)) {
+    event.preventDefault();
+    (event.shiftKey ? focusable.at(-1) : focusable[0])?.focus({ preventScroll: true });
+  }
 }
 
 export function requestDialogClose(target: EventTarget | null, afterClose?: () => void, force = false) {
@@ -133,18 +148,7 @@ export function AppBottomSheet({ children, footer, open, onClose, onCloseStart, 
         void dismiss();
         return;
       }
-      if (event.key !== "Tab") return;
-      const focusable = focusableChildren(dialog);
-      if (!focusable.length) {
-        event.preventDefault();
-        dialog.focus({ preventScroll: true });
-        return;
-      }
-      const active = document.activeElement;
-      if (event.shiftKey ? active === focusable[0] || !dialog.contains(active) : active === focusable.at(-1) || !dialog.contains(active)) {
-        event.preventDefault();
-        (event.shiftKey ? focusable.at(-1) : focusable[0])?.focus({ preventScroll: true });
-      }
+      trapDialogTab(event, dialog);
     };
     const keepFocusInside = (event: FocusEvent) => {
       if (closingRef.current || (event.target instanceof Node && dialog.contains(event.target))) return;

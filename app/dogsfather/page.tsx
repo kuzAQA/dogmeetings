@@ -47,8 +47,9 @@ import { DogmeetState } from "../components/ui/DogmeetState";
 import { DogmeetDialog, DogmeetFrame, DogmeetHeader, requestDialogClose } from "../components/ui/DogmeetFrame";
 import { SingleLineInput } from "../components/ui/SingleLineInput";
 import { capitalizePlaceName, MAX_WALK_PLACE_LENGTH } from "../../server/domain/walk";
+import { AdminAnnouncements } from "../features/admin/Announcements";
 
-type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "locations" | "telegram-notifications";
+type AdminPhase = "checking" | "login" | "dashboard" | "requests" | "pets" | "edit-pet" | "locations" | "telegram-notifications" | "announcements";
 
 function locationNameLimit(level: AdminLocationLevel) {
   return level === "place" ? MAX_WALK_PLACE_LENGTH : level === "complex" ? 120 : 80;
@@ -75,6 +76,7 @@ function formatRequestDate(value: string) {
 
 export default function AdminPage() {
   const [phase, setPhase] = useState<AdminPhase>("checking");
+  const handleAnnouncementsUnauthorized = useCallback(() => setPhase("login"), []);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [requests, setRequests] = useState<LocationRequest[]>([]);
@@ -575,9 +577,14 @@ export default function AdminPage() {
         <button className="menu-row" type="button" onClick={openLocations}><MapPin /><span><strong>Локации</strong><small>Города, районы, ЖК и места для прогулок</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setQuery(""); openPets(); }}><PawIcon /><span><strong>Все питомцы</strong><small>Посмотреть и изменить</small></span><ChevronRight /></button>
         <button className="menu-row" type="button" onClick={() => { setPhase("telegram-notifications"); void loadTelegramSubscriptions(); }}><Bell /><span><strong>Уведомления в Telegram</strong><small>Активные подписки</small></span><ChevronRight /></button>
+        <button className="menu-row" type="button" onClick={() => setPhase("announcements")}><Bell /><span><strong>Баннеры</strong><small>Аудитория и сроки показа</small></span><ChevronRight /></button>
         <Link className="menu-row" href="/"><Compass /><span><strong>На главную</strong><small>Расписание прогулок</small></span><ChevronRight /></Link>
         <button className="menu-row" type="button" onClick={() => setSignOutPending(true)}><LogOut /><span><strong>Выйти</strong></span><ChevronRight /></button>
       </nav>
+    </>}
+    {phase === "announcements" && <>
+      {sectionHeading("Баннеры", "")}
+      <AdminAnnouncements onUnauthorized={handleAnnouncementsUnauthorized} />
     </>}
     {phase === "telegram-notifications" && <>
       {sectionHeading("Уведомления в Telegram", "")}

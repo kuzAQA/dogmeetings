@@ -28,7 +28,7 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
   const continueFromBrowserGuide = useCallback(async () => {
     setStage("checking"); setError(""); setLinkInactive(false);
     try {
-      await ensureClientSession();
+      await ensureClientSession(token);
       const data = await loadSharedPet(token);
       if (data.inactive) setLinkInactive(true);
       if (!data.pet) throw new Error(data.error || "Ссылка недействительна.");
@@ -45,7 +45,7 @@ export default function SharedPetPage({ params }: { params: Promise<{ token: str
     if (!pet || adding) return;
     setAdding(true); setError("");
     try {
-      await ensureClientSession();
+      await ensureClientSession(token);
       const data = await addSharedPet(token);
       if (data.inactive) setLinkInactive(true);
       if (!data.petId) throw new Error(data.error || "Не удалось добавить питомца.");

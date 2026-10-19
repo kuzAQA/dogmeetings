@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { withDb } from "../../../db";
 import { petShareLinks, pets } from "../../../db/schema";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../lib/session";
@@ -43,22 +43,27 @@ export async function POST(request: Request) {
       return privateJson({ error: "Поделиться может только владелец питомца." }, { status: 403 });
     }
 
+    const location = session.location;
+    if (!location) return privateJson({ error: "Сначала выберите локацию." }, { status: 400 });
+    const shareLocation = { city: location.city, district: location.district, residentialComplex: location.complex };
+
     const [existing] = await withDb((db) => db
       .select({ token: petShareLinks.token })
       .from(petShareLinks)
       .where(eq(petShareLinks.petId, petId))
       .limit(1));
     if (existing && shareTokenPattern.test(existing.token)) {
+      await withDb((db) => db.update(petShareLinks).set(shareLocation).where(and(eq(petShareLinks.token, existing.token), isNull(petShareLinks.city))));
       return privateJson(sharePayload(existing.token));
     }
 
     const token = createShareToken();
     const [created] = await withDb((db) => db
       .insert(petShareLinks)
-      .values({ token, petId })
+      .values({ token, petId, ...shareLocation })
       .onConflictDoUpdate({
         target: petShareLinks.petId,
-        set: { token, updatedAt: new Date() }
+        set: { token, ...shareLocation, updatedAt: new Date() }
       })
       .returning({ token: petShareLinks.token }));
     return privateJson(sharePayload(created.token), { status: 201 });
@@ -85,13 +90,17 @@ export async function PATCH(request: Request) {
       return privateJson({ error: "Обновить ссылку может только владелец питомца." }, { status: 403 });
     }
 
+    const location = session.location;
+    if (!location) return privateJson({ error: "Сначала выберите локацию." }, { status: 400 });
+    const shareLocation = { city: location.city, district: location.district, residentialComplex: location.complex };
+
     const token = createShareToken();
     const [link] = await withDb((db) => db
       .insert(petShareLinks)
-      .values({ token, petId, updatedAt: new Date() })
+      .values({ token, petId, ...shareLocation, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: petShareLinks.petId,
-        set: { token, updatedAt: new Date() }
+        set: { token, ...shareLocation, updatedAt: new Date() }
       })
       .returning({ token: petShareLinks.token }));
 

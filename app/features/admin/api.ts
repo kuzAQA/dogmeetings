@@ -1,5 +1,24 @@
 import { requestJson } from "../api/client";
 import type { AdminLocation, AdminLocationTarget, AdminPet, AdminPlace, LocationRequest, LoginChallenge, LoginProof } from "./model";
+import type { AdminAnnouncement, AdminAnnouncementsResponse, AnnouncementExclusions, AnnouncementSchedule } from "../../../lib/announcement-types";
+
+export function loadAdminAnnouncements() {
+  return requestJson<AdminAnnouncementsResponse>("/api/dogsfather/announcements", { cache: "no-store", credentials: "same-origin" });
+}
+
+export async function updateAdminAnnouncement(id: string, change: { action: "extend"; days: number } | { action: "exclusions"; exclusions: AnnouncementExclusions } | ({ action: "schedule" } & AnnouncementSchedule) | { action: "start-now" }) {
+  const data = await requestJson<{ banner: AdminAnnouncement }>("/api/dogsfather/announcements", {
+    method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...change })
+  });
+  return data.banner;
+}
+
+export async function createAdminAnnouncement(input: AnnouncementSchedule & { title: string; text: string }) {
+  const data = await requestJson<{ banner: AdminAnnouncement }>("/api/dogsfather/announcements", {
+    method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input)
+  });
+  return data.banner;
+}
 
 export async function getAdminSession() {
   return requestJson<{ authenticated?: boolean }>("/api/dogsfather/session", {

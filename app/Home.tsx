@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { Announcements } from "./features/announcements/Announcements";
 import { DogmeetState } from "./components/ui/DogmeetState";
 import { requestJson } from "./features/api/client";
 import { ChangeEvent, FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   createLocationRequest,
   deletePet as deletePetRequest,
@@ -64,7 +66,7 @@ type PetReturnTarget = "my-pets" | "announce";
 type WalkEditReturnTarget = "walks" | "my-walks";
 type FormScreen = "pet" | "announce";
 
-export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }) {
+export default function Home({ hasSessionCookie, announcementPreviewEnabled = false }: { hasSessionCookie: boolean; announcementPreviewEnabled?: boolean }) {
   const [walkEditWarning, setWalkEditWarning] = useState(0);
   useEffect(() => {
     if (!walkEditWarning) return;
@@ -122,7 +124,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
   const [petShareLoading, setPetShareLoading] = useState(false);
   const [petShareRefreshing, setPetShareRefreshing] = useState(false);
   const [petShareError, setPetShareError] = useState("");
-  const [petShareCopied, setPetShareCopied] = useState(false);
   const [highlightedPetId, setHighlightedPetId] = useState("");
   const [pendingSharedPetHighlightId, setPendingSharedPetHighlightId] = useState("");
   const [showSharedPetAlreadyAddedPopup, setShowSharedPetAlreadyAddedPopup] = useState(false);
@@ -524,14 +525,32 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     openFormScreen("pet");
   }
 
-  async function openTelegramSubscription() {
-    if (telegramOpening) return;
-    setTelegramOpening(true);
+  async function openTelegramSubscription(waitForSelection: () => Promise<void>) {
+    if (telegramOpening) return false;
+    flushSync(() => setTelegramOpening(true));
     setTelegramError("");
+    let stopWaiting = () => {};
     try {
-      window.location.assign(await requestTelegramSubscriptionLink());
+      const [link] = await Promise.all([requestTelegramSubscriptionLink(), waitForSelection()]);
+      const pageHidden = new Promise<void>((resolve) => {
+        const handleHidden = (event: Event) => {
+          if (document.hidden || event.type === "pagehide") resolve();
+        };
+        document.addEventListener("visibilitychange", handleHidden);
+        window.addEventListener("pagehide", handleHidden);
+        stopWaiting = () => {
+          document.removeEventListener("visibilitychange", handleHidden);
+          window.removeEventListener("pagehide", handleHidden);
+        };
+      });
+      window.location.assign(link);
+      await pageHidden;
+      return true;
     } catch (error) {
       setTelegramError(error instanceof Error ? error.message : "Не удалось открыть Telegram.");
+      return false;
+    } finally {
+      stopWaiting();
       setTelegramOpening(false);
     }
   }
@@ -555,7 +574,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
       setPetShareLoading(true);
     }
     setPetShareError("");
-    setPetShareCopied(false);
     try {
       setPetShareLink(await requestPetShareLinkRequest(pet.id, rotate));
     } catch (error) {
@@ -574,31 +592,6 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
     setPetToShare(null);
     setPetShareLink("");
     setPetShareError("");
-    setPetShareCopied(false);
-  }
-
-  async function copyPetShareLink() {
-    if (!petShareLink || petShareLoading) return;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(petShareLink);
-      } else {
-        const temporaryInput = document.createElement("textarea");
-        temporaryInput.value = petShareLink;
-        temporaryInput.setAttribute("readonly", "");
-        temporaryInput.style.position = "fixed";
-        temporaryInput.style.opacity = "0";
-        document.body.appendChild(temporaryInput);
-        temporaryInput.select();
-        const copied = document.execCommand("copy");
-        temporaryInput.remove();
-        if (!copied) throw new Error("copy-failed");
-      }
-      setPetShareCopied(true);
-      window.setTimeout(() => setPetShareCopied(false), 1800);
-    } catch {
-      setPetShareError("Не удалось скопировать ссылку. Нажмите на поле и скопируйте её вручную.");
-    }
   }
 
   function dismissSharedPetHighlight() {
@@ -1033,6 +1026,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
 
         {(screen === "walks" || screen === "walk-detail" || screen === "contact") && (
           <WalksWorkspace
+            announcementPreviewEnabled={announcementPreviewEnabled}
             selectedWalk={selectedWalk}
             onSelectWalk={setSelectedWalk}
             dockSection={dockSection}
@@ -1190,9 +1184,8 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
           petShareLoading={petShareLoading}
           petShareRefreshing={petShareRefreshing}
           petShareError={petShareError}
-          petShareCopied={petShareCopied}
           shareDoneButtonRef={shareDoneButtonRef}
-          onCopyPetShareLink={copyPetShareLink}
+          onRetryPetShare={(pet) => requestPetShareLink(pet, Boolean(petShareLink))}
           onRotatePetShareLink={(pet) => requestPetShareLink(pet, true)}
           onClosePetShare={closePetShare}
           walkPendingDelete={walkPendingDelete}
@@ -1209,6 +1202,7 @@ export default function Home({ hasSessionCookie }: { hasSessionCookie: boolean }
         />
       </section>
       </main>
+      <Announcements enabled={sessionReady && hasLocation && screen === "walks" && !menuOpen && !dockWalkOpen} />
     </DogmeetFrame>
   );
 }

@@ -1,4 +1,4 @@
-import { ApiRequestError, requestJson } from "../api/client";
+import { requestJson } from "../api/client";
 
 export type SharedPet = {
   id: string;
@@ -23,20 +23,11 @@ type SharedPetAcceptance = {
   error?: string;
 };
 
-export async function ensureClientSession() {
-  try {
-    await requestJson("/api/session", { cache: "no-store" });
-    return;
-  } catch (error) {
-    if (!(error instanceof ApiRequestError) || error.status !== 401) {
-      throw new Error("Не удалось восстановить сессию.");
-    }
-  }
-
+export async function ensureClientSession(token: string) {
   await requestJson("/api/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({})
+    body: JSON.stringify({ shareToken: token })
   });
 }
 

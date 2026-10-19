@@ -2,6 +2,7 @@
 
 import { CalendarDays, Check, Compass, Plus } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { dockMotionDuration } from "../../components/ui/motion.mjs";
 import { TelegramHintBubble } from "../../components/ui/DogmeetFrame";
 
@@ -10,10 +11,30 @@ let telegramHintShown = false;
 
 function DogProfileIcon(props: React.SVGProps<SVGSVGElement>) {
   return <svg viewBox="287 262 758 758" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path strokeWidth="46" d="M389 874Q432 817 447 775M580 474C598 548 638 682 598 744C557 811 422 770 357 702C294 644 322 590 370 529L444 437C494 374 535 359 607 360C723 347 797 383 831 472C852 551 870 569 941 591L986 606C1028 620 1004 663 998 703L980 742C956 779 927 789 869 789H805C738 791 702 827 686 872L655 921" />
+    <path strokeWidth="52" d="M389 874Q432 817 447 775M580 474C598 548 638 682 598 744C557 811 422 770 357 702C294 644 322 590 370 529L444 437C494 374 535 359 607 360C723 347 797 383 831 472C852 551 870 569 941 591L986 606C1028 620 1004 663 998 703L980 742C956 779 927 789 869 789H805C738 791 702 827 686 872L655 921" />
     <circle cx="745" cy="561" r="35" fill="currentColor" stroke="none" />
     <path d="M955 601Q1008 585 1009 634Q1004 675 970 659Q935 645 955 601Z" fill="currentColor" stroke="none" />
   </svg>;
+}
+
+function TelegramIcon() {
+  return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.4 3.6 18.2 20c-.2 1.2-.9 1.5-1.8.9l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.1-8.2c.4-.4-.1-.6-.6-.3L5.8 13.7 1 12.2c-1-.3-1-1 .2-1.5L20 3.4c.9-.3 1.7.2 1.4 1.2Z" /></svg>;
+}
+
+export function BottomDockExample() {
+  return <div className="announcement-dock-example" role="img" aria-label="Нижнее меню: Рядом, Планы, Питомцы, Telegram. Уведомления подключаются через Telegram.">
+    <div className="announcement-dock" inert aria-hidden="true">
+      <div className="nav-tabs dock-tabs" data-active="telegram">
+        <span className="nav-indicator" />
+        {([
+          ["nearby", "Рядом", Compass],
+          ["plans", "Планы", CalendarDays],
+          ["pets", "Питомцы", DogProfileIcon],
+          ["telegram", "Telegram", TelegramIcon]
+        ] as const).map(([target, label, Icon]) => <button key={target} type="button" disabled className={`dock-item dock-item--${target} ${target === "telegram" ? "is-active" : ""}`}><span className="nav-label"><Icon aria-hidden="true" /><span>{label}</span></span></button>)}
+      </div>
+    </div>
+  </div>;
 }
 
 type BottomDockProps = {
@@ -26,13 +47,14 @@ type BottomDockProps = {
   onPlansClick: () => void;
   onPetsClick: () => void;
   telegramOpening: boolean;
-  onTelegramClick: () => void;
+  onTelegramClick: (waitForSelection: () => Promise<void>) => Promise<boolean>;
   onAddPet: () => void;
   onWalkClick: () => void;
 };
 
 export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded, walkSaving, onNearbyClick, onPlansClick, onPetsClick, telegramOpening, onTelegramClick, onAddPet, onWalkClick }: BottomDockProps) {
   const addingPet = section === "pets";
+  const selectedSection = telegramOpening ? "telegram" : section;
   const [telegramHintVisible, setTelegramHintVisible] = useState(false);
   const [preferences, setPreferences] = useState({ mobile: false, reduced: true });
   const actionHidden = section === "nearby";
@@ -231,8 +253,8 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
     const dock = dockRef.current;
     const indicator = dock?.querySelector<HTMLElement>(".nav-indicator");
     if (!dock || !indicator) return;
-    const target = `translateX(${section === "plans" ? 100 : section === "pets" ? 200 : 0}%)`;
-    if (!preferences.mobile || preferences.reduced || document.documentElement.dataset.motionInput === "keyboard" || selectionFrame.current === target) {
+    const target = `translateX(${selectedSection === "telegram" ? 300 : selectedSection === "plans" ? 100 : selectedSection === "pets" ? 200 : 0}%)`;
+    if (document.hidden || (!preferences.mobile && selectedSection !== "telegram") || preferences.reduced || document.documentElement.dataset.motionInput === "keyboard" || selectionFrame.current === target) {
       selectionFrame.current = target;
       return;
     }
@@ -255,7 +277,7 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
       current = false;
       animation.cancel();
     };
-  }, [section, actionHidden, preferences.mobile, preferences.reduced]);
+  }, [selectedSection, actionHidden, preferences.mobile, preferences.reduced]);
 
   return (
     <nav ref={dockRef} className="bottom-nav walks-bottom-dock" data-action={actionHidden ? "hidden" : "visible"} aria-label="Основная навигация">
@@ -269,7 +291,7 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
         </defs>
       </svg>
       <div className="dock-goo" aria-hidden="true" style={{ "--dock-filter": `url(#${filterId})` } as React.CSSProperties}><span className="dock-source-shape" /><span className="dock-bridge" /><span className="dock-drop-shape" /></div>
-      <div className="nav-tabs dock-tabs" data-active={section === "walk" ? "nearby" : section}>
+      <div className="nav-tabs dock-tabs" data-active={selectedSection === "walk" ? "nearby" : selectedSection}>
         {telegramHintVisible && <TelegramHintBubble onDismiss={() => setTelegramHintVisible(false)}>Вы можете получать уведомления о прогулках ваших друзей <em>в Telegram</em></TelegramHintBubble>}
         <span className="nav-indicator" aria-hidden="true" />
         {([
@@ -277,12 +299,21 @@ export function BottomDock({ section, walkFormDirty, walkFormIsValid, petsLoaded
           ["plans", "Планы", CalendarDays, onPlansClick],
           ["pets", "Питомцы", DogProfileIcon, onPetsClick]
         ] as const).map(([target, label, Icon, onClick]) => (
-          <button className={`dock-item dock-item--${target} ${section === target ? "is-active" : ""}`} type="button" key={target} aria-current={section === target ? "page" : undefined} onClick={onClick}>
+          <button className={`dock-item dock-item--${target} ${selectedSection === target ? "is-active" : ""}`} type="button" key={target} aria-current={selectedSection === target ? "page" : undefined} onClick={onClick}>
             <span className="nav-label"><Icon aria-hidden="true" /><span>{String(label)}</span></span>
           </button>
         ))}
-        <button className="dock-item dock-item--telegram" type="button" disabled={telegramOpening} aria-busy={telegramOpening} onClick={onTelegramClick}>
-          <span className="nav-label"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.4 3.6 18.2 20c-.2 1.2-.9 1.5-1.8.9l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.1-8.2c.4-.4-.1-.6-.6-.3L5.8 13.7 1 12.2c-1-.3-1-1 .2-1.5L20 3.4c.9-.3 1.7.2 1.4 1.2Z" /></svg><span>Telegram</span></span>
+        <button className={`dock-item dock-item--telegram ${telegramOpening ? "is-active" : ""}`} type="button" disabled={telegramOpening} aria-current={telegramOpening ? "true" : undefined} aria-busy={telegramOpening} onClick={async () => {
+          const opened = await onTelegramClick(async () => {
+            const animations = dockRef.current?.querySelector(".nav-indicator")?.getAnimations() ?? [];
+            await Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
+          });
+          if (opened) {
+            flushSync(onNearbyClick);
+            dockRef.current?.querySelector<HTMLButtonElement>(".dock-item--nearby")?.focus({ preventScroll: true });
+          }
+        }}>
+          <span className="nav-label"><TelegramIcon /><span>Telegram</span></span>
         </button>
       </div>
       <button className={`dock-add dock-context-action dock-item--walk ${section === "walk" ? "is-active" : ""}`} type="button" disabled={!actionReady || actionHidden || !petsLoaded || walkSaving || (section === "walk" && walkFormDirty && !walkFormIsValid)} aria-hidden={actionHidden || undefined} tabIndex={actionHidden || !actionReady ? -1 : undefined} aria-label={actionLabel} onFocus={() => { actionFocused.current = true; }} onBlur={(event) => { if (event.relatedTarget) actionFocused.current = false; }} onClick={() => { if (actionReady && !actionHidden) (addingPet ? onAddPet : onWalkClick)(); }}>

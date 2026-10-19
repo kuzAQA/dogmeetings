@@ -95,7 +95,7 @@ export async function POST(request: Request, context: RouteContext) {
       }, { status: 410 });
     }
 
-    if (pet.ownerClientId === session.clientId) {
+    if (await clientAlreadyAddedPet(pet.id, pet.ownerClientId, session.clientId)) {
       return privateJson({ petId: pet.id, added: false, alreadyAdded: true });
     }
 

@@ -1,7 +1,9 @@
 "use client";
 
-import { Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, Share2, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
+import { Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
 import Image from "next/image";
+import { ShareMenuRow } from "../../../components/ui/ShareMenuRow";
+import { MyPlacesMenuRow } from "../../../components/ui/MyPlacesMenuRow";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { type FormEvent, type RefObject, useMemo, useState } from "react";
 import type { ApiWalk, Period, Walk } from "../../../../lib/walks";
@@ -13,10 +15,12 @@ import { WalkAnnouncementForm } from "./WalkAnnouncementForm";
 import { WalkActionsDialog } from "./WalkActionsDialog";
 import { isWalkEditExpired } from "../../../../server/domain/walk";
 import { useWalkEditClock } from "../use-walk-edit-clock";
+import { AnnouncementPreview } from "../../announcements/Announcements";
 
 const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
 type Props = {
+  announcementPreviewEnabled?: boolean;
   dockSection: DockSection;
   location: Location;
   period: Period;
@@ -95,8 +99,9 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
-        <button className="menu-row" type="button" onClick={onShareSite}><Share2 aria-hidden="true" /><span><strong>Поделиться сайтом</strong><small>QR-код для ваших друзей</small></span><ChevronRight aria-hidden="true" /></button>
-        <button className="menu-row" type="button" onClick={onOpenMyPlaces}><MapPin aria-hidden="true" /><span><strong>Мои места</strong><small>Места для прогулок, добавленные вами</small></span><ChevronRight aria-hidden="true" /></button>
+        <ShareMenuRow kind="site" onClick={onShareSite} />
+        <AnnouncementPreview />
+        <MyPlacesMenuRow onClick={onOpenMyPlaces} />
         <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
       </div>

@@ -1,3 +1,4 @@
+import type { ContactType } from "../../../lib/pet-contact";
 import type { ScheduleType } from "../../../lib/walks";
 import { allowedPhotoTypes, containsLetter, MAX_SOURCE_PHOTO_SIZE } from "../shared/validation";
 
@@ -12,6 +13,8 @@ export type Pet = {
   name: string;
   breed: string;
   ownerName: string;
+  contactType?: ContactType | null;
+  contact?: string | null;
   photoUrl: string;
   createdAt: string;
   updatedAt: string;
