@@ -1,15 +1,51 @@
 import { sql } from "drizzle-orm";
-import { boolean, customType, date, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
-import type { AnnouncementExclusions, AnnouncementPage } from "../lib/announcement-types";
+import { bigint, boolean, check, customType, date, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import type { AnnouncementExclusions, AnnouncementPage, AnnouncementStatus } from "../lib/announcement-types";
+
+export const dialogs = pgTable("dialogs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientLow: uuid("client_low").notNull(),
+  clientHigh: uuid("client_high").notNull(),
+  lowPetId: uuid("low_pet_id").references(() => pets.id, { onDelete: "set null" }),
+  highPetId: uuid("high_pet_id").references(() => pets.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  lastSeq: bigint("last_seq", { mode: "number" }).notNull().default(0),
+  lowHiddenThrough: bigint("low_hidden_through", { mode: "number" }).notNull().default(0),
+  highHiddenThrough: bigint("high_hidden_through", { mode: "number" }).notNull().default(0)
+}, table => [
+  check("dialogs_pair_order", sql`${table.clientLow} < ${table.clientHigh}`),
+  uniqueIndex("dialogs_pair_unique").on(table.clientLow, table.clientHigh),
+  index("dialogs_client_low_idx").on(table.clientLow),
+  index("dialogs_client_high_idx").on(table.clientHigh),
+  index("dialogs_expires_at_idx").on(table.expiresAt)
+]);
+
+export const dialogMessages = pgTable("dialog_messages", {
+  dialogId: uuid("dialog_id").notNull().references(() => dialogs.id, { onDelete: "cascade" }),
+  seq: bigint("seq", { mode: "number" }).notNull(),
+  senderClientId: uuid("sender_client_id").notNull(),
+  requestId: uuid("request_id").notNull(),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  readAt: timestamp("read_at", { withTimezone: true })
+}, table => [
+  primaryKey({ columns: [table.dialogId, table.seq] }),
+  uniqueIndex("dialog_messages_request_unique").on(table.dialogId, table.senderClientId, table.requestId),
+  check("dialog_messages_text_check", sql`char_length(${table.text}) BETWEEN 1 AND 2000`)
+]);
 
 export const announcementCampaigns = pgTable("announcement_campaigns", {
   id: varchar("id", { length: 100 }).primaryKey(),
   startsAt: timestamp("starts_at", { withTimezone: true }),
   endsAt: timestamp("ends_at", { withTimezone: true }),
   permanent: boolean("permanent").notNull().default(false),
+  status: varchar("status", { length: 16 }).$type<AnnouncementStatus>().notNull().default("active"),
   pages: jsonb("pages").$type<AnnouncementPage[]>().notNull(),
   exclusions: jsonb("exclusions").$type<AnnouncementExclusions>().notNull().default({ cities: [], districts: [], complexes: [] })
-}, (table) => [index("announcement_campaigns_ends_at_idx").on(table.endsAt)]);
+}, (table) => [
+  index("announcement_campaigns_ends_at_idx").on(table.endsAt),
+  check("announcement_campaigns_status_check", sql`${table.status} IN ('active', 'paused', 'disabled', 'information')`)
+]);
 
 export const announcementReceipts = pgTable("announcement_receipts", {
   clientId: uuid("client_id").notNull(),
@@ -31,6 +67,7 @@ export const pets = pgTable(
     name: varchar("name", { length: 40 }).notNull(),
     breed: varchar("breed", { length: 80 }).notNull(),
     ownerName: varchar("owner_name", { length: 60 }).notNull(),
+    description: varchar("description", { length: 100 }),
     contactType: varchar("contact_type", { length: 10 }),
     contact: varchar("contact", { length: 120 }),
     photo: bytea("photo"),

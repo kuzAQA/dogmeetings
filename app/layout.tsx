@@ -43,9 +43,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  // ponytail: vinext omits interactiveWidget; move this directive back when its viewport renderer supports it.
-  width: "device-width, interactive-widget=resizes-content",
+  // shortcut: vinext omits interactiveWidget and viewportFit; remove width directives when its renderer supports them.
+  width: "device-width, interactive-widget=resizes-content, viewport-fit=cover",
   initialScale: 1,
+  viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: "#f7f4ed"
 };

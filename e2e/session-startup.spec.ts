@@ -76,7 +76,7 @@ test(`migrates legacy saved state before choosing the screen ${legacyClientId ? 
   });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
-  expect(migration).toEqual({ ...(legacyClientId ? { legacyClientId } : {}), legacyLocation: location, legacyHasLocation: true });
+  expect(migration).toEqual({ legacyLocation: location, legacyHasLocation: true });
   expect(await page.evaluate(() => (window as Window & { welcomeSeen?: boolean }).welcomeSeen)).toBe(false);
   expect(await page.evaluate(() => localStorage.getItem("dogwalk.hasLocation.v1"))).toBeNull();
 });

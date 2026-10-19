@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { withDb } from "../../../../db";
-import { announcementCampaigns, locations } from "../../../../db/schema";
+import { announcementCampaigns, announcementReceipts, locations } from "../../../../db/schema";
 import { authorizeAdminRequest } from "../../../../lib/admin-request";
 import { ANNOUNCEMENT_MAX_END, parseAnnouncementExclusions, parseAnnouncementSchedule, validExtensionDays } from "../../../../lib/announcement-settings";
 import { privateJson } from "../../../../lib/session";
@@ -31,6 +31,27 @@ export async function PATCH(request: Request) {
       return privateJson({ error: "Некорректный баннер." }, { status: 400 });
     }
     const id = payload.id;
+    if (["pause", "resume", "disable", "information", "delete"].includes(payload.action as string)) {
+      return await withDb((db) => db.transaction(async (tx) => {
+        const [current] = await tx.select().from(announcementCampaigns).where(eq(announcementCampaigns.id, id)).for("update");
+        if (!current) return privateJson({ error: "Баннер не найден." }, { status: 404 });
+        if (payload.action === "delete") {
+          await tx.delete(announcementReceipts).where(eq(announcementReceipts.bannerId, id));
+          await tx.delete(announcementCampaigns).where(eq(announcementCampaigns.id, id));
+          return privateJson({ deleted: true });
+        }
+        if (payload.action === "resume") {
+          if (current.status !== "paused") return privateJson({ error: "Возобновить можно только приостановленный баннер." }, { status: 409 });
+          const clock = await tx.execute(sql`SELECT clock_timestamp() AS now`);
+          if (current.endsAt && current.endsAt <= new Date(clock.rows[0].now as string)) {
+            return privateJson({ error: "Срок показа завершён. Сначала исправьте окончание." }, { status: 409 });
+          }
+        }
+        const status = payload.action === "pause" ? "paused" : payload.action === "resume" ? "active" : payload.action === "disable" ? "disabled" : "information";
+        const [banner] = await tx.update(announcementCampaigns).set({ status, ...(payload.action === "information" ? { permanent: true } : {}) }).where(eq(announcementCampaigns.id, id)).returning();
+        return privateJson({ banner });
+      }));
+    }
     if (payload.action === "schedule" || payload.action === "start-now") {
       const schedule = payload.action === "schedule" ? parseAnnouncementSchedule(payload) : null;
       if (payload.action === "schedule" && !schedule) return privateJson({ error: "Проверьте постоянность, даты и интервал показа." }, { status: 400 });
@@ -45,7 +66,7 @@ export async function PATCH(request: Request) {
         const [banner] = await tx.update(announcementCampaigns).set(schedule ? {
           permanent: schedule.permanent, startsAt: schedule.startsAt ? new Date(schedule.startsAt) : null,
           endsAt: schedule.endsAt ? new Date(schedule.endsAt) : null
-        } : { startsAt: now }).where(eq(announcementCampaigns.id, id)).returning();
+        } : { startsAt: now, status: "active" }).where(eq(announcementCampaigns.id, id)).returning();
         return privateJson({ banner });
       }));
     }

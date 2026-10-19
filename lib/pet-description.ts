@@ -1,0 +1,1 @@
+export const MAX_PET_DESCRIPTION_LENGTH = 100;

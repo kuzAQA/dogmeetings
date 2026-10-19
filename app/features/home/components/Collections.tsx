@@ -67,9 +67,13 @@ export function PetCollection({ pets, fromDock, loaded, error, highlightedPetId,
       {loaded && !error && pets.length > 0 && <p>Те, ради кого мы выходим<br />из дома в любую погоду.</p>}
       {!loaded ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={onRetry} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="Добавить питомца" onAction={onAdd} /> : <>
         <div className="note pet-share-note"><Share2 aria-hidden="true" />Питомцем можно поделиться с близким человеком и вместе планировать прогулки.</div>
-        <div className="pet-rows">{pets.map((pet) => <button className="pet-row" type="button" key={pet.id} onClick={() => (onOpen ?? onEdit)(pet)}><Image className="pet-face" data-pet-photo={pet.id} src={pet.photoUrl} alt={`Собака ${pet.name}`} width={72} height={72} unoptimized={pet.photoUrl.startsWith("/api/")} /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span>{highlightedPetId === pet.id ? <Check aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>)}</div>
+        <div className="pet-rows">{pets.map((pet) => <button className="pet-row" type="button" key={pet.id} onClick={() => (onOpen ?? onEdit)(pet)}><PetRowContent pet={pet} />{highlightedPetId === pet.id ? <Check aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>)}</div>
       </>}
       </div>
     </div>
   );
+}
+
+export function PetRowContent({ pet }: { pet: Pet }) {
+  return <><Image className="pet-face" data-pet-photo={pet.id} src={pet.photoUrl} alt={`Собака ${pet.name}`} width={72} height={72} unoptimized={pet.photoUrl.startsWith("/api/")} /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small><em>{pet.isOwner ? "Ваш питомец" : "Общий питомец"}</em></span></>;
 }

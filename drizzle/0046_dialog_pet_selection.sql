@@ -1,0 +1,2 @@
+ALTER TABLE dialogs ADD COLUMN low_pet_id uuid REFERENCES pets(id) ON DELETE SET NULL;
+ALTER TABLE dialogs ADD COLUMN high_pet_id uuid REFERENCES pets(id) ON DELETE SET NULL;

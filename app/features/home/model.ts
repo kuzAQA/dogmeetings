@@ -13,6 +13,7 @@ export type Pet = {
   name: string;
   breed: string;
   ownerName: string;
+  description?: string | null;
   contactType?: ContactType | null;
   contact?: string | null;
   photoUrl: string;
@@ -38,7 +39,6 @@ export type SessionBootstrapData = {
 };
 
 export type LegacySessionData = {
-  legacyClientId?: string;
   legacyLocation?: Location | null;
   legacyHasLocation?: boolean;
 };

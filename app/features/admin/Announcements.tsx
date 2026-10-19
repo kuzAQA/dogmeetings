@@ -6,7 +6,7 @@ import { announcementDateInput, announcementDateValue, maxExtensionDays, validEx
 import { DogmeetState } from "../../components/ui/DogmeetState";
 import { SingleLineInput } from "../../components/ui/SingleLineInput";
 import { ApiRequestError } from "../api/client";
-import { createAdminAnnouncement, loadAdminAnnouncements, updateAdminAnnouncement } from "./api";
+import { createAdminAnnouncement, deleteAdminAnnouncement, loadAdminAnnouncements, updateAdminAnnouncement } from "./api";
 
 const date = (value: string | null) => value ? new Intl.DateTimeFormat("ru-RU", {
   timeZone: "Europe/Moscow", dateStyle: "short", timeStyle: "short"
@@ -19,8 +19,19 @@ function duration(milliseconds: number) {
   return `${Math.floor(minutes / 1440)} дн. ${Math.floor(minutes % 1440 / 60)} ч. ${minutes % 60} мин.`;
 }
 
+function bannerStatus(banner: AdminAnnouncement, now: number) {
+  if (banner.status !== "active") return { paused: "Пауза", disabled: "Отключён", information: "Информация" }[banner.status];
+  if (banner.endsAt && Date.parse(banner.endsAt) <= now) return "Завершён";
+  if (banner.startsAt && Date.parse(banner.startsAt) > now) return "Запланирован";
+  return "Показывается";
+}
+
 export function AdminAnnouncements({ onUnauthorized }: { onUnauthorized: () => void }) {
   const [data, setData] = useState<AdminAnnouncementsResponse | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const previousId = useRef<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [clock, setClock] = useState({ time: 0, started: 0 });
@@ -51,21 +62,41 @@ export function AdminAnnouncements({ onUnauthorized }: { onUnauthorized: () => v
   }, []);
   const now = clock.time + Math.max(0, tick - clock.started);
   const banners = data?.banners ?? [];
+  const selected = banners.find((banner) => banner.id === selectedId);
+  useEffect(() => {
+    if (selectedId) backRef.current?.focus();
+    else if (previousId.current) (document.getElementById(`admin-banner-${previousId.current}`) ?? tableRef.current)?.focus();
+    previousId.current = selectedId;
+  }, [selectedId]);
   return <>
     {loading ? <DogmeetState state="loading" /> : error ? <DogmeetState state="error" message={error} onAction={load} /> : <>
-      <p>Даты и время — Москва (UTC+3). Показаны запланированные, действующие и завершённые баннеры.</p>
-      <CreateBanner onUnauthorized={onUnauthorized} onCreated={() => { void load(); }} />
-      {banners.length ? banners.map((banner) => <BannerSettings key={banner.id} banner={banner} locations={data!.locations} now={now}
-        onUnauthorized={onUnauthorized} onSaved={(updated) => setData((current) => current && ({ ...current, banners: current.banners.map((item) => item.id === updated.id ? updated : item) }))} />)
-        : <DogmeetState state="empty" title="Действующих баннеров нет" message="Создайте баннер, чтобы сообщить о нововведениях." />}
+      {selected ? <>
+        <button ref={backRef} className="button secondary" type="button" onClick={() => setSelectedId(null)}>Назад к списку баннеров</button>
+        <BannerSettings key={selected.id} banner={selected} locations={data!.locations} now={now}
+        onUnauthorized={onUnauthorized} onSaved={(updated) => setData((current) => current && ({ ...current, banners: current.banners.map((item) => item.id === updated.id ? updated : item) }))}
+        onDeleted={() => {
+          setData((current) => current && ({ ...current, banners: current.banners.filter((item) => item.id !== selected.id) }));
+          setSelectedId((current) => current === selected.id ? null : current);
+        }} />
+      </> : <>
+        <p>Все баннеры. Нажмите на строку, чтобы открыть настройки. Время — Москва (UTC+3).</p>
+        <CreateBanner onUnauthorized={onUnauthorized} onCreated={() => { void load(); }} />
+        {banners.length ? <table ref={tableRef} className="admin-banner-table" aria-label="Все баннеры" tabIndex={-1}>
+          <thead><tr><th scope="col">Баннер</th><th scope="col">Статус</th><th scope="col">Окончание</th></tr></thead>
+          <tbody>{banners.map((banner) => <tr key={banner.id}>
+            <td><button id={`admin-banner-${banner.id}`} className="admin-banner-link" type="button" onClick={() => setSelectedId(banner.id)}>{banner.pages[0]?.title || banner.id}</button></td>
+            <td>{bannerStatus(banner, now)}</td><td>{banner.endsAt ? date(banner.endsAt) : "Без срока"}</td>
+          </tr>)}</tbody>
+        </table> : <DogmeetState state="empty" title="Действующих баннеров нет" message="Создайте баннер, чтобы сообщить о нововведениях." />}
+      </>}
       <button className="button secondary" type="button" onClick={load}>Обновить</button>
     </>}
   </>;
 }
 
-function BannerSettings({ banner, locations, now, onSaved, onUnauthorized }: {
+function BannerSettings({ banner, locations, now, onSaved, onDeleted, onUnauthorized }: {
   banner: AdminAnnouncement; locations: AnnouncementLocation[]; now: number;
-  onSaved: (banner: AdminAnnouncement) => void; onUnauthorized: () => void;
+  onSaved: (banner: AdminAnnouncement) => void; onDeleted: () => void; onUnauthorized: () => void;
 }) {
   const [exclusions, setExclusions] = useState(banner.exclusions);
   const [schedule, setSchedule] = useState<AnnouncementSchedule>({ permanent: banner.permanent, startsAt: banner.startsAt, endsAt: banner.endsAt });
@@ -76,17 +107,24 @@ function BannerSettings({ banner, locations, now, onSaved, onUnauthorized }: {
   const [message, setMessage] = useState("");
   const cities = [...new Set(locations.map((item) => item.city))];
   const districts = [...new Map(locations.map(({ city, district }) => [JSON.stringify([city, district]), { city, district }])).values()];
-  async function save(change: Parameters<typeof updateAdminAnnouncement>[1]) {
+  async function save(change: Parameters<typeof updateAdminAnnouncement>[1] | { action: "delete" }) {
     if (pending.current) return;
+    if (change.action === "delete" && !window.confirm(`Удалить баннер «${banner.pages[0]?.title || banner.id}» навсегда? Он исчезнет и из раздела «Информация». Восстановить его будет нельзя.`)) return;
     pending.current = true;
     setBusy(true);
     setError("");
     setMessage("");
     try {
+      if (change.action === "delete") {
+        await deleteAdminAnnouncement(banner.id);
+        onDeleted();
+        return;
+      }
       const updated = await updateAdminAnnouncement(banner.id, change);
       onSaved(updated);
       setSchedule({ permanent: updated.permanent, startsAt: updated.startsAt, endsAt: updated.endsAt });
-      setMessage(change.action === "extend" ? "Срок продлён." : change.action === "exclusions" ? "Исключения сохранены." : change.action === "start-now" ? "Показ начат." : "Настройки показа сохранены.");
+      const messages = { extend: "Срок продлён.", exclusions: "Исключения сохранены.", "start-now": "Показ начат.", schedule: "Настройки показа сохранены.", pause: "Показ приостановлен до ручного включения.", resume: "Показ возобновлён.", disable: "Баннер полностью отключён.", information: "Баннер убран из показа и сохранён в разделе «Информация»." };
+      setMessage(messages[change.action]);
       if (change.action === "extend") setDays("");
     } catch (failure) {
       if (failure instanceof ApiRequestError && failure.status === 401) onUnauthorized();
@@ -115,6 +153,19 @@ function BannerSettings({ banner, locations, now, onSaved, onUnauthorized }: {
   return <article className="request-row admin-banner" aria-label={banner.pages[0]?.title || banner.id}>
     <h2>{banner.pages[0]?.title || banner.id}</h2>
     <p className="admin-banner-id">{banner.id}</p>
+    <p><strong>Статус: </strong>{{ active: "По расписанию", paused: "Приостановлен", disabled: "Полностью отключён", information: "Только в «Информации»" }[banner.status]}</p>
+    <fieldset disabled={busy} className="admin-banner-schedule">
+      <legend>Действия с баннером</legend>
+      {banner.status === "active" && <button className="button secondary" type="button" onClick={() => { void save({ action: "pause" }); }}>Отключить временно</button>}
+      {banner.status === "paused" && <>
+        <p>Пауза до ручного включения. Дата окончания не сдвигается; просмотры сохраняются.</p>
+        <button className="button secondary" type="button" onClick={() => { void save({ action: "resume" }); }}>Возобновить показ</button>
+      </>}
+      {banner.status !== "disabled" && <button className="button secondary" type="button" onClick={() => { void save({ action: "disable" }); }}>Отключить полностью</button>}
+      {banner.status === "disabled" && <p>Баннер скрыт из показа и «Информации». Для повторного показа нажмите «Запустить сейчас».</p>}
+      {banner.status !== "information" && <button className="button secondary" type="button" onClick={() => { void save({ action: "information" }); }}>Убрать из показа, сохранить в «Информации»</button>}
+      <button className="button secondary" type="button" onClick={() => { void save({ action: "delete" }); }}>Удалить навсегда</button>
+    </fieldset>
     <dl className="admin-banner-dates">
       <div><dt>Начало</dt><dd>{date(banner.startsAt)}</dd></div>
       <div><dt>Окончание</dt><dd>{date(banner.endsAt)}</dd></div>

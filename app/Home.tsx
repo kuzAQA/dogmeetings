@@ -55,6 +55,10 @@ import { HomeDialogs } from "./features/home/components/HomeDialogs";
 import { MyPlaces } from "./features/home/components/MyPlaces";
 import { LocationEditor, LocationRequestForm } from "./features/home/components/LocationFlow";
 import { PetForm } from "./features/home/components/PetForm";
+import { Dialogs } from "./features/chat/Dialogs";
+import { Dialog } from "./features/chat/Dialog";
+import { SelectPetDialog } from "./features/chat/SelectPetDialog";
+import { PetDetail } from "./features/home/components/PetDetail";
 import { WalksWorkspace } from "./features/home/components/WalksWorkspace";
 import { apiWalkToCard, isWalkScheduledForToday, type ApiWalk, type Period, type Walk } from "../lib/walks";
 import { BrowserGuide, detectBrowserGuidePlatform, isInAppBrowser, type BrowserGuidePlatform } from "./components/ui/BrowserGuide";
@@ -101,6 +105,8 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
   const [photoError, setPhotoError] = useState("");
   const [petSubmitError, setPetSubmitError] = useState("");
   const [petSaving, setPetSaving] = useState(false);
+  const [chatPetWalkId, setChatPetWalkId] = useState<string | null>(null);
+  const chatPetRequest = useRef(0);
   const [petNameInput, setPetNameInput] = useState("");
   const [ownerNameInput, setOwnerNameInput] = useState("");
   const [breedInput, setBreedInput] = useState("");
@@ -129,6 +135,8 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
   const [showSharedPetAlreadyAddedPopup, setShowSharedPetAlreadyAddedPopup] = useState(false);
   const {
     screen,
+    chatDialogId,
+    chatWalkId,
     menuOpen,
     locationOpenedFromMenu,
     dockWalkOpen,
@@ -204,6 +212,25 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
     retryPlaces,
     retryMyWalks
   } = useHomeResources(sessionReady, location, hasLocation || screen === "location" || screen === "my-pets", hasLocation);
+  const ownedPets = savedPets.filter(pet => pet.isOwner);
+  function closeChatPetChoice() {
+    chatPetRequest.current++;
+    setChatPetWalkId(null);
+  }
+  async function startChat(walkId: string) {
+    const request = ++chatPetRequest.current;
+    let pets = savedPets;
+    if (!petsLoaded || petsError) {
+      setChatPetWalkId(walkId);
+      try { pets = await reloadPets(); } catch { return; }
+      if (request !== chatPetRequest.current) return;
+    }
+    if (pets.filter(pet => pet.isOwner).length > 1) setChatPetWalkId(walkId);
+    else {
+      closeChatPetChoice();
+      pushNavigation("dialog", { chatWalkId: walkId });
+    }
+  }
   const walkForm = useWalkForm(savedPets, sharedPlaces, placesLoaded);
   useEffect(() => {
     if (!sessionReady || !(screen === "announce" || (screen === "walks" && (menuOpen || dockWalkOpen)))) return;
@@ -762,6 +789,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
         pet: savedPet.name,
         breed: savedPet.breed,
         owner: savedPet.ownerName,
+        description: savedPet.description,
         image: savedPet.photoUrl
       } : walk));
       setMyWalks((current) => current.map((walk) => walk.petId === savedPet.id ? {
@@ -769,16 +797,24 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
         pet: savedPet.name,
         breed: savedPet.breed,
         owner: savedPet.ownerName,
+        description: savedPet.description,
         image: savedPet.photoUrl
       } : walk));
       setPetSaving(false);
-      setResult({ title: editedPet ? "Паспорт обновлён" : "Рады знакомству!", message: editedPet ? "Изменения сохранены в списке питомцев." : "Питомец добавлен. Теперь можно сообщить о прогулке.", action: returnTarget === "announce" ? "Продолжить прогулку" : "Готово", onContinue: () => {
+      setResult({ title: editedPet ? "Паспорт обновлён" : "Рады знакомству!", message: editedPet ? "Изменения сохранены в паспорте питомца." : "Питомец добавлен. Теперь можно сообщить о прогулке.", action: returnTarget === "announce" ? "Продолжить прогулку" : "Готово", onContinue: () => {
       if (returnTarget === "announce") {
         setPetReturnTarget("my-pets");
         walkForm.selectPet(savedPet.id);
         beginFormClose("announce", "replace");
       } else {
-        beginFormClose("my-pets");
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(savedPet.photoUrl);
+        setPetBeingEdited(savedPet);
+        setPetNameInput(savedPet.name);
+        setOwnerNameInput(savedPet.ownerName);
+        setBreedInput(savedPet.breed);
+        setTouchedFields({});
+        setPetScreenMode("view");
       }
       } });
     } catch (error) {
@@ -1034,6 +1070,8 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
             contactOpen={screen === "contact"}
             onOpenDetail={() => pushNavigation("walk-detail")}
             onOpenContact={() => pushNavigation("contact")}
+            onOpenDialogs={() => pushNavigation("dialogs")}
+            onWrite={(walkId) => { void startChat(walkId); }}
             location={location}
             period={period}
             visibleWalks={visibleWalks}
@@ -1112,6 +1150,8 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
           />
         )}
 
+        {screen === "pet-detail" && petBeingEdited && <PetDetail pet={petBeingEdited} location={location} onBack={returnThroughHistory} />}
+
         {screen === "pet" && (
           <PetForm
             guidedWalkFlow={guidedWalkFlow}
@@ -1136,11 +1176,19 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
             onOwnerNameChange={(value) => { setOwnerNameInput(value); setPetSubmitError(""); }}
             onBreedChange={(value) => { setBreedInput(value); setPetSubmitError(""); }}
             onEdit={() => setPetScreenMode("edit")}
+            onOpenDetail={() => pushNavigation("pet-detail", { petsSource })}
             onShare={() => { if (petBeingEdited) void requestPetShareLink(petBeingEdited); }}
             onDelete={() => { if (petBeingEdited) { setPetDeleteError(""); setPetPendingDelete(petBeingEdited); } }}
             onBack={() => beginFormClose(petReturnTarget === "announce" ? "announce" : "my-pets")}
           />
         )}
+
+        {screen === "dialogs" && <Dialogs onBack={returnThroughHistory} onOpen={(id) => pushNavigation("dialog", { chatDialogId: id })} />}
+        {screen === "dialog" && <Dialog id={chatDialogId} walkId={chatWalkId} petId={ownedPets.length === 1 ? ownedPets[0].id : undefined} onBack={returnThroughHistory} onResolved={(id) => replaceNavigation("dialog", { chatDialogId: id })} />}
+        {chatPetWalkId && (petsLoaded && !petsError ? ownedPets.length > 1 && <SelectPetDialog pets={ownedPets} walkId={chatPetWalkId} onDismiss={closeChatPetChoice} onOpen={(id) => { closeChatPetChoice(); pushNavigation("dialog", { chatDialogId: id }); }} /> :
+          <DogmeetDialog title="От имени какого питомца написать?" onDismiss={closeChatPetChoice} footer={<button className="button secondary" type="button" onClick={event => requestDialogClose(event.currentTarget, closeChatPetChoice)}>Закрыть</button>}>
+            <DogmeetState state={petsLoaded ? "error" : "loading"} message={petsError} onAction={petsLoaded ? () => { void startChat(chatPetWalkId); } : undefined} />
+          </DogmeetDialog>)}
 
         {screen === "my-places" && <MyPlaces onBack={returnThroughHistory} />}
 

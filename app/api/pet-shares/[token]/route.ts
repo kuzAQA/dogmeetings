@@ -16,6 +16,7 @@ async function sharedPet(token: string) {
       name: pets.name,
       breed: pets.breed,
       ownerName: pets.ownerName,
+      description: pets.description,
       photoType: pets.photoType,
       updatedAt: pets.updatedAt
     })
@@ -62,6 +63,7 @@ export async function GET(request: Request, context: RouteContext) {
         name: pet.name,
         breed: pet.breed,
         ownerName: pet.ownerName,
+        description: pet.description,
         photoUrl: petPhotoUrl(pet.id, pet.updatedAt, pet.photoType)
       },
       alreadyAdded

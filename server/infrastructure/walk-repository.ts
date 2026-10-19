@@ -10,6 +10,7 @@ export type WalkRow = {
   petName: string;
   petBreed: string;
   ownerName: string;
+  description?: string | null;
   city: string;
   district: string;
   residentialComplex: string;
@@ -31,6 +32,7 @@ const walkSelection = {
   petName: pets.name,
   petBreed: pets.breed,
   ownerName: pets.ownerName,
+  description: pets.description,
   city: walks.city,
   district: walks.district,
   residentialComplex: walks.residentialComplex,
@@ -58,6 +60,7 @@ export async function findWalkPetForClient(
       name: pets.name,
       breed: pets.breed,
       ownerName: pets.ownerName,
+      description: pets.description,
       photoType: pets.photoType,
       updatedAt: pets.updatedAt
     })

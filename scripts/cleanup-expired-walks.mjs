@@ -80,6 +80,24 @@ let notificationListenerTimer;
 let callbackTimer;
 let messageCleanupTimer;
 let bannerCleanupTimer;
+let dialogCleanupTimer;
+
+export async function cleanupExpiredDialogs(client) {
+  return client.query("DELETE FROM dialogs WHERE expires_at <= clock_timestamp()");
+}
+
+async function runDialogCleanup() {
+  const client = new Client({ connectionString: connectionString(), connectionTimeoutMillis: 5000, statement_timeout: 5000 });
+  try {
+    await client.connect();
+    await cleanupExpiredDialogs(client);
+  } catch (error) {
+    console.error("[dialog-cleanup] Очистка не выполнена. Повтор через 60 секунд.", error);
+  } finally {
+    await client.end().catch(() => undefined);
+    dialogCleanupTimer = setTimeout(runDialogCleanup, 60_000);
+  }
+}
 
 /** Expired campaigns leave active queries; retain their content and receipts. */
 export async function cleanupExpiredBanners(client) {
@@ -558,6 +576,7 @@ function shutdown(signal) {
   if (callbackTimer) clearTimeout(callbackTimer);
   if (messageCleanupTimer) clearTimeout(messageCleanupTimer);
   if (bannerCleanupTimer) clearTimeout(bannerCleanupTimer);
+  if (dialogCleanupTimer) clearTimeout(dialogCleanupTimer);
   console.info(`[walk-cleanup] Получен ${signal}, планировщик остановлен.`);
   process.exit(0);
 }
@@ -579,6 +598,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
 
   if (!runOnce) {
+    void runDialogCleanup();
     void runBannerCleanup();
     void runMessageCleanup();
     void startTelegramQueueListener();

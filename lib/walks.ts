@@ -7,6 +7,7 @@ export type Walk = {
   pet: string;
   breed: string;
   owner: string;
+  description?: string | null;
   time: string;
   walkDate: string;
   point: string;
@@ -23,6 +24,7 @@ export type ApiWalk = {
   pet: string;
   breed: string;
   owner: string;
+  description?: string | null;
   city: string;
   district: string;
   complex: string;
@@ -51,6 +53,7 @@ export function apiWalkToCard(walk: ApiWalk): Walk {
     pet: walk.pet,
     breed: walk.breed,
     owner: walk.owner,
+    description: walk.description,
     point: walk.point,
     comment: walk.comment?.trim() ?? "",
     period,

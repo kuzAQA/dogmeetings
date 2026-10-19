@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import type { Announcement } from "../lib/announcement-types";
 import { location, mockApp, pet } from "./fixtures";
 
-const title = "Теперь в карточке питомца можно добавить контакт для связи";
-const text = "Добавьте контакт в карточку своего питомца, чтобы другие пользователи могли связаться с вами. Контакты владельцев также можно найти в карточках их питомцев.";
+const title = "Полезная информация о Dogmeet";
+const text = "Узнайте больше о возможностях приложения.";
 const serverTime = "2026-10-19T00:00:00+03:00";
 const banner: Announcement = {
-  id: "pet-owner-contact-2026-10", permanent: true, startsAt: serverTime, endsAt: "2026-10-26T00:00:00+03:00",
-  pages: [{ title, text, example: "pet-contact" }]
+  id: "general-information", permanent: true, startsAt: serverTime, endsAt: "2026-10-26T00:00:00+03:00",
+  pages: [{ title, text }]
 };
 
 async function campaign(page: Page, value: Announcement = banner) {
@@ -265,6 +265,28 @@ test("requests announcements only after the session GET succeeds", async ({ page
   expect(requests).toBe(1);
 });
 
+test("automatic banner keeps its button above the bottom edge on tall and short screens", async ({ page }) => {
+  await mockApp(page);
+  await campaign(page);
+  await page.goto("/");
+  const dialog = page.getByRole("dialog", { name: title });
+  await expect(dialog).toBeVisible();
+  for (const height of [956, 844, 500]) {
+    await page.setViewportSize({ width: 440, height });
+    await expect.poll(async () => (await dialog.locator(".announcement-card").boundingBox())!.height).toBeLessThanOrEqual(560);
+    const button = dialog.getByRole("button", { name: "Понятно", exact: true });
+    await expect(button).toBeVisible();
+    await expect.poll(async () => {
+      const dots = (await dialog.locator(".announcement-dots").boundingBox())!;
+      return (await button.boundingBox())!.y - dots.y - dots.height;
+    }).toBeLessThanOrEqual(8);
+    await expect.poll(async () => {
+      const bounds = (await button.boundingBox())!;
+      return height - bounds.y - bounds.height;
+    }).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("shows after verification, covers viewport, traps focus, locks and restores scroll", async ({ page, browserName, isMobile }) => {
   await mockApp(page);
   let release = () => {};
@@ -287,8 +309,6 @@ test("shows after verification, covers viewport, traps focus, locks and restores
   const bounds = await dialog.boundingBox();
   expect(bounds).toEqual({ x: 0, y: 0, ...page.viewportSize()! });
   await expect(dialog.getByRole("link")).toHaveCount(0);
-  await expect(dialog.locator(".facts dt")).toHaveText("Контакт");
-  await expect(dialog.locator(".facts dd")).toHaveText("@my_contact");
   const button = dialog.getByRole("button", { name: "Понятно" });
   await expect(button).toBeFocused();
   await page.keyboard.press("Tab");
@@ -326,7 +346,7 @@ test("acknowledges once and stays absent after reload", async ({ page }) => {
 
 test("Next changes pages without acknowledgement; only last page confirms", async ({ page }) => {
   await mockApp(page);
-  const state = await campaign(page, { ...banner, pages: [banner.pages[0], { title: "Вторая страница", text: "Подробности", example: "pet-contact" }] });
+  const state = await campaign(page, { ...banner, pages: [banner.pages[0], { title: "Вторая страница", text: "Подробности" }] });
   await page.goto("/");
   await page.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Вторая страница" })).toBeVisible();
@@ -541,29 +561,21 @@ test("expires while open using server lifetime even with an incorrect browser da
   await expect(page.getByRole("button", { name: "Питомцы", exact: true })).toBeEnabled();
 });
 
-test("example shares contact markup and computed styles with the pet passport", async ({ page }) => {
+test("hides retired contact banners automatically and in information", async ({ page }) => {
   await mockApp(page);
-  await campaign(page);
-  await page.route("**/api/pets", (route) => route.fulfill({ json: { pets: [{ ...pet, contactType: "telegram", contact: "@my_contact" }] } }));
+  const retired: Announcement = { ...banner, id: "pet-owner-contact-2026-10", pages: [{ title: "Контакт владельца", text: "Добавьте контакт", example: "pet-contact" }] };
+  const state = await campaign(page, retired);
+  await page.route("**/api/announcements?information=1", (route) => route.fulfill({ json: { serverTime, banners: [retired] } }));
+  await page.clock.install();
   await page.goto("/");
-  const styles = () => page.locator(".pet-contact-row").evaluate((row) => {
-    const read = (element: Element) => {
-      const style = getComputedStyle(element);
-      return Object.fromEntries(["fontFamily", "fontSize", "fontWeight", "color", "padding", "gap", "display", "justifyContent", "textAlign", "textDecorationLine", "textUnderlineOffset"].map((key) => [key, style[key as keyof CSSStyleDeclaration]]));
-    };
-    return [read(row), read(row.querySelector("dt")!), read(row.querySelector("dd")!), read(row.querySelector(".pet-contact-value")!)];
-  });
-  await expect(page.locator(".pet-contact-row")).toBeVisible();
-  const example = await styles();
-  await expect(page.locator(".pet-contact-row")).toHaveCSS("border-top-width", "1px");
-  await expect(page.locator(".pet-contact-row")).toHaveCSS("border-top-style", "solid");
-  await page.getByRole("button", { name: "Понятно", exact: true }).click();
-  await page.getByRole("button", { name: "Питомцы", exact: true }).click();
-  await page.getByRole("button", { name: /Собака Луна/ }).click();
-  await expect(page.locator(".pet-contact-row")).toBeVisible();
-  expect(await styles()).toEqual(example);
+  await page.clock.fastForward(4000);
+  await expect.poll(() => state.gets()).toBeGreaterThan(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Мой район и настройки", exact: true }).click();
+  await page.getByRole("button", { name: "Информация", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText("Пока нет информации.")).toBeVisible();
 });
-
 
 test("carousel slides on Next and swipe and respects reduced motion", async ({ page }) => {
   await mockApp(page);

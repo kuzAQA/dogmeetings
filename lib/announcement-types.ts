@@ -24,7 +24,8 @@ export type AnnouncementExclusions = {
   districts: { city: string; district: string }[];
   complexes: AnnouncementLocation[];
 };
-export type AdminAnnouncement = Announcement & { exclusions: AnnouncementExclusions };
+export type AnnouncementStatus = "active" | "paused" | "disabled" | "information";
+export type AdminAnnouncement = Announcement & { exclusions: AnnouncementExclusions; status: AnnouncementStatus };
 export type AdminAnnouncementsResponse = {
   serverTime: string;
   banners: AdminAnnouncement[];

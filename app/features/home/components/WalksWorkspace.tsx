@@ -58,11 +58,13 @@ type Props = {
   contactOpen: boolean;
   onOpenDetail: () => void;
   onOpenContact: () => void;
+  onOpenDialogs: () => void;
+  onWrite: (walkId: string) => void;
   selectedWalk: Walk | null;
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, onOpenDialogs, onWrite, selectedWalk, onSelectWalk }: Props) {
   const now = useWalkEditClock(visibleWalks.map((walk) => ({ walkDate: walk.walkDate, walkTime: walk.time })));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
@@ -99,6 +101,7 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
+        <button className="menu-row" type="button" onClick={onOpenDialogs}><MessageCircle aria-hidden="true" /><span><strong>Диалоги</strong><small>Сообщите своим друзьям что-то важное</small></span><ChevronRight aria-hidden="true" /></button>
         <ShareMenuRow kind="site" onClick={onShareSite} />
         <AnnouncementPreview />
         <MyPlacesMenuRow onClick={onOpenMyPlaces} />
@@ -116,10 +119,12 @@ export function WalksWorkspace({ dockSection, location, period, visibleWalks, sa
         <Image className="portrait" src={selectedWalk.image} alt={selectedWalk.pet} width={390} height={300} unoptimized={selectedWalk.image.startsWith("/api/")} />
         <div className="pet-title"><h2>{selectedWalk.pet}</h2><span>{selectedWalk.breed}</span></div>
         <p>Хозяин: {selectedWalk.owner}</p>
+        {selectedWalk.description?.trim() && <section className="pet-about"><h3>О нас</h3><p>{selectedWalk.description}</p></section>}
         <div className="big-time"><Clock3 /><strong>{selectedWalk.time}</strong><span>{selectedWalk.scheduleType === "always" ? "Ежедневно" : selectedWalk.scheduleType === "tomorrow" ? "Завтра" : "Сегодня"}</span></div>
         <div className="place-detail"><MapPin /><div><h3>{selectedWalk.point}</h3><p>{location.complex}<br />{location.city}, {location.district}</p></div></div>
         {selectedWalk.comment && <blockquote>«{selectedWalk.comment}»</blockquote>}
-        <div className="note">Узнаете друг друга по питомцу. Встречайтесь в указанном месте.</div>
+        <div className="note">Узнаете друг друга по питомцу.<br />Встречайтесь в указанном месте.</div>
+        {!ownedWalksById.has(selectedWalk.id) && <button className="button secondary" type="button" onClick={() => onWrite(selectedWalk.id)}>Написать</button>}
         <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}</button>
       </div>
     );

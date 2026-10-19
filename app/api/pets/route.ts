@@ -8,7 +8,7 @@ import { canEditPet, petPhotoUrl, uuidPattern } from "../../../server/domain/pet
 import { AVIF_TYPE, encodePetPhotoFile, PetPhotoError } from "../../../server/pet-photo.mjs";
 import { readJsonRecord, readJsonString } from "../../../server/transport/request-json";
 
-type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "contactType" | "contact" | "photoType" | "createdAt" | "updatedAt">;
+type PetSummary = Pick<typeof pets.$inferSelect, "id" | "clientId" | "name" | "breed" | "ownerName" | "description" | "contactType" | "contact" | "photoType" | "createdAt" | "updatedAt">;
 
 function publicPet(pet: PetSummary, clientId: string, isShared = false) {
   const isOwner = pet.clientId === clientId;
@@ -17,6 +17,7 @@ function publicPet(pet: PetSummary, clientId: string, isShared = false) {
     name: pet.name,
     breed: pet.breed,
     ownerName: pet.ownerName,
+    description: pet.description,
     contactType: pet.contactType,
     contact: pet.contact,
     photoUrl: petPhotoUrl(pet.id, pet.updatedAt, pet.photoType),
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
+          description: pets.description,
           contactType: pets.contactType,
           contact: pets.contact,
           photoType: pets.photoType,
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const parsedInput = parsePetMutation(formData, "create");
     if (!parsedInput.ok) return privateError(parsedInput.error, 400);
-    const { name, breed, ownerName, contactType, contact, photo } = parsedInput.value;
+    const { name, breed, ownerName, description, contactType, contact, photo } = parsedInput.value;
 
     const id = crypto.randomUUID();
     const photoBytes = photo ? await encodePetPhotoFile(photo) : null;
@@ -119,6 +121,7 @@ export async function POST(request: Request) {
           name,
           breed,
           ownerName,
+          description,
           contactType,
           contact,
           photo: photoBytes,
@@ -130,6 +133,7 @@ export async function POST(request: Request) {
           name: pets.name,
           breed: pets.breed,
           ownerName: pets.ownerName,
+          description: pets.description,
           contactType: pets.contactType,
           contact: pets.contact,
           photoType: pets.photoType,
@@ -158,7 +162,7 @@ export async function PATCH(request: Request) {
     const formData = await request.formData();
     const parsedInput = parsePetMutation(formData, "update");
     if (!parsedInput.ok) return privateError(parsedInput.error, 400);
-    const { petId, name, breed, ownerName, contactType, contact, photo } = parsedInput.value;
+    const { petId, name, breed, ownerName, description, contactType, contact, photo } = parsedInput.value;
 
     const [existingPet] = await withDb((db) => db
       .select({ id: pets.id, clientId: pets.clientId })
@@ -185,7 +189,7 @@ export async function PATCH(request: Request) {
     }
 
     const updatedAt = new Date();
-    const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, contactType, contact, updatedAt };
+    const values: Partial<typeof pets.$inferInsert> = { name, breed, ownerName, description, contactType, contact, updatedAt };
     if (photo) {
       values.photo = await encodePetPhotoFile(photo);
       values.photoType = AVIF_TYPE;
@@ -201,6 +205,7 @@ export async function PATCH(request: Request) {
         name: pets.name,
         breed: pets.breed,
         ownerName: pets.ownerName,
+        description: pets.description,
         contactType: pets.contactType,
         contact: pets.contact,
         photoType: pets.photoType,

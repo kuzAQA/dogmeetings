@@ -5,7 +5,6 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import type { Announcement, AnnouncementsResponse } from "../../../lib/announcement-types";
 import { DogmeetBrand, trapDialogTab } from "../../components/ui/DogmeetFrame";
 import { BottomDockExample } from "../home/BottomDock";
-import { PetContactRow } from "../../components/ui/PetContactRow";
 import { ShareMenuRow } from "../../components/ui/ShareMenuRow";
 import { MyPlacesMenuRow } from "../../components/ui/MyPlacesMenuRow";
 import { ApiRequestError, requestJson } from "../api/client";
@@ -15,7 +14,7 @@ type TimedAnnouncement = Announcement & { deadline: number };
 async function loadAnnouncements(information = false): Promise<TimedAnnouncement[]> {
   const started = performance.now();
   const data = await requestJson<AnnouncementsResponse>(`/api/announcements${information ? "?information=1" : ""}`, { cache: "no-store" });
-  return data.banners.map((banner) => ({
+  return data.banners.filter((banner) => banner.id !== "pet-owner-contact-2026-10" && !banner.pages.some((page) => page.example === "pet-contact")).map((banner) => ({
     ...banner,
     // A slow response must shorten the remaining lifetime, never extend it.
     deadline: information || !banner.endsAt ? Infinity : started + Date.parse(banner.endsAt) - Date.parse(data.serverTime)
@@ -225,7 +224,6 @@ function AnnouncementDialog({ banners, onDismiss, manual = false }: { manual?: b
             {slide.example === "walk-periods" && <div className="announcement-periods">{["Весь день", "День", "Утро", "Вечер"].map((period, index) => { const Icon = [Clock3, Sun, Sunrise, Sunset][index]!; return <span key={period} className="announcement-period-filter"><Icon aria-hidden="true" />{period}</span>; })}</div>}
             {slide.example === "places-help" && <MyPlacesMenuRow />}
             {slide.example === "telegram-dock" && <BottomDockExample />}
-            {slide.example === "pet-contact" && <dl className="facts"><PetContactRow contact="@my_contact" type="telegram" example /></dl>}
             {(slide.example === "site-share" || slide.example === "pet-share") && <ShareMenuRow kind={slide.example === "pet-share" ? "pet" : "site"} />}
           </div>}
         </div>

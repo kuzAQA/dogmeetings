@@ -1,14 +1,13 @@
 "use client";
 
-import { Camera, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Camera, ChevronRight, PawPrint, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
 import { SingleLineInput } from "../../../components/ui/SingleLineInput";
-import { contactError, formatPhoneContact, type ContactType } from "../../../../lib/pet-contact";
-import { PetContactRow } from "../../../components/ui/PetContactRow";
 import { ShareMenuRow } from "../../../components/ui/ShareMenuRow";
+import { MAX_PET_DESCRIPTION_LENGTH } from "../../../../lib/pet-description";
 import { MAX_BREED_LENGTH, type Pet } from "../model";
 
 type Props = {
@@ -34,17 +33,17 @@ type Props = {
   onOwnerNameChange: (value: string) => void;
   onBreedChange: (value: string) => void;
   onEdit: () => void;
+  onOpenDetail: () => void;
   onShare: () => void;
   onDelete: () => void;
   onBack?: () => void;
 };
 
-export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitError, name, ownerName, breed, nameValid, ownerNameValid, breedValid, saving, touchedFields, onSubmit, onPhotoChange, onTouch, onNameChange, onOwnerNameChange, onBreedChange, onEdit, onShare, onDelete, onBack }: Props) {
+export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitError, name, ownerName, breed, nameValid, ownerNameValid, breedValid, saving, touchedFields, onSubmit, onPhotoChange, onTouch, onNameChange, onOwnerNameChange, onBreedChange, onEdit, onOpenDetail, onShare, onDelete, onBack }: Props) {
   const [photoOpen, setPhotoOpen] = useState(false);
-  const [contactType, setContactType] = useState<ContactType>(petBeingEdited?.contactType ?? "phone");
-  const [contact, setContact] = useState(petBeingEdited?.contactType === "phone" ? formatPhoneContact(petBeingEdited.contact ?? "") : petBeingEdited?.contact ?? "");
-  const invalidContact = contactError(contactType, contact);
-  const savedContact = petBeingEdited?.contact;
+  const [descriptionName, setDescriptionName] = useState(petBeingEdited?.name ?? "");
+  const [description, setDescription] = useState(petBeingEdited?.description ?? "");
+  const descriptionEnabled = Boolean(name.trim() && descriptionName.trim());
   if (petBeingEdited && mode === "view") {
     return (
       <div className="screen pet-passport-screen">
@@ -52,8 +51,10 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
         <h1>Паспорт питомца</h1>
         <Image className="portrait" data-pet-photo={petBeingEdited.id} src={petBeingEdited.photoUrl} alt={petBeingEdited.name} width={390} height={300} unoptimized={petBeingEdited.photoUrl.startsWith("/api/")} />
         <div className="pet-title"><h2>{petBeingEdited.name}</h2><span>{petBeingEdited.isOwner ? "Ваш питомец" : "Общий питомец"}</span></div>
-        <dl className="facts"><div><dt>Порода</dt><dd>{petBeingEdited.breed}</dd></div><div><dt>Хозяин</dt><dd>{petBeingEdited.ownerName}</dd></div>{savedContact && <PetContactRow contact={savedContact} type={petBeingEdited.contactType} />}</dl>
-        {petBeingEdited.canEdit && <button className="menu-row" type="button" onClick={onEdit}><Pencil aria-hidden="true" /><span><strong>Изменить данные</strong><small>Имя, порода, фото и контакт</small></span><ChevronRight /></button>}
+        <dl className="facts"><div><dt>Порода</dt><dd>{petBeingEdited.breed}</dd></div><div><dt>Хозяин</dt><dd>{petBeingEdited.ownerName}</dd></div></dl>
+        {petBeingEdited.description?.trim() && <section className="pet-about"><h3>О нас</h3><p>{petBeingEdited.description}</p></section>}
+        <button className="menu-row" type="button" onClick={onOpenDetail}><PawPrint aria-hidden="true" /><span><strong>Карточка питомца</strong></span><ChevronRight aria-hidden="true" /></button>
+        {petBeingEdited.canEdit && <button className="menu-row" type="button" onClick={onEdit}><Pencil aria-hidden="true" /><span><strong>Изменить данные</strong><small>Имя, порода и фото</small></span><ChevronRight /></button>}
         {petBeingEdited.canShare && <ShareMenuRow kind="pet" onClick={onShare} />}
         {petBeingEdited.canDelete && <button className="menu-row" type="button" onClick={onDelete}><Trash2 aria-hidden="true" /><span><strong>{petBeingEdited.isOwner ? "Удалить питомца" : "Убрать из моего списка"}</strong><small>{petBeingEdited.isOwner ? "Вместе с его прогулками" : "У владельца питомец останется"}</small></span><ChevronRight /></button>}
       </div>
@@ -61,7 +62,7 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
   }
 
   const editing = Boolean(petBeingEdited);
-  const formValid = nameValid && ownerNameValid && breedValid && !invalidContact;
+  const formValid = nameValid && ownerNameValid && breedValid;
   const preview = photoUrl || petBeingEdited?.photoUrl || "/dog-placeholder.avif";
   return (
     <div className="screen form-screen pet-screen">
@@ -80,41 +81,10 @@ export function PetForm({ petBeingEdited, mode, photoUrl, photoError, submitErro
           <span><Camera aria-hidden="true" />{editing ? "Изменить фотографию" : "Выбрать фотографию"}</span>
         </button>
         {photoError && <p className="field-error" role="alert">{photoError}</p>}
-        <label className="field"><span>Имя питомца</span><SingleLineInput autoComplete="off" aria-label="Имя питомца" name="petName" value={name} required maxLength={40} placeholder="Например, Боня" aria-invalid={Boolean(touchedFields["pet-name"] && !nameValid)} onBlur={() => onTouch("pet-name")} onChange={(event) => onNameChange(event.target.value)} />{touchedFields["pet-name"] && !nameValid && <small className="field-error">Введите имя питомца</small>}</label>
+        <label className="field"><span>Имя питомца</span><SingleLineInput autoComplete="off" aria-label="Имя питомца" name="petName" value={name} required maxLength={40} placeholder="Например, Боня" aria-invalid={Boolean(touchedFields["pet-name"] && !nameValid)} onBlur={() => { onTouch("pet-name"); setDescriptionName(name); }} onChange={(event) => { if (!event.target.value.trim()) setDescriptionName(""); onNameChange(event.target.value); }} />{touchedFields["pet-name"] && !nameValid && <small className="field-error">Введите имя питомца</small>}</label>
         <label className="field"><span>Порода</span><SingleLineInput autoComplete="off" aria-label="Порода" name="breed" value={breed} required maxLength={MAX_BREED_LENGTH} placeholder="Например, корги" aria-invalid={Boolean(touchedFields["pet-breed"] && !breedValid)} onBlur={() => onTouch("pet-breed")} onChange={(event) => onBreedChange(event.target.value)} />{touchedFields["pet-breed"] && !breedValid && <small className="field-error">Введите породу</small>}</label>
         <label className="field"><span>Имя хозяина</span><SingleLineInput autoComplete="off" aria-label="Имя хозяина" name="ownerName" value={ownerName} required maxLength={60} placeholder="Например, Анна" aria-invalid={Boolean(touchedFields["owner-name"] && !ownerNameValid)} onBlur={() => onTouch("owner-name")} onChange={(event) => onOwnerNameChange(event.target.value)} />{touchedFields["owner-name"] && !ownerNameValid && <small className="field-error">Введите имя хозяина</small>}</label>
-        <label className="field"><span>Тип контакта</span><select aria-label="Тип контакта" name="contactType" value={contactType} onChange={(event) => { setContactType(event.target.value as ContactType); setContact(""); onTouch("contact-type"); }}><option value="phone">Телефон</option><option value="telegram">Telegram</option><option value="other">Другое</option></select></label>
-        <label className="field"><span>Контакт</span>
-          <input type="hidden" name="contact" value={contact} />
-          <span className={contactType === "telegram" ? "contact-control contact-input" : "contact-control"}>
-            {contactType === "telegram" && <span className="contact-prefix" aria-hidden="true">@</span>}
-            <SingleLineInput aria-label="Контакт" type={contactType === "phone" ? "tel" : "text"} inputMode={contactType === "phone" ? "tel" : "text"} autoCapitalize="none" spellCheck={false} maxLength={contactType === "phone" ? 18 : contactType === "telegram" ? 32 : 120} value={contactType === "telegram" ? contact.replace(/^@/, "") : contact} placeholder={contactType === "phone" ? "+7 (911) 123 31-11" : contactType === "telegram" ? "myName" : "Как с вами связаться"} aria-invalid={Boolean(touchedFields.contact && invalidContact)} aria-describedby={touchedFields.contact && invalidContact ? "pet-contact-error" : undefined} onBlur={() => onTouch("contact")} onChange={(event) => {
-              const input = event.currentTarget;
-              let value = input.value;
-              if (contactType === "phone") {
-                let caret = input.selectionStart ?? value.length;
-                // Removing a mask separator should delete the adjacent digit as well.
-                if ((event.nativeEvent as InputEvent).inputType === "deleteContentBackward" && value.replace(/\D/g, "") === contact.replace(/\D/g, "")) {
-                  const before = value.slice(0, caret).replace(/\d(?=\D*$)/, "");
-                  value = before + value.slice(caret);
-                  caret = before.length;
-                }
-                const digitsBeforeCaret = value.slice(0, caret).replace(/\D/g, "").length;
-                const digitCount = value.replace(/\D/g, "").length;
-                value = formatPhoneContact(value);
-                const caretDigits = digitsBeforeCaret + Math.max(0, value.replace(/\D/g, "").length - digitCount);
-                const nextCaret = caretDigits ? [...value.matchAll(/\d/g)][caretDigits - 1]?.index : 0;
-                const position = nextCaret === undefined ? value.length : nextCaret + (caretDigits ? 1 : 0);
-                requestAnimationFrame(() => input.setSelectionRange(position, position));
-              } else if (contactType === "telegram") {
-                value = value.replace(/^@+/, "");
-                value = value ? "@" + value : "";
-              }
-              setContact(value);
-            }} />
-          </span>
-          {touchedFields.contact && invalidContact && <small className="field-error" id="pet-contact-error">{invalidContact}</small>}
-        </label>
+        <label className="field"><span>{descriptionEnabled ? `Расскажите о себе и ${descriptionName}` : "Расскажите о себе и..."}</span><textarea name="description" value={description} disabled={!descriptionEnabled} maxLength={MAX_PET_DESCRIPTION_LENGTH} aria-describedby="pet-description-counter" onChange={(event) => setDescription(event.target.value.slice(0, MAX_PET_DESCRIPTION_LENGTH))} /><small className="counter" id="pet-description-counter">{description.length}/{MAX_PET_DESCRIPTION_LENGTH}</small></label>
         {submitError && <p className="field-error" role="alert">{submitError}</p>}
         <button className="button" type="submit" disabled={!formValid || Boolean(photoError) || saving}>{saving ? "Сохраняем…" : editing ? "Сохранить изменения" : "Добавить питомца"}</button>
         </div>

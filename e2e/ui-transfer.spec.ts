@@ -38,9 +38,8 @@ test.describe("mobile single-line fields", () => {
     const name = page.getByLabel("Имя питомца", { exact: true });
     const owner = page.getByLabel("Имя хозяина", { exact: true });
     const breed = page.getByLabel("Порода", { exact: true });
-    const contact = page.getByLabel("Контакт", { exact: true });
     await expect(name).toHaveAttribute("enterkeyhint", "next");
-    await expect(contact).toHaveAttribute("enterkeyhint", "done");
+    await expect(owner).toHaveAttribute("enterkeyhint", "done");
     await name.fill("Боня");
     await name.press("Enter");
     await expect(breed).toBeFocused();
@@ -49,10 +48,6 @@ test.describe("mobile single-line fields", () => {
     await expect(owner).toBeFocused();
     await owner.fill("Анна");
     await owner.press("Enter");
-    await expect(page.getByLabel("Тип контакта", { exact: true })).toBeFocused();
-    await page.keyboard.press("Tab");
-    await expect(contact).toBeFocused();
-    await contact.press("Enter");
     await expect(page.getByRole("heading", { name: "Рады знакомству!" })).toBeVisible();
   });
 });

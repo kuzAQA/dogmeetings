@@ -1,6 +1,7 @@
 import { contactError, normalizeContact, type ContactType } from "../../lib/pet-contact";
 import { containsLetter, MAX_BREED_LENGTH, normalizeName, uuidPattern } from "../domain/pet";
 import { MAX_SOURCE_PHOTO_SIZE } from "../domain/pet-photo-limits.mjs";
+import { MAX_PET_DESCRIPTION_LENGTH } from "../../lib/pet-description";
 
 type MutationMode = "create" | "update";
 
@@ -9,6 +10,7 @@ type PetFields = {
   breed: string;
   ownerName: string;
   photo: File | null;
+  description?: string | null;
   contactType?: ContactType | null;
   contact?: string | null;
 };
@@ -58,6 +60,15 @@ export function parsePetMutation(formData: FormData, mode: MutationMode): ParseR
     return { ok: false, error: mode === "create" ? "Имя хозяина должно содержать хотя бы одну букву." : "Укажите корректное имя хозяина до 60 символов." };
   }
 
+  const descriptionFields: Pick<PetFields, "description"> = {};
+  if (formData.has("description")) {
+    const description = String(formData.get("description") ?? "");
+    if (description.length > MAX_PET_DESCRIPTION_LENGTH) {
+      return { ok: false, error: `Описание должно быть не больше ${MAX_PET_DESCRIPTION_LENGTH} символов.` };
+    }
+    descriptionFields.description = description.trim() || null;
+  }
+
   const invalidPhoto = photoError(photo);
   if (invalidPhoto) return { ok: false, error: invalidPhoto };
 
@@ -70,7 +81,7 @@ export function parsePetMutation(formData: FormData, mode: MutationMode): ParseR
     contactFields.contact = normalizeContact(type as ContactType, contact) || null;
     contactFields.contactType = contactFields.contact ? type as ContactType : null;
   }
-  const value: PetFields = { name, breed, ownerName, photo, ...contactFields };
+  const value: PetFields = { name, breed, ownerName, photo, ...descriptionFields, ...contactFields };
   return mode === "update"
     ? { ok: true, value: { ...value, petId } }
     : { ok: true, value };

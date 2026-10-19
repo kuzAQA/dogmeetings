@@ -6,11 +6,16 @@ export function loadAdminAnnouncements() {
   return requestJson<AdminAnnouncementsResponse>("/api/dogsfather/announcements", { cache: "no-store", credentials: "same-origin" });
 }
 
-export async function updateAdminAnnouncement(id: string, change: { action: "extend"; days: number } | { action: "exclusions"; exclusions: AnnouncementExclusions } | ({ action: "schedule" } & AnnouncementSchedule) | { action: "start-now" }) {
+export async function updateAdminAnnouncement(id: string, change: { action: "extend"; days: number } | { action: "exclusions"; exclusions: AnnouncementExclusions } | ({ action: "schedule" } & AnnouncementSchedule) | { action: "start-now" | "pause" | "resume" | "disable" | "information" }) {
   const data = await requestJson<{ banner: AdminAnnouncement }>("/api/dogsfather/announcements", {
     method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...change })
   });
   return data.banner;
+}
+export function deleteAdminAnnouncement(id: string) {
+  return requestJson<{ deleted: true }>("/api/dogsfather/announcements", {
+    method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action: "delete" })
+  });
 }
 
 export async function createAdminAnnouncement(input: AnnouncementSchedule & { title: string; text: string }) {

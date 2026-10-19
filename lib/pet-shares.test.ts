@@ -38,7 +38,7 @@ test("pet invitations persist location, preserve previews and accept only once",
         granted_by_client_id uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(),
         PRIMARY KEY(pet_id, client_id));
     `);
-    for (const file of ["0011_colossal_wallflower.sql", "0034_pet_share_location.sql"]) {
+    for (const file of ["0011_colossal_wallflower.sql", "0034_pet_share_location.sql", "0044_pet_description.sql"]) {
       await client.query(await readFile(new URL(`../drizzle/${file}`, import.meta.url), "utf8"));
     }
     const isolatedUrl = new URL(databaseUrl!);

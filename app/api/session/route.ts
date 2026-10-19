@@ -13,7 +13,6 @@ import {
   type SessionLocation,
   updateSessionLocation
 } from "../../../lib/session";
-import { uuidPattern } from "../../../server/domain/pet";
 import { isJsonRecord, readJsonRecord } from "../../../server/transport/request-json";
 
 function normalizeLocation(value: unknown): SessionLocation | null {
@@ -98,22 +97,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const legacyClientId = String(payload?.legacyClientId ?? "").trim();
-    if (legacyClientId && !uuidPattern.test(legacyClientId)) {
-      return privateJson({ error: "Некорректные данные переноса сессии." }, { status: 400 });
+    if (payload?.legacyClientId) {
+      return privateJson({ error: "Перенос личности без подтверждения владения больше не поддерживается." }, { status: 400 });
     }
-    const migratingLegacyClient = uuidPattern.test(legacyClientId);
-    const clientId = migratingLegacyClient ? legacyClientId : crypto.randomUUID();
     const legacyLocation = normalizeLocation(payload?.legacyLocation);
     const migrateLocation = Boolean(
       payload?.legacyHasLocation && legacyLocation && await knownLocation(legacyLocation)
     );
 
     const session = await createClientSession({
-      clientId,
+      clientId: crypto.randomUUID(),
       location: invitationLocation ?? (migrateLocation ? legacyLocation : null),
-      hasLocation: Boolean(invitationLocation) || migrateLocation,
-      replaceExisting: migratingLegacyClient
+      hasLocation: Boolean(invitationLocation) || migrateLocation
     });
     return privateJson(
       sessionPayload(session),

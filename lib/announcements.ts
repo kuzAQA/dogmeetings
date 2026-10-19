@@ -37,8 +37,10 @@ export function listAnnouncements(clientId: string, includeAcknowledged = false,
           'id', c.id, 'startsAt', c.starts_at, 'endsAt', c.ends_at, 'pages', c.pages, 'exclusions', c.exclusions, 'permanent', c.permanent
         ) ORDER BY c.starts_at, c.id)
         FROM announcement_campaigns c
-        WHERE (c.starts_at IS NULL OR c.starts_at <= CURRENT_TIMESTAMP)
-          AND (CASE WHEN ${information} THEN c.permanent ELSE c.ends_at IS NULL OR c.ends_at > CURRENT_TIMESTAMP END)
+      WHERE (CASE WHEN ${information} THEN
+          c.status = 'information' OR (c.status = 'active' AND c.permanent AND (c.starts_at IS NULL OR c.starts_at <= CURRENT_TIMESTAMP))
+        ELSE c.status = 'active' AND (c.starts_at IS NULL OR c.starts_at <= CURRENT_TIMESTAMP)
+          AND (c.ends_at IS NULL OR c.ends_at > CURRENT_TIMESTAMP) END)
           AND (${information} OR ${includeAcknowledged} OR NOT EXISTS (
             SELECT 1 FROM announcement_receipts r WHERE r.banner_id = c.id AND r.client_id = ${clientId}::uuid
           ))
@@ -55,13 +57,13 @@ export function listAnnouncements(clientId: string, includeAcknowledged = false,
 export function acknowledgeAnnouncement(clientId: string, id: string, location: AnnouncementLocation | null = null) {
   return withDb((db) => db.transaction(async (tx) => {
     const campaign = await tx.execute(sql`SELECT exclusions FROM announcement_campaigns
-      WHERE id = ${id} AND (starts_at IS NULL OR starts_at <= CURRENT_TIMESTAMP)
+      WHERE id = ${id} AND status = 'active' AND (starts_at IS NULL OR starts_at <= CURRENT_TIMESTAMP)
         AND (ends_at IS NULL OR ends_at > CURRENT_TIMESTAMP) FOR SHARE`);
     if (!campaign.rows[0] || !allowsAnnouncement(campaign.rows[0].exclusions as AdminAnnouncement["exclusions"], location)) return false;
     const result = await tx.execute(sql`
       INSERT INTO announcement_receipts (client_id, banner_id)
       SELECT ${clientId}::uuid, id FROM announcement_campaigns
-      WHERE id = ${id} AND (starts_at IS NULL OR starts_at <= CURRENT_TIMESTAMP)
+      WHERE id = ${id} AND status = 'active' AND (starts_at IS NULL OR starts_at <= CURRENT_TIMESTAMP)
         AND (ends_at IS NULL OR ends_at > CURRENT_TIMESTAMP)
       ON CONFLICT (client_id, banner_id) DO UPDATE SET banner_id = EXCLUDED.banner_id
       RETURNING banner_id

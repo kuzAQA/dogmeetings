@@ -5,6 +5,7 @@ export type SharedPet = {
   name: string;
   breed: string;
   ownerName: string;
+  description?: string | null;
   photoUrl: string;
 };
 

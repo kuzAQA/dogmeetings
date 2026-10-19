@@ -47,6 +47,13 @@ test("announcements use server time and session identity in isolated PostgreSQL"
       assert.equal(row.ends_at, null);
       await client.query("DELETE FROM announcement_campaigns WHERE id = 'default-test'");
     });
+    await t.test("status migration preserves campaigns and defaults to active", async () => {
+      const before = (await client.query("SELECT * FROM announcement_campaigns ORDER BY id")).rows;
+      await client.query(await readFile(new URL("../drizzle/0043_announcement_status.sql", import.meta.url), "utf8"));
+      const after = (await client.query("SELECT * FROM announcement_campaigns ORDER BY id")).rows;
+      assert.deepEqual(after.map(({ status, ...row }) => { assert.equal(status, "active"); return row; }), before);
+      await assert.rejects(client.query("UPDATE announcement_campaigns SET status = 'unknown'"), /announcement_campaigns_status_check/);
+    });
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
     await t.test("release gives every current banner seven days and keeps content and receipts", async () => {
@@ -201,6 +208,7 @@ test("announcements use server time and session identity in isolated PostgreSQL"
         const created = await create({ title: "New", text: "Content", startsAt: future, endsAt: end });
         assert.equal(created.status, 201);
         const newBanner = (await created.json()).banner;
+      assert.equal(newBanner.status, "active");
         assert.equal(newBanner.permanent, false);
         assert.equal(newBanner.startsAt, future);
         assert.deepEqual(newBanner.pages, [{ title: "New", text: "Content" }]);
@@ -233,6 +241,63 @@ test("announcements use server time and session identity in isolated PostgreSQL"
         assert.equal((await patch({ id, action: "extend", days: 1 })).status, 409);
         await client.query("UPDATE announcement_campaigns SET ends_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
         assert.equal((await patch({ id, action: "extend", days: 1 })).status, 200);
+      // Exercise all lifecycle actions without changing the campaign used by later tests.
+      {
+        const target = "admin-actions-test";
+        await client.query("INSERT INTO announcement_campaigns (id, pages, permanent) VALUES ($1, '[{\"title\":\"Actions\",\"text\":\"Content\"}]', true)", [target]);
+        const visible = async (information = false) => {
+          const response = await GET(new Request(`${endpoint}${information ? "?information=1" : ""}`, { headers: { cookie: cookie(second) } }));
+          return (await response.json()).banners.some((banner: { id: string }) => banner.id === target);
+        };
+        const action = (name: string, auth = true, origin = "http://localhost:3000") => patch({ id: target, action: name }, auth, origin);
+        try {
+          for (const name of ["pause", "resume", "disable", "information", "delete"]) {
+            assert.equal((await action(name, false)).status, 401);
+            assert.equal((await action(name, true, "https://foreign.test")).status, 401);
+          }
+          assert.equal(await visible(), true);
+          assert.equal((await action("pause")).status, 200);
+          assert.equal(await visible(), false);
+          const { listAnnouncements } = await import("./announcements");
+          assert.equal((await listAnnouncements(second.clientId, true)).banners.some((banner) => banner.id === target), false);
+          assert.equal(await visible(true), false);
+          assert.equal((await POST(request(second, { id: target }))).status, 410);
+          assert.equal((await action("resume")).status, 200);
+          assert.equal(await visible(), true);
+          assert.equal((await POST(request(second, { id: target }))).status, 200);
+          await action("pause");
+          await action("resume");
+          assert.equal(await visible(), false);
+          assert.equal(await visible(true), true);
+          assert.equal((await client.query("SELECT * FROM announcement_receipts WHERE banner_id = $1", [target])).rowCount, 1);
+          assert.equal((await action("disable")).status, 200);
+          assert.equal(await visible(true), false);
+          assert.equal((await listAnnouncements(second.clientId, true)).banners.some((banner) => banner.id === target), false);
+          assert.equal((await action("resume")).status, 409);
+          assert.equal((await patch({ id: target, action: "schedule", startsAt: null, endsAt: null, permanent: true })).status, 200);
+          assert.equal(await visible(true), false);
+          assert.equal((await action("start-now")).status, 200);
+          assert.equal(await visible(true), true);
+          await action("pause");
+          await client.query("UPDATE announcement_campaigns SET starts_at = CURRENT_TIMESTAMP - interval '2 hours', ends_at = CURRENT_TIMESTAMP - interval '1 hour' WHERE id = $1", [target]);
+          assert.equal((await action("resume")).status, 409);
+          assert.equal((await action("information")).status, 200);
+          assert.equal(await visible(true), true);
+          await client.query("UPDATE announcement_campaigns SET starts_at = CURRENT_TIMESTAMP + interval '1 day', ends_at = NULL, permanent = false WHERE id = $1", [target]);
+          assert.equal(await visible(), false);
+          assert.equal(await visible(true), true);
+          assert.equal((await listAnnouncements(second.clientId, true)).banners.some((banner) => banner.id === target), false);
+          assert.equal((await POST(request(second, { id: target }))).status, 410);
+          assert.equal((await action("delete")).status, 200);
+          assert.equal(await visible(true), false);
+          assert.equal((await client.query("SELECT * FROM announcement_campaigns WHERE id = $1", [target])).rowCount, 0);
+          assert.equal((await client.query("SELECT * FROM announcement_receipts WHERE banner_id = $1", [target])).rowCount, 0);
+          for (const name of ["pause", "resume", "disable", "information", "delete"]) assert.equal((await action(name)).status, 404);
+        } finally {
+          await client.query("DELETE FROM announcement_receipts WHERE banner_id = $1", [target]);
+          await client.query("DELETE FROM announcement_campaigns WHERE id = $1", [target]);
+        }
+      }
       } finally {
         await client.query("UPDATE announcement_campaigns SET ends_at = CURRENT_TIMESTAMP + interval '1 hour', exclusions = '{\"cities\":[],\"districts\":[],\"complexes\":[]}' WHERE id = $1", [id]);
         if (oldSecret === undefined) delete process.env.ADMIN_SESSION_SECRET;

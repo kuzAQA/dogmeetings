@@ -5,8 +5,7 @@ import {
   STORAGE_KEY,
   type LegacySessionData,
   type Location,
-  type SessionBootstrapData,
-  uuidPattern
+  type SessionBootstrapData
 } from "./model";
 
 function isLocation(value: unknown): value is Location {
@@ -18,7 +17,6 @@ function isLocation(value: unknown): value is Location {
 
 function readLegacySessionData(): LegacySessionData {
   try {
-    const legacyClientId = window.localStorage.getItem(CLIENT_ID_KEY) ?? "";
     const storedLocation = window.localStorage.getItem(STORAGE_KEY);
     const parsedLocation: unknown = storedLocation ? JSON.parse(storedLocation) : null;
     const legacyLocation = isLocation(parsedLocation) ? {
@@ -28,7 +26,6 @@ function readLegacySessionData(): LegacySessionData {
     } : null;
 
     return {
-      legacyClientId: uuidPattern.test(legacyClientId) ? legacyClientId : undefined,
       legacyLocation,
       legacyHasLocation: window.localStorage.getItem(HAS_LOCATION_KEY) === "true"
     };

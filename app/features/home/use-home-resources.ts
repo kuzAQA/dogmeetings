@@ -42,6 +42,7 @@ export function useHomeResources(
       const pets = await listPets();
       preloadImages(pets.map((pet) => pet.photoUrl));
       setSavedPets(pets);
+      return pets;
     } catch (error) {
       setPetsError(errorMessage(error, "Не удалось загрузить питомцев."));
       throw error;

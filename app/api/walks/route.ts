@@ -24,6 +24,7 @@ function publicWalk(walk: WalkRow) {
     pet: walk.petName,
     breed: walk.petBreed,
     owner: walk.ownerName,
+    description: walk.description,
     city: walk.city,
     district: walk.district,
     complex: walk.residentialComplex,
@@ -185,6 +186,7 @@ export async function POST(request: Request) {
         petName: result.pet.name,
         petBreed: result.pet.breed,
         ownerName: result.pet.ownerName,
+        description: result.pet.description,
         petUpdatedAt: result.pet.updatedAt,
         petPhotoType: result.pet.photoType
       })
@@ -334,6 +336,7 @@ export async function PATCH(request: Request) {
         petName: result.pet.name,
         petBreed: result.pet.breed,
         ownerName: result.pet.ownerName,
+        description: result.pet.description,
         petUpdatedAt: result.pet.updatedAt,
         petPhotoType: result.pet.photoType
       })

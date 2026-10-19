@@ -4,13 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { directionFor, skipPageTransition, transitionPage } from "../../components/ui/motion.mjs";
 
-export type Screen = "walk-detail" | "contact" | "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets" | "my-places";
+export type Screen = "dialogs" | "dialog" | "walk-detail" | "pet-detail" | "contact" | "welcome" | "browser-guide" | "location" | "location-request" | "walks" | "pet" | "announce" | "my-walks" | "my-pets" | "my-places";
 export type PrimaryDockSection = "nearby" | "profile";
 export type DockSection = PrimaryDockSection | "walk" | "pets";
 export type DockPanelSection = "nearby" | "walk" | "profile";
 
 export type AppNavigationState = {
   dogmeetNavigation: true;
+  chatDialogId: string | null;
+  chatWalkId: string | null;
   screen: Screen;
   menuOpen: boolean;
   locationOpenedFromMenu: boolean;
@@ -20,11 +22,13 @@ export type AppNavigationState = {
   petsSource: "dock" | "profile" | null;
 };
 
-type NavigationOptions = Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "plansSource" | "petsSource">>;
+type NavigationOptions = Partial<Pick<AppNavigationState, "menuOpen" | "locationOpenedFromMenu" | "dockWalkOpen" | "dockReturnSection" | "plansSource" | "petsSource" | "chatDialogId" | "chatWalkId">>;
 
 export function createNavigationState(screen: Screen, options: NavigationOptions = {}): AppNavigationState {
   return {
     dogmeetNavigation: true,
+    chatDialogId: options.chatDialogId ?? null,
+    chatWalkId: options.chatWalkId ?? null,
     screen,
     menuOpen: options.menuOpen ?? false,
     locationOpenedFromMenu: options.locationOpenedFromMenu ?? false,
@@ -38,6 +42,8 @@ export function createNavigationState(screen: Screen, options: NavigationOptions
 function normalizeNavigationState(value: Partial<AppNavigationState>): AppNavigationState | null {
   if (!value.dogmeetNavigation || !value.screen) return null;
   return createNavigationState(value.screen, {
+    chatDialogId: typeof value.chatDialogId === "string" ? value.chatDialogId : null,
+    chatWalkId: typeof value.chatWalkId === "string" ? value.chatWalkId : null,
     menuOpen: Boolean(value.menuOpen),
     locationOpenedFromMenu: Boolean(value.locationOpenedFromMenu),
     dockWalkOpen: Boolean(value.dockWalkOpen),
@@ -73,9 +79,9 @@ export function useHomeNavigation(hasLocation: boolean) {
       if (previousNavigation.current !== nextNavigation) return;
       flushSync(() => setNavigation(nextNavigation));
       window.scrollTo(0, 0);
-      const heading = document.querySelector<HTMLElement>("main h1");
+      const heading = document.querySelector<HTMLElement>("main h1, main .screen-pet-detail h2");
       heading?.setAttribute("tabindex", "-1");
-      heading?.focus({ preventScroll: true });
+      if (nextNavigation.screen !== "dialog") heading?.focus({ preventScroll: true });
     }, { direction: directionFor(from, to, back), photoId: photo, keyboard: document.documentElement.dataset.motionInput === "keyboard", from, target: to });
   }, []);
 
@@ -111,6 +117,8 @@ export function useHomeNavigation(hasLocation: boolean) {
   }, [hasLocation, replaceNavigation]);
 
   const initializeNavigation = useCallback((initialNavigation: AppNavigationState, returnNavigation?: AppNavigationState) => {
+    const saved = normalizeNavigationState(window.history.state ?? {});
+    if (!returnNavigation && saved?.screen === "dialog" && (saved.chatDialogId || saved.chatWalkId)) initialNavigation = saved;
     if (returnNavigation) {
       window.history.replaceState(returnNavigation, "", window.location.href);
       window.history.pushState(initialNavigation, "", window.location.href);
@@ -147,6 +155,8 @@ export function useHomeNavigation(hasLocation: boolean) {
 
   return {
     screen: navigation?.screen ?? null,
+    chatDialogId: navigation?.chatDialogId ?? null,
+    chatWalkId: navigation?.chatWalkId ?? null,
     menuOpen: navigation?.menuOpen ?? false,
     locationOpenedFromMenu: navigation?.locationOpenedFromMenu ?? false,
     dockWalkOpen: navigation?.dockWalkOpen ?? false,
