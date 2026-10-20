@@ -18,7 +18,7 @@
 
 # Production VDS
 
-- VDS update 2026-10-20 applied the one-time Telegram dialog notification backfill from `docs/superpowers/plans/2026-10-20-telegram-dialog-backfill.md`. Both verified client links are enabled; 6 of 8 active chats have no proven client_id link after checking retained intents and available backups. Keep the plan partially complete until those links are recovered through the existing Telegram confirmation flow; do not invent links, re-run the backfill after user opt-outs, or message subscribers without authorization. See the plan for backup and validation results.
+- VDS update 2026-10-20 applied the one-time Telegram dialog notification backfill from `docs/superpowers/plans/2026-10-20-telegram-dialog-backfill.md`. Both verified client links are enabled; 6 of 8 active chats have no proven client_id link after checking retained intents and available backups. Keep the plan partially complete until those links are recovered through the existing Telegram confirmation flow; do not invent links, re-run the backfill after user opt-outs, or message subscribers without authorization. The owner approved recovery through the existing menu and Telegram confirmation on 2026-10-20; the users must complete those links themselves. See the plan for backup and validation results.
 
 - Use the new VDS at `185.75.189.36`, SSH user `root`, port `22`.
 - Update only this VDS. The old VDS is shut down and must not be accessed.
