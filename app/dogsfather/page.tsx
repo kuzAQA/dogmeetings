@@ -1,5 +1,6 @@
 "use client";
 
+import { PetRow } from "../components/ui/PetRow";
 import { PawIcon } from "../components/ui/PawIcon";
 import Image from "next/image";
 import Link from "next/link";
@@ -603,7 +604,7 @@ export default function AdminPage() {
     {phase === "pets" && <>
       {sectionHeading("Все питомцы", "")}
       <label className="search-field"><Search /><SingleLineInput inputMode="text" autoComplete="off" enterKeyHint="search" aria-label="Найти питомца" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти по имени" /></label>
-      {contentLoading ? <DogmeetState state="loading" /> : error && !petPendingDelete ? <DogmeetState state="error" message={error} onAction={loadPets} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="К управлению" onAction={() => setPhase("dashboard")} /> : <div className="pet-rows">{pets.filter((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))).map((pet) => <button className="pet-row" type="button" key={pet.id} onClick={() => openPetEditor(pet)}><Image className="pet-face" src={pet.photoUrl} alt={`Собака ${pet.name}`} width={72} height={72} unoptimized /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.ownerName}</small></span><ChevronRight /></button>)}</div>}
+      {contentLoading ? <DogmeetState state="loading" /> : error && !petPendingDelete ? <DogmeetState state="error" message={error} onAction={loadPets} /> : pets.length === 0 ? <DogmeetState state="empty" title="Пока ни одного питомца" message="Добавьте питомца, чтобы сообщать о прогулках." action="К управлению" onAction={() => setPhase("dashboard")} /> : <div className="pet-rows">{pets.filter((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))).map((pet) => <PetRow key={pet.id} pet={pet} onOpen={() => openPetEditor(pet)} />)}</div>}
       {pets.length > 0 && !pets.some((pet) => pet.name.toLocaleLowerCase("ru").includes(query.toLocaleLowerCase("ru"))) && <p role="status">Никого не нашли. Попробуйте другое имя.</p>}
     </>}
     {phase === "locations" && <>

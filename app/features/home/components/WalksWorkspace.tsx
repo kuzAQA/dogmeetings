@@ -1,11 +1,13 @@
 "use client";
+import { telegramStatusText, type TelegramSettings } from "../../telegram/useTelegramSettings";
 
 import { Bell, Check, ChevronRight, Clock3, ExternalLink, MapPin, MessageCircle, SlidersHorizontal, Sun, Sunrise, Sunset } from "lucide-react";
 import Image from "next/image";
 import { ShareMenuRow } from "../../../components/ui/ShareMenuRow";
+import { PawIcon } from "../../../components/ui/PawIcon";
 import { MyPlacesMenuRow } from "../../../components/ui/MyPlacesMenuRow";
 import { DogmeetState } from "../../../components/ui/DogmeetState";
-import { type FormEvent, type RefObject, useMemo, useState } from "react";
+import { type FormEvent, type PointerEvent, type RefObject, useMemo, useState } from "react";
 import type { ApiWalk, Period, Walk } from "../../../../lib/walks";
 import { DogmeetDialog, DogmeetHeader, requestDialogClose } from "../../../components/ui/DogmeetFrame";
 import type { Location, Pet, SharedPlace } from "../model";
@@ -19,10 +21,13 @@ import { AnnouncementPreview } from "../../announcements/Announcements";
 
 const periods: Period[] = ["Все", "Утро", "День", "Вечер"];
 
+function releaseMenuCard(event: PointerEvent<HTMLDivElement>) {
+  event.currentTarget.querySelector("[data-pressed]")?.removeAttribute("data-pressed");
+}
+
 type Props = {
   unreadCount: number;
-  pushEnabled: boolean;
-  pushChecked: boolean;
+  telegramSettings: TelegramSettings | null;
   onNotificationsSettings: () => void;
   announcementPreviewEnabled?: boolean;
   dockSection: DockSection;
@@ -63,12 +68,13 @@ type Props = {
   onOpenDetail: () => void;
   onOpenContact: () => void;
   onOpenDialogs: () => void;
+  onOpenDistrictPets: () => void;
   onWrite: (walkId: string) => void;
   selectedWalk: Walk | null;
   onSelectWalk: (walk: Walk) => void;
 };
 
-export function WalksWorkspace({ unreadCount, pushEnabled, pushChecked, onNotificationsSettings, dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, onOpenDialogs, onWrite, selectedWalk, onSelectWalk }: Props) {
+export function WalksWorkspace({ unreadCount, telegramSettings, onNotificationsSettings, dockSection, location, period, visibleWalks, savedWalks, walksLoaded, walksError, onRetryWalks, ownedWalksById, onPeriodChange, onEditWalk, onDeleteWalk, guidedWalkFlow, savedPets, sharedPlaces, onAddPet, placesLoaded, walkForm, walkSaving, editingWalk, onWalkSubmit, onStartWalk, placesError, onRetryPlaces, profileHeadingRef, onOpenLocationEditor, onOpenMyPlaces, onShareSite, onOpenProfile, onBack, detailOpen, contactOpen, onOpenDetail, onOpenContact, onOpenDialogs, onOpenDistrictPets, onWrite, selectedWalk, onSelectWalk }: Props) {
   const now = useWalkEditClock(visibleWalks.map((walk) => ({ walkDate: walk.walkDate, walkTime: walk.time })));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tempPeriod, setTempPeriod] = useState(period);
@@ -76,6 +82,7 @@ export function WalksWorkspace({ unreadCount, pushEnabled, pushChecked, onNotifi
   const [copyError, setCopyError] = useState("");
   const [actionsWalk, setActionsWalk] = useState<Walk | null>(null);
   const active = dockSection === "profile" ? "profile" : dockSection === "walk" ? "walk" : "nearby";
+  const notificationsStatus = telegramStatusText[telegramSettings?.status ?? "unknown"];
   const today = useMemo(() => new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).formatToParts(new Date()), []);
   const day = today.find((part) => part.type === "day")?.value ?? "";
   const month = today.find((part) => part.type === "month")?.value ?? "";
@@ -105,12 +112,27 @@ export function WalksWorkspace({ unreadCount, pushEnabled, pushChecked, onNotifi
           <p>{location.city} · {location.district}</p>
           <button className="button light" type="button" onClick={onOpenLocationEditor}>Изменить локацию</button>
         </div>
-        <button className="menu-row" type="button" onClick={onOpenDialogs}><MessageCircle aria-hidden="true" /><span><strong>Диалоги</strong><small>Сообщите своим друзьям что-то важное</small></span>{unreadCount > 0 && <span className="unread-dot" role="img" aria-label="Есть непрочитанные сообщения" />}<ChevronRight aria-hidden="true" /></button>
-        <ShareMenuRow kind="site" onClick={onShareSite} />
-        <AnnouncementPreview />
-        <MyPlacesMenuRow onClick={onOpenMyPlaces} />
-        <button className="menu-row" type="button" onClick={onNotificationsSettings}><Bell aria-hidden="true" /><span><strong>Уведомления</strong><small>Push и Telegram</small></span><small className={!pushEnabled && pushChecked ? "push-disabled" : ""}>Push: {!pushChecked ? "Проверить" : pushEnabled ? "Включено" : "Отключено"}</small></button>
-        <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
+        <div className="profile-menu"
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0) return;
+            const card = (event.target as Element).closest("button.menu-row");
+            if (card?.parentElement === event.currentTarget) card.setAttribute("data-pressed", "");
+          }}
+          onPointerUp={releaseMenuCard}
+          onPointerCancel={releaseMenuCard}
+          onPointerOut={(event) => {
+            const card = (event.target as Element).closest(".menu-row");
+            if (!(event.relatedTarget instanceof Node) || !card?.contains(event.relatedTarget)) releaseMenuCard(event);
+          }}
+        >
+          <button className="menu-row" type="button" onClick={onOpenDialogs}><MessageCircle aria-hidden="true" /><span><strong>Диалоги</strong><small>Сообщите своим друзьям что-то важное</small></span>{unreadCount > 0 && <span className="unread-dot" role="img" aria-label="Есть непрочитанные сообщения" />}<ChevronRight aria-hidden="true" /></button>
+          <ShareMenuRow kind="site" onClick={onShareSite} />
+          <AnnouncementPreview />
+          <MyPlacesMenuRow onClick={onOpenMyPlaces} />
+          <button className="menu-row" type="button" aria-label="Питомцы твоего района" onClick={onOpenDistrictPets}><PawIcon aria-hidden="true" /><span><strong>Питомцы твоего района</strong><small>Знакомьтесь с соседями</small></span><ChevronRight aria-hidden="true" /></button>
+          <button className="menu-row" type="button" onClick={onNotificationsSettings}><Bell aria-hidden="true" /><span><strong>Уведомления</strong><small>Новые сообщения в Telegram</small></span><small className={telegramSettings?.status === "inactive" ? "telegram-disabled" : ""}>{notificationsStatus}</small></button>
+          <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
+        </div>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>
       </div>
     );

@@ -10,6 +10,12 @@
 - Run the narrowest relevant checks after changes.
 - Inspect git diff before finishing.
 
+# Menu card chevrons
+
+- Show a right chevron (`>`) only on cards that navigate to a separate page or screen.
+- Do not show it on cards that open a modal, bottom sheet, popover, or perform an action on the current page. Apply this consistently to shared menu components and their informational examples.
+- Keep the chevron in its existing position on navigation cards; it is an indicator within the card, not a separate button.
+
 # Production VDS
 
 - Use the new VDS at `185.75.189.36`, SSH user `root`, port `22`.

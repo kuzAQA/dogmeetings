@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockApp, openNearby } from "./fixtures";
 
-const seenKey = "dogmeet.telegramMenuHintSeen";
+const seenKey = "dogmeet.telegramMenuHintSeen.v2";
 const hintText = "Вы можете получать уведомления о прогулках ваших друзей в Telegram";
 
 test("Telegram hint grows from its pointer without covering navigation", async ({ page }) => {

@@ -1,6 +1,6 @@
 import { databaseErrorMessage } from "../../../../lib/database-error";
 import { getClientSession, isSameOriginRequest, privateJson } from "../../../../lib/session";
-import { createTelegramSubscriptionLink } from "../../../../lib/telegram-subscriptions";
+import { createTelegramSubscriptionLink, telegramSubscriptionPurposes, type TelegramSubscriptionPurpose } from "../../../../lib/telegram-subscriptions";
 import { getSavedLocation } from "../../../../server/domain/location";
 
 export async function POST(request: Request) {
@@ -13,12 +13,20 @@ export async function POST(request: Request) {
     if (!session) {
       return privateJson({ error: "Сессия истекла. Обновите страницу." }, { status: 401 });
     }
+    let body: unknown;
+    try { body = await request.text().then(text => text ? JSON.parse(text) : {}); }
+    catch { return privateJson({ error: "Некорректный запрос." }, { status: 400 }); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return privateJson({ error: "Некорректный запрос." }, { status: 400 });
+    const purpose = "purpose" in body ? body.purpose : "combined";
+    if (typeof purpose !== "string" || !telegramSubscriptionPurposes.includes(purpose as TelegramSubscriptionPurpose)) {
+      return privateJson({ error: "Неизвестное назначение ссылки." }, { status: 400 });
+    }
     const location = getSavedLocation(session);
-    if (!location) {
+    if (purpose === "combined" && !location) {
       return privateJson({ error: "Сначала сохраните локацию прогулки." }, { status: 400 });
     }
 
-    return privateJson({ link: await createTelegramSubscriptionLink(location, session.clientId) });
+    return privateJson({ link: await createTelegramSubscriptionLink(location, session.clientId, purpose as TelegramSubscriptionPurpose) });
   } catch (error) {
     const message = error instanceof Error && error.message.startsWith("Telegram-")
       ? error.message

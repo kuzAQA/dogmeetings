@@ -37,7 +37,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
     await client.query(`CREATE SCHEMA ${schema}`);
     await client.query(`SET search_path TO ${schema}`);
     await client.query("CREATE TABLE walks (id uuid PRIMARY KEY)");
-    for (const migration of ["0011_colossal_wallflower.sql", "0018_admin_sessions.sql", "0019_telegram_complex_subscriptions.sql"]) {
+    for (const migration of ["0011_colossal_wallflower.sql", "0018_admin_sessions.sql", "0019_telegram_complex_subscriptions.sql", "0048_telegram_chat_settings.sql", "0050_telegram_subscription_purposes.sql"]) {
       await client.query(await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8"));
     }
     const isolatedUrl = new URL(databaseUrl!);
@@ -90,8 +90,8 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
       SELECT $1, id, $2 FROM walks WHERE id <> $3`, [randomUUID(), firstId, walkId]);
     const token = "a".repeat(32);
     await client.query(`INSERT INTO telegram_subscription_intents
-      (token_hash, city, district, residential_complex, expires_at)
-      VALUES ($1, 'Москва', 'Район', 'Третий ЖК', now() + interval '15 minutes')`, [createHash("sha256").update(token).digest("hex")]);
+      (token_hash, client_id, city, district, residential_complex, expires_at)
+      VALUES ($1, $2, 'Москва', 'Район', 'Третий ЖК', now() + interval '15 minutes')`, [createHash("sha256").update(token).digest("hex"), randomUUID()]);
 
     await t.test("counts active subscription rows, including multiple complexes per chat, without joins", async () => {
       assert.equal(await count(), 2);
@@ -107,7 +107,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
       assert.equal((await prepareTelegramComplexSubscription(token, "456")).status, "ready");
       assert.equal((await activateTelegramComplexSubscription(token, "456")).status, "subscribed");
       assert.equal(await count(), 3);
-      assert.equal((await activateTelegramComplexSubscription(token, "456")).status, "active");
+      assert.equal((await activateTelegramComplexSubscription(token, "456")).status, "processed");
       assert.equal(await count(), 3);
     });
     await t.test("real deactivation and repeated deactivation update the count", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Clock3, GalleryHorizontalEnd, Menu, SlidersHorizontal, Sun, Sunrise, Sunset, X } from "lucide-react";
+import { Clock3, GalleryHorizontalEnd, Menu, SlidersHorizontal, Sun, Sunrise, Sunset, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Announcement, AnnouncementsResponse } from "../../../lib/announcement-types";
 import { DogmeetBrand, trapDialogTab } from "../../components/ui/DogmeetFrame";
@@ -40,7 +40,7 @@ export function AnnouncementPreview() {
     }
   }
   return <>
-    <button className="menu-row" type="button" aria-disabled={loading} aria-busy={loading} aria-label="Информация" onClick={() => { void open(); }}><GalleryHorizontalEnd aria-hidden="true" /><span><strong>{loading ? "Загружаем…" : "Информация"}</strong><small>Полезная информация</small></span><ChevronRight aria-hidden="true" /></button>
+    <button className="menu-row" type="button" aria-disabled={loading} aria-busy={loading} aria-label="Информация" onClick={() => { void open(); }}><GalleryHorizontalEnd aria-hidden="true" /><span><strong>{loading ? "Загружаем…" : "Информация"}</strong><small>Полезная информация</small></span></button>
     {error && <p className="field-error" role="status">{error}</p>}
     {banners.length > 0 && <AnnouncementDialog manual banners={banners} onDismiss={(ids) => setBanners((current) => current.filter((banner) => !ids.includes(banner.id)))} />}
   </>;

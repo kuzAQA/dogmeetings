@@ -1,9 +1,10 @@
 import { MapPin } from "lucide-react";
 import Image from "next/image";
 import { DogmeetHeader } from "../../../components/ui/DogmeetFrame";
-import type { Location, Pet } from "../model";
+import type { SharedPet } from "../../share/api";
+import type { Location } from "../model";
 
-export function PetDetail({ pet, location, onBack }: { pet: Pet; location: Location; onBack: () => void }) {
+export function PetDetail({ pet, location, onBack }: { pet: SharedPet; location: Location; onBack: () => void }) {
   const complex = location.complex.trim();
   const area = [location.city, location.district].map((value) => value.trim()).filter(Boolean).join(", ");
 

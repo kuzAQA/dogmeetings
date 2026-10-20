@@ -1,9 +1,6 @@
 import { requestTelegramApi } from "../server/telegram-api.mjs";
 import pg from "pg";
 import { pathToFileURL } from "node:url";
-import { startPushWorker } from "../server/push-worker.mjs";
-
-let stopPushWorker = () => {};
 import { replaceTelegramWalkNotification } from "../server/telegram-walk-photo.mjs";
 import { cleanupDeletedWalkMessages, deferTelegramMessageDeletion } from "../server/telegram-walk-deletion.mjs";
 
@@ -586,8 +583,6 @@ function shutdown(signal) {
 
 // Importing retention helpers from the app must not start the scheduler.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (!runOnce) stopPushWorker = startPushWorker();
-  process.on("exit", () => stopPushWorker());
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 

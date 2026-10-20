@@ -19,6 +19,7 @@ async function setup(page: Page, pets = [pet, secondPet, invitedPet], options: {
     await route.fulfill({ json: { pets } });
   });
   await page.route("**/api/dialogs**", async route => {
+    if (new URL(route.request().url()).pathname === "/api/dialogs/events") return route.fulfill({ contentType: "text/event-stream", body: "retry: 60000\n\nevent: unread\ndata: {\"unreadCount\":0}\n\n" });
     if (route.request().method() === "POST") {
       state.opens.push(route.request().postDataJSON());
       if (state.gate) await state.gate;

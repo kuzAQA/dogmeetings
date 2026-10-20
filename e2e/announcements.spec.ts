@@ -1,4 +1,3 @@
-import { pushMock } from "./push-fixtures";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import type { Announcement } from "../lib/announcement-types";
@@ -152,7 +151,9 @@ test("site sharing banner shows the menu example with both separators", async ({
 });
 
 test("first visit waits for ЖК selection and entering the home screen", async ({ page }) => {
-  await pushMock(page, false, { permission: "granted" });
+  await mockApp(page, { hasLocation: false });
+  await page.route("**/api/dialogs**", route => route.fulfill({ json: { dialogs: [], unreadCount: 0, nextCursor: null } }));
+  await page.route("**/api/telegram/notifications", route => route.fulfill({ json: { enabled: false, subscribed: false } }));
   const state = await campaign(page);
   let selected = false;
   await page.route("**/api/session", (route) => {
@@ -197,7 +198,9 @@ test("adding the first pet starts a fresh banner delay on returning home", async
   const now = new Date("2031-01-01T00:00:00Z");
   await page.clock.install({ time: now });
   await page.clock.pauseAt(now);
-  await pushMock(page, true, { permission: "granted" });
+  await mockApp(page);
+  await page.route("**/api/dialogs**", route => route.fulfill({ json: { dialogs: [], unreadCount: 0, nextCursor: null } }));
+  await page.route("**/api/telegram/notifications", route => route.fulfill({ json: { enabled: false, subscribed: false } }));
   const state = await campaign(page);
   await page.route("**/api/pets", (route) => route.fulfill({ json: route.request().method() === "POST" ? { pet } : { pets: [] } }));
   await page.goto("/");
@@ -212,7 +215,6 @@ test("adding the first pet starts a fresh banner delay on returning home", async
   await page.getByRole("button", { name: "Добавить питомца", exact: true }).click();
   await page.getByRole("button", { name: "Готово", exact: true }).click();
   await page.clock.runFor(500);
-  await page.getByRole("button", { name: "Подключить", exact: true }).click();
   await page.clock.runFor(5000);
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
   expect(state.gets()).toBe(0);

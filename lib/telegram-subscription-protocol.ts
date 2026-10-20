@@ -46,3 +46,14 @@ export function telegramSubscribeToken(data: unknown) {
   const match = /^complex-subscribe:([a-f0-9]{32})$/i.exec(data);
   return match ? match[1]!.toLowerCase() : null;
 }
+
+export function telegramSubscriptionConfirmation(data: unknown) {
+  if (typeof data !== "string") return null;
+  const match = /^(complex-subscribe|messages-subscribe|messages-unsubscribe):([a-f0-9]{32})$/i.exec(data);
+  if (!match) return null;
+  const action = match[1]!.toLowerCase();
+  return {
+    token: match[2]!.toLowerCase(),
+    purpose: action === "complex-subscribe" ? "combined" : action === "messages-subscribe" ? "messages-subscribe" : "messages-unsubscribe"
+  } as const;
+}

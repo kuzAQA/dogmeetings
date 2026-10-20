@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   telegramDeepLink,
+  telegramSubscriptionConfirmation,
   telegramStartToken,
   telegramUnsubscribeCallbackData,
   telegramUnsubscribeSubscriptionId
@@ -28,7 +29,7 @@ test("subscription upsert and unsubscription are idempotent for one Telegram cha
   const schema = await readFile(new URL("../db/schema.ts", import.meta.url), "utf8");
   const subscriptions = await readFile(new URL("./telegram-subscriptions.ts", import.meta.url), "utf8");
   assert.match(schema, /telegram_complex_subscriptions_chat_location_unique[\s\S]*telegramChatId[\s\S]*residentialComplex/);
-  assert.match(subscriptions, /\.onConflictDoNothing\([\s\S]*telegramComplexSubscriptions\.telegramChatId[\s\S]*telegramComplexSubscriptions\.residentialComplex/);
+  assert.match(subscriptions, /\.onConflictDoUpdate\([\s\S]*telegramComplexSubscriptions\.telegramChatId[\s\S]*telegramComplexSubscriptions\.residentialComplex/);
   assert.match(subscriptions, /eq\(telegramComplexSubscriptions\.id, subscriptionId\)[\s\S]*eq\(telegramComplexSubscriptions\.telegramChatId, chatId\)/);
 });
 
@@ -39,4 +40,14 @@ test("walk notifications are queued only for active subscriptions in the same co
   assert.match(route, /\.onConflictDoNothing\([\s\S]*telegramWalkNotifications\.walkId[\s\S]*telegramWalkNotifications\.subscriptionId/);
   assert.match(scheduler, /walk\.residential_complex[\s\S]*subscription\.active = true/);
   assert.match(scheduler, /blocked by the user[\s\S]*user is deactivated/);
+});
+
+test("confirmation callbacks preserve purpose and fit Telegram's limit", () => {
+  for (const [prefix, purpose] of [["complex-subscribe", "combined"], ["messages-subscribe", "messages-subscribe"], ["messages-unsubscribe", "messages-unsubscribe"]]) {
+    const data = `${prefix}:${token}`;
+    assert.ok(new TextEncoder().encode(data).length <= 64);
+    assert.deepEqual(telegramSubscriptionConfirmation(data), { token, purpose });
+  }
+  assert.equal(telegramSubscriptionConfirmation("messages-subscribe:other"), null);
+  assert.equal(telegramSubscriptionConfirmation(`messages-check:${token}`), null);
 });

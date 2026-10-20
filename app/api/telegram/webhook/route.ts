@@ -3,12 +3,14 @@ import {
   activateTelegramComplexSubscription,
   listTelegramComplexSubscriptions,
   prepareTelegramComplexSubscription,
-  deactivateTelegramComplexSubscription
+  deactivateTelegramComplexSubscription,
+  telegramMessagesActive,
+  createTelegramMessagesUnsubscribeToken,
+  type TelegramSubscriptionPurpose
 } from "../../../../lib/telegram-subscriptions";
 import {
   telegramStartToken,
-  telegramSubscribeToken,
-  telegramUnsubscribeButtonText,
+  telegramSubscriptionConfirmation,
   telegramUnsubscribeCallbackData,
   telegramUnsubscribeSubscriptionId
 } from "../../../../lib/telegram-subscription-protocol";
@@ -65,65 +67,65 @@ function telegramChatId(chat: Record<string, unknown> | null) {
   return typeof id === "string" && /^-?\d{1,20}$/.test(id) ? id : null;
 }
 
+async function sendTelegramSubscriptionMenu(chatId: string) {
+  await telegramBotRequest("sendMessage", { chat_id: chatId, text: "От каких уведомлений вы хотите отписаться?",
+    reply_markup: { inline_keyboard: [[{ text: "От прогулок", callback_data: "subscriptions:walks" }], [{ text: "От сообщений", callback_data: "subscriptions:messages" }]] } });
+}
+
+async function sendTelegramMessagesConfirmation(chatId: string, token?: string) {
+  const confirmation = token ?? await createTelegramMessagesUnsubscribeToken(chatId);
+  await telegramBotRequest("sendMessage", { chat_id: chatId,
+    text: confirmation ? "Вы точно хотите отписаться от уведомлений о личных сообщениях других владельцев собак?" : "У вас нет активной подписки на сообщения.",
+    ...(confirmation ? { reply_markup: { inline_keyboard: [[{ text: "Отписаться", callback_data: `messages-unsubscribe:${confirmation}` }]] } } : {}) });
+}
+
 async function handleTelegramStart(message: Record<string, unknown>) {
   const chat = isRecord(message.chat) ? message.chat : null;
   const chatId = telegramChatId(chat);
+  if (!chatId || chat?.type !== "private" || typeof message.text !== "string"
+    || !/^\/start(?:@[A-Za-z0-9_]{5,32})?(?:\s|$)/.test(message.text)) return false;
   const token = telegramStartToken(message.text);
-  if (!chatId || chat?.type !== "private") return false;
-  if (!token) {
-    if (typeof message.text !== "string" || !/^\/start(?:@[A-Za-z0-9_]{5,32})?(?:\s|$)/.test(message.text)) return false;
-    await telegramBotRequest("sendMessage", {
-      chat_id: chatId,
-      text: "Получайте уведомления о прогулках в вашем ЖК. Перейдите на сайт, выберите свой жилой комплекс, затем включите уведомления в Telegram.",
-      reply_markup: { inline_keyboard: [[{ text: "Открыть Dogmeet.ru", url: `${PUBLIC_ORIGIN}/?telegram=notifications` }]] }
-    });
+  if (!token && /^\/start(?:@[A-Za-z0-9_]{5,32})?\s*$/.test(message.text)) {
+    const [walks, messages] = await Promise.all([listTelegramComplexSubscriptions(chatId), telegramMessagesActive(chatId)]);
+    if (walks.length || messages) await sendTelegramSubscriptionMenu(chatId);
+    else await telegramBotRequest("sendMessage", { chat_id: chatId,
+      text: "Получайте уведомления о прогулках и новых сообщениях. Откройте Dogmeet.ru, чтобы настроить подписки.",
+      reply_markup: { inline_keyboard: [[{ text: "Открыть Dogmeet.ru", url: `${PUBLIC_ORIGIN}/?telegram=notifications` }]] } });
     return true;
   }
-
-  const result = await prepareTelegramComplexSubscription(token, chatId);
-  if (chat?.type === "private" && typeof message.message_id === "number" && Number.isSafeInteger(message.message_id)) {
+  const result = token ? await prepareTelegramComplexSubscription(token, chatId) : { status: "expired" as const };
+  if (typeof message.message_id === "number" && Number.isSafeInteger(message.message_id)) {
     await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: message.message_id });
   }
   if (result.status === "expired") {
-    await telegramBotRequest("sendMessage", {
-      chat_id: chatId,
-      text: "Ссылка для настройки уведомлений недействительна или просрочена. Снова откройте бота с сайта Dogmeet.ru."
-    });
+    await telegramBotRequest("sendMessage", { chat_id: chatId, text: "Ссылка для настройки уведомлений недействительна или просрочена. Снова откройте бота с сайта Dogmeet.ru." });
     return true;
   }
-
-  await telegramBotRequest("sendMessage", {
-    chat_id: chatId,
-    text: `Привет! 🐾 Я помогу узнавать о новых прогулках.\n\n🏘️ ЖК «${result.complex}»\nНажмите на кнопку ниже, чтобы подписаться на уведомления.`,
-    reply_markup: {
-      inline_keyboard: [[{
-        text: "Подписаться",
-        callback_data: `complex-subscribe:${token}`
-      }]]
-    }
-  });
+  if (result.purpose === "messages-check") {
+    await telegramBotRequest("sendMessage", { chat_id: chatId, text: result.enabled ? "Подписка на уведомления о личных сообщениях активна." : "Подписка на уведомления о личных сообщениях неактивна." });
+  } else if (result.purpose === "messages-unsubscribe") {
+    await sendTelegramMessagesConfirmation(chatId, token!);
+  } else {
+    await telegramBotRequest("sendMessage", { chat_id: chatId,
+      text: result.purpose === "combined"
+        ? `Получайте уведомления о новых прогулках в ЖК „${result.complex}“ и о новых сообщениях от других владельцев собак`
+        : "Получайте уведомления о новых личных сообщениях от других владельцев собак. Текст переписки остаётся на сайте.",
+      reply_markup: { inline_keyboard: [[{ text: "Подписаться", callback_data: `${result.purpose === "combined" ? "complex-subscribe" : "messages-subscribe"}:${token}` }]] } });
+  }
   return true;
 }
 
-async function handleTelegramSubscribeCallback(callbackId: string, chatId: string, token: string) {
-  const result = await activateTelegramComplexSubscription(token, chatId);
+async function handleTelegramSubscribeCallback(callbackId: string, chatId: string, token: string, purpose: TelegramSubscriptionPurpose = "combined") {
+  const result = await activateTelegramComplexSubscription(token, chatId, purpose);
   if (result.status === "expired") {
     await callbackAnswer(callbackId, "Ссылка недействительна или просрочена. Снова откройте бота с сайта Dogmeet.ru.", true);
     return;
   }
-  await callbackAnswer(callbackId, result.status === "active" ? "Подписка уже активна." : "Вы подписались на уведомления.");
-  await telegramBotRequest("sendMessage", {
-    chat_id: chatId,
-    text: result.status === "active"
-      ? `Подписка на уведомления ЖК „${result.complex}“ уже активна.`
-      : `✅ Вы подписались на уведомления ЖК „${result.complex}“`,
-    reply_markup: {
-      inline_keyboard: [[{
-        text: telegramUnsubscribeButtonText(result.complex),
-        callback_data: telegramUnsubscribeCallbackData(result.subscriptionId)
-      }]]
-    }
-  });
+  if (result.status === "processed") { await callbackAnswer(callbackId, "Это действие уже обработано."); return; }
+  await callbackAnswer(callbackId, "Настройки сохранены.");
+  await telegramBotRequest("sendMessage", { chat_id: chatId,
+    text: purpose === "combined" ? `✅ Вы подписались на уведомления о прогулках ЖК „${result.complex}“ и о новых личных сообщениях.`
+      : purpose === "messages-subscribe" ? "✅ Вы подписались на уведомления о личных сообщениях." : "✅ Подписка на уведомления о личных сообщениях отключена." });
 }
 
 async function sendTelegramSubscriptions(chatId: string, messageId?: number) {
@@ -136,7 +138,7 @@ async function sendTelegramSubscriptions(chatId: string, messageId?: number) {
       : "У вас пока нет активных подписок. Откройте бота с сайта Dogmeet.ru, чтобы подписаться на уведомления вашего ЖК.",
     reply_markup: {
       inline_keyboard: subscriptions.map(subscription => [{
-        text: telegramUnsubscribeButtonText(subscription.complex),
+        text: subscription.complex,
         callback_data: telegramUnsubscribeCallbackData(subscription.id)
       }])
     }
@@ -149,7 +151,7 @@ async function handleTelegramSubscriptions(message: Record<string, unknown>) {
   if (!chatId || chat?.type !== "private" || typeof message.text !== "string"
     || !/^\/subscriptions(?:@[A-Za-z0-9_]{5,32})?\s*$/.test(message.text)) return false;
   try {
-    await sendTelegramSubscriptions(chatId);
+    await sendTelegramSubscriptionMenu(chatId);
   } catch (error) {
     console.error("[telegram] Не удалось загрузить подписки.", error);
     await telegramBotRequest("sendMessage", { chat_id: chatId, text: "Не удалось загрузить подписки. Повторите /subscriptions." });
@@ -213,17 +215,23 @@ export async function POST(request: Request) {
     return Response.json({ ok: true });
   }
 
-  if (typeof callback.data === "string" && callback.data.startsWith("complex-subscribe:")) {
-    const token = telegramSubscribeToken(callback.data);
+  const subscriptionAction = typeof callback.data === "string" && /^(?:complex-subscribe:|messages-subscribe:|messages-unsubscribe:|subscriptions:)/.test(callback.data);
+  if (subscriptionAction) {
     const sender = isRecord(callback.from) ? telegramChatId(callback.from) : null;
-    if (!token || chat.type !== "private" || sender !== chatId) {
-      await callbackAnswer(callbackId, "Ссылка недействительна. Снова откройте бота с сайта Dogmeet.ru.", true);
+    if (chat.type !== "private" || sender !== chatId) {
+      await callbackAnswer(callbackId, "Не удалось обработать подписку в этом чате.", true);
       return Response.json({ ok: true });
     }
     try {
-      await handleTelegramSubscribeCallback(callbackId, chatId, token);
+      if (callback.data === "subscriptions:walks") { await callbackAnswer(callbackId, "Прогулки"); await sendTelegramSubscriptions(chatId); }
+      else if (callback.data === "subscriptions:messages") { await callbackAnswer(callbackId, "Сообщения"); await sendTelegramMessagesConfirmation(chatId); }
+      else {
+        const confirmation = telegramSubscriptionConfirmation(callback.data);
+        if (!confirmation) await callbackAnswer(callbackId, "Ссылка недействительна. Снова откройте бота с сайта Dogmeet.ru.", true);
+        else await handleTelegramSubscribeCallback(callbackId, chatId, confirmation.token, confirmation.purpose);
+      }
     } catch (error) {
-      console.error("[telegram] Не удалось подтвердить подписку ЖК.", error);
+      console.error("[telegram] Не удалось изменить подписку.", error);
       await callbackAnswer(callbackId, "Не удалось обработать подписку. Повторите попытку.", true);
     }
     return Response.json({ ok: true });

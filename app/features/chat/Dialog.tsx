@@ -310,15 +310,16 @@ export function Dialog({ id, walkId, petId, onBack, onResolved }: {
     </div>
     <form className="chat-composer" onSubmit={event => { event.preventDefault(); void send(); }}>
       <div className="chat-composer-input">
-        <textarea ref={input} aria-label="Сообщение" placeholder="Сообщение" inputMode="none" aria-describedby="chat-input-note" rows={1} value={text} readOnly={Boolean(attempt)}
+        <textarea ref={input} aria-label="Сообщение" placeholder="Сообщение" inputMode="none" aria-describedby="chat-input-note" rows={1} value={text} aria-readonly={Boolean(attempt) || sending}
           onPointerDown={event => {
             const node = event.currentTarget;
             if (node.inputMode !== "none") return;
             node.inputMode = "text";
             node.blur(); node.focus({ preventScroll: true });
           }}
-          disabled={!dialog || sending} onChange={event => setText(event.target.value)} />
+          disabled={!dialog} onChange={event => { if (!attempt && !sending) setText(event.target.value); }} />
         <button className="chat-send" type="submit" aria-label="Отправить сообщение" aria-busy={sending}
+          onPointerDown={event => { if (event.button === 0 && document.activeElement === input.current) event.preventDefault(); }}
           title={sending ? "Отправляем…" : attempt ? "Повторить отправку" : "Отправить сообщение"}
           disabled={!dialog || sending || expired || chatText(text) === null}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

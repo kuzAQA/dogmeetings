@@ -46,6 +46,7 @@ export function clearLegacySessionData() {
 }
 
 function normalizeSessionResponse(data: Partial<SessionBootstrapData>) {
+  window.dispatchEvent(new Event("dogmeet-session-changed"));
   return {
     hasLocation: Boolean(data.hasLocation),
     location: data.location ?? null

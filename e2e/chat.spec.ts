@@ -15,6 +15,7 @@ async function mockChat(page: Page) {
   await page.route("**/api/dialogs**", async route => {
     const url = new URL(route.request().url());
     const method = route.request().method();
+    if (url.pathname === "/api/dialogs/events") return route.fulfill({ contentType: "text/event-stream", body: "retry: 60000\n\nevent: unread\ndata: {\"unreadCount\":0}\n\n" });
     if (url.pathname === "/api/dialogs") {
       if (method === "POST") return route.fulfill({ json: { dialog: state.dialog, serverTime: new Date().toISOString() } });
       return route.fulfill({ json: { dialogs: !state.hidden && state.messages.length
@@ -215,7 +216,7 @@ test("composer matches the compact capsule and grows without moving the send but
   expect(state.sends).toEqual([]);
 });
 
-test("composer blocks duplicate submits while a mocked request is pending and resets its height", async ({ page }, testInfo) => {
+test("composer keeps focus without blurring while sending and blocks duplicate submits", async ({ page }, testInfo) => {
   const state = await mockChat(page);
   await openChat(page);
   let release = () => {};
@@ -223,12 +224,21 @@ test("composer blocks duplicate submits while a mocked request is pending and re
   const input = page.getByRole("textbox", { name: "Сообщение", exact: true });
   const send = page.getByRole("button", { name: "Отправить сообщение", exact: true });
   await input.fill("Первая строка\nВторая строка\nТретья строка");
+  await input.click();
+  await input.evaluate(node => {
+    node.addEventListener("blur", () => node.setAttribute("data-blurred", "true"));
+  });
   try {
     await send.click();
     await expect.poll(() => state.sends.length).toBe(1);
     await expect(send).toBeDisabled();
     await expect(send).toHaveAttribute("aria-busy", "true");
-    await expect(input).toBeDisabled();
+    await expect(input).toBeEnabled();
+    await expect(input).toBeFocused();
+    await expect(input).not.toHaveAttribute("readonly");
+    await expect(input).toHaveAttribute("aria-readonly", "true");
+    await page.keyboard.type("лишний текст");
+    await expect(input).toHaveValue("Первая строка\nВторая строка\nТретья строка");
     await page.locator(".chat-composer").evaluate(node => {
       (node as HTMLFormElement).requestSubmit();
       (node as HTMLFormElement).requestSubmit();
@@ -237,6 +247,11 @@ test("composer blocks duplicate submits while a mocked request is pending and re
     await page.screenshot({ path: testInfo.outputPath("composer-sending.png"), fullPage: true });
   } finally { release(); }
   await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
+  await expect(input).not.toHaveAttribute("data-blurred");
+  await page.keyboard.type("Следующее сообщение");
+  await expect(input).toHaveValue("Следующее сообщение");
+  await input.fill("");
   await expect(page.locator(".chat-composer-input")).toHaveCSS("height", "48px");
   await expect(send).toBeDisabled();
   await expect(send).toHaveAttribute("aria-busy", "false");
@@ -267,10 +282,14 @@ test("notice, Unicode limit, failed-send retry and accessible receipts", async (
   await input.fill("<b>Привет</b>");
   await page.getByRole("button", { name: "Отправить сообщение", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Не удалось отправить");
+  await expect(input).toBeFocused();
+  await expect(input).not.toHaveAttribute("readonly");
+  await page.keyboard.type("лишний текст");
+  await expect(input).toHaveValue("<b>Привет</b>");
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: "Написать", exact: true }).click();
   await expect(input).toHaveValue("<b>Привет</b>");
-  await expect(input).toHaveAttribute("readonly", "");
+  await expect(input).toHaveAttribute("aria-readonly", "true");
   await page.getByRole("button", { name: "Отправить сообщение", exact: true }).click();
   await expect(input).toHaveValue("");
   expect(state.sends[0].requestId).toBe(state.sends[1].requestId);
@@ -669,7 +688,7 @@ test("dialogs menu row is first, uses the existing description style and opens d
   await page.getByRole("button", { name: "Мой район и настройки" }).click();
   const rows = page.locator(".profile-screen .menu-row");
   await expect(rows.locator("strong")).toHaveText([
-    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Push-уведомления", "Связь с разработчиком",
+    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Уведомления", "Связь с разработчиком",
   ]);
   const description = rows.first().locator("small");
   await expect(description).toHaveText("Сообщите своим друзьям что-то важное");

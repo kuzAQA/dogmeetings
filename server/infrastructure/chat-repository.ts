@@ -173,26 +173,29 @@ export async function sendMessage(clientId: string, id: string, requestId: strin
       .where(eq(dialogs.id, id)).returning();
     const [message] = await tx.insert(dialogMessages).values({ dialogId: id, seq: updated.lastSeq,
       senderClientId: clientId, requestId, text, createdAt: now }).returning();
-    const recipient = row.clientLow === clientId ? row.clientHigh : row.clientLow;
-    await tx.execute(sql`INSERT INTO chat_push_outbox (dialog_id, message_seq, subscription_id, subscription_version)
-      SELECT ${id}::uuid, ${message.seq}, s.id, s.version FROM push_subscriptions s
-      JOIN client_sessions c ON c.client_id = s.client_id AND c.token_hash = s.session_hash
-      WHERE s.client_id = ${recipient}::uuid AND s.active AND c.expires_at > clock_timestamp()
-      ON CONFLICT DO NOTHING`);
     const dialog = await dialogView(tx, updated, clientId);
+    await tx.execute(sql`SELECT pg_notify('dogmeet_chat', ${JSON.stringify({ type: "message",
+      userIds: [row.clientLow === clientId ? row.clientHigh : row.clientLow], dialogId: id, messageSeq: message.seq })})`);
     return { message: messageView(message, clientId), dialog,
       serverTime: (await checkDeadline(tx, updated)).toISOString(), duplicate: false };
   }));
 }
 
 export async function unreadStatus(clientId: string) {
+  const { unreadCount } = await unreadSnapshot(clientId);
+  return { unreadCount };
+}
+
+export async function unreadSnapshot(clientId: string) {
   return withDb(async db => {
-    const result = await db.execute<{ count: string }>(sql`SELECT count(*) FROM dialog_messages m
+    const result = await db.execute<{ count: string; expires_in_ms: string | null }>(sql`SELECT count(*),
+      EXTRACT(EPOCH FROM (min(d.expires_at) - clock_timestamp())) * 1000 AS expires_in_ms FROM dialog_messages m
       JOIN dialogs d ON d.id = m.dialog_id
       WHERE (d.client_low = ${clientId}::uuid OR d.client_high = ${clientId}::uuid)
         AND d.expires_at > clock_timestamp() AND m.sender_client_id <> ${clientId}::uuid AND m.read_at IS NULL
         AND m.seq > CASE WHEN d.client_low = ${clientId}::uuid THEN d.low_hidden_through ELSE d.high_hidden_through END`);
-    return { unreadCount: Number(result.rows[0].count) };
+    return { unreadCount: Number(result.rows[0].count),
+      expiresInMs: result.rows[0].expires_in_ms === null ? null : Math.ceil(Number(result.rows[0].expires_in_ms)) };
   });
 }
 
@@ -203,12 +206,14 @@ export async function updateDialog(clientId: string, id: string, action: "hide" 
       await tx.update(dialogs).set(row.clientLow === clientId
         ? { lowHiddenThrough: row.lastSeq } : { highHiddenThrough: row.lastSeq }).where(eq(dialogs.id, id));
       await checkDeadline(tx, row);
+      await tx.execute(sql`SELECT pg_notify('dogmeet_chat', ${JSON.stringify({ type: "hide", userIds: [clientId], dialogId: id })})`);
       return { hiddenThrough: row.lastSeq };
     }
     if (seqs.length) await tx.update(dialogMessages).set({ readAt: sql`COALESCE(${dialogMessages.readAt}, ${now.toISOString()}::timestamptz)` })
       .where(and(eq(dialogMessages.dialogId, id), ne(dialogMessages.senderClientId, clientId),
         gt(dialogMessages.seq, hiddenThrough(row, clientId)), inArray(dialogMessages.seq, seqs)));
     await checkDeadline(tx, row);
+    if (seqs.length) await tx.execute(sql`SELECT pg_notify('dogmeet_chat', ${JSON.stringify({ type: "read", userIds: [clientId], dialogId: id })})`);
     return { read: true };
   }));
 }

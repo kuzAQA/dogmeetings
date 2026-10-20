@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, customType, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, date, index, integer, jsonb, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import type { AnnouncementExclusions, AnnouncementPage, AnnouncementStatus } from "../lib/announcement-types";
 
 export const dialogs = pgTable("dialogs", {
@@ -32,36 +32,6 @@ export const dialogMessages = pgTable("dialog_messages", {
   primaryKey({ columns: [table.dialogId, table.seq] }),
   uniqueIndex("dialog_messages_request_unique").on(table.dialogId, table.senderClientId, table.requestId),
   check("dialog_messages_text_check", sql`char_length(${table.text}) BETWEEN 1 AND 2000`)
-]);
-
-export const pushSubscriptions = pgTable("push_subscriptions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  clientId: uuid("client_id").notNull(),
-  sessionHash: varchar("session_hash", { length: 64 }).notNull(),
-  endpoint: text("endpoint").notNull().unique(),
-  p256dh: text("p256dh").notNull(),
-  auth: text("auth").notNull(),
-  active: boolean("active").notNull().default(true),
-  version: uuid("version").notNull().defaultRandom(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-}, table => [index("push_subscriptions_client_idx").on(table.clientId).where(sql`${table.active}`)]);
-
-export const chatPushOutbox = pgTable("chat_push_outbox", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  dialogId: uuid("dialog_id").notNull(),
-  messageSeq: bigint("message_seq", { mode: "number" }).notNull(),
-  subscriptionId: uuid("subscription_id").notNull().references(() => pushSubscriptions.id, { onDelete: "cascade" }),
-  subscriptionVersion: uuid("subscription_version").notNull(),
-  attempts: integer("attempts").notNull().default(0),
-  availableAt: timestamp("available_at", { withTimezone: true }).notNull().defaultNow(),
-  lockedUntil: timestamp("locked_until", { withTimezone: true }),
-  lease: uuid("lease"),
-  doneAt: timestamp("done_at", { withTimezone: true }),
-  outcome: varchar("outcome", { length: 20 })
-}, table => [
-  foreignKey({ columns: [table.dialogId, table.messageSeq], foreignColumns: [dialogMessages.dialogId, dialogMessages.seq] }).onDelete("cascade"),
-  uniqueIndex("chat_push_outbox_message_subscription_unique").on(table.dialogId, table.messageSeq, table.subscriptionId),
-  index("chat_push_outbox_pending_idx").on(table.availableAt).where(sql`${table.doneAt} IS NULL`)
 ]);
 
 export const announcementCampaigns = pgTable("announcement_campaigns", {
@@ -177,6 +147,8 @@ export const telegramSubscriptionIntents = pgTable(
   {
     tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
     clientId: uuid("client_id"),
+    purpose: varchar("purpose", { length: 24 }).notNull().default("combined"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
     city: varchar("city", { length: 80 }).notNull(),
     district: varchar("district", { length: 80 }).notNull(),
     residentialComplex: varchar("residential_complex", { length: 120 }).notNull(),
@@ -268,20 +240,6 @@ export const adminSessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [index("admin_sessions_expires_at_idx").on(table.expiresAt)]
-);
-
-export const adminPushSubscriptions = pgTable(
-  "admin_push_subscriptions",
-  {
-    endpointHash: varchar("endpoint_hash", { length: 64 }).primaryKey(),
-    endpoint: text("endpoint").notNull(),
-    p256dh: varchar("p256dh", { length: 180 }).notNull(),
-    auth: varchar("auth", { length: 64 }).notNull(),
-    userAgent: varchar("user_agent", { length: 300 }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-  },
-  (table) => [index("admin_push_subscriptions_updated_at_idx").on(table.updatedAt)]
 );
 
 export const places = pgTable(
