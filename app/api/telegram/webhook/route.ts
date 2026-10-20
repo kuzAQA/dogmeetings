@@ -76,7 +76,10 @@ async function sendTelegramMessagesConfirmation(chatId: string, token?: string) 
   const confirmation = token ?? await createTelegramMessagesUnsubscribeToken(chatId);
   await telegramBotRequest("sendMessage", { chat_id: chatId,
     text: confirmation ? "Вы точно хотите отписаться от уведомлений о личных сообщениях других владельцев собак?" : "У вас нет активной подписки на сообщения.",
-    ...(confirmation ? { reply_markup: { inline_keyboard: [[{ text: "Отписаться", callback_data: `messages-unsubscribe:${confirmation}` }]] } } : {}) });
+    reply_markup: { inline_keyboard: [
+      ...(confirmation ? [[{ text: "Отписаться", callback_data: `messages-unsubscribe:${confirmation}` }]] : []),
+      [{ text: "Назад", callback_data: "subscriptions:back" }]
+    ] } });
 }
 
 async function handleTelegramStart(message: Record<string, unknown>) {
@@ -137,10 +140,10 @@ async function sendTelegramSubscriptions(chatId: string, messageId?: number) {
       ? "🏘️ Ваши подписки\nНажмите на нужный ЖК, чтобы отключить его уведомления."
       : "У вас пока нет активных подписок. Откройте бота с сайта Dogmeet.ru, чтобы подписаться на уведомления вашего ЖК.",
     reply_markup: {
-      inline_keyboard: subscriptions.map(subscription => [{
+      inline_keyboard: [...subscriptions.map(subscription => [{
         text: subscription.complex,
         callback_data: telegramUnsubscribeCallbackData(subscription.id)
-      }])
+      }]), [{ text: "Назад", callback_data: "subscriptions:back" }]]
     }
   });
 }
@@ -223,7 +226,8 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
     try {
-      if (callback.data === "subscriptions:walks") { await callbackAnswer(callbackId, "Прогулки"); await sendTelegramSubscriptions(chatId); }
+      if (callback.data === "subscriptions:back") { await callbackAnswer(callbackId, "Назад"); await sendTelegramSubscriptionMenu(chatId); }
+      else if (callback.data === "subscriptions:walks") { await callbackAnswer(callbackId, "Прогулки"); await sendTelegramSubscriptions(chatId); }
       else if (callback.data === "subscriptions:messages") { await callbackAnswer(callbackId, "Сообщения"); await sendTelegramMessagesConfirmation(chatId); }
       else {
         const confirmation = telegramSubscriptionConfirmation(callback.data);
