@@ -54,6 +54,7 @@ test("admin places persist changes and protect linked walks in an isolated Postg
     }
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     process.env.ADMIN_SESSION_SECRET = "admin-locations-test-secret-only-0000000000";
     process.env.ADMIN_USERNAME_HASH = createHash("sha256").update("test-admin").digest("base64url");

@@ -38,6 +38,7 @@ test("my places: ownership, profile filters, creation and linked walks", {
     await client.query(await readFile(new URL("../drizzle/0026_place_creators.sql", import.meta.url), "utf8"));
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     const { GET, PATCH, DELETE } = await import("../app/api/places/route");
     const { createClientSession, sessionCookie } = await import("./session");

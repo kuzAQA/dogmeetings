@@ -44,7 +44,7 @@
 }
 .chat-notice { margin: auto; padding: 24px 12px; text-align: center; max-width: 38ch; font-size: 14px; line-height: 1.6; }
 .chat-notification:empty { display: none; }
-.chat-notification { --accent: #be4629; --ink: #222b3b; position: fixed; z-index: 20; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); max-width: 370px; margin-inline: auto; color: #222b3b; font-family: Inter, system-ui, Arial, sans-serif; }
+.chat-notification { --accent: #be4629; --ink: #222b3b; position: fixed; z-index: 20; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); margin-inline: auto; color: #222b3b; font-family: Inter, system-ui, Arial, sans-serif; }
 .chat-notification *, .chat-notification *::before, .chat-notification *::after { box-sizing: border-box; }
 .chat-notification button { font: inherit; cursor: pointer; }
 .chat-notification .d2-toast{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;padding:18px 16px 18px 12px;border-radius:19px;border:1px solid #e3dad0;background:#fffcf7;box-shadow:0 12px 30px #2625213d;animation:d2-enter .42s cubic-bezier(.18,.9,.24,1.04) both}

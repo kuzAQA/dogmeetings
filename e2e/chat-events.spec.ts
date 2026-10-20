@@ -77,6 +77,16 @@ test("snapshot is quiet; incoming banner opens its dialog once and preserves foc
   await incoming(3);
   await expect(banner).toBeEmpty();
   expect(await page.evaluate(() => window.chatSources.length)).toBe(1);
+  await page.route("**/api/dialogs", route => route.fulfill({ json: { dialogs: [] } }));
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Диалоги", exact: true })).toBeVisible();
+  await incoming(4);
+  await page.getByRole("button", { name: "Открыть диалог", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Луна • Анна", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Диалоги", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Назад", exact: true }).click();
+  await expect(page.locator(".walk-summary").first()).toBeVisible();
 });
 
 test("hidden tabs close SSE; return opens exactly one fresh stream without polling", async ({ page }) => {
@@ -114,6 +124,35 @@ async function incoming(page: import("@playwright/test").Page, messageSeq: numbe
     window.chatSources.at(-1)!.dispatchEvent(new MessageEvent("message", { data: JSON.stringify({ dialogId, messageSeq }) }));
   }, { dialogId, messageSeq });
 }
+
+test("incoming message immediately refreshes dialog preview and unread highlight", async ({ page }) => {
+  let seq = 1;
+  let unreadCount = 0;
+  await page.route("**/api/dialogs", route => route.fulfill({ json: {
+    dialogs: [{
+      id: dialogId,
+      peer: { clientId: "40000000-0000-4000-8000-000000000001", name: "Луна • Анна", photoUrl: "/dog-luna.webp" },
+      expiresAt: null, hiddenThrough: 0, unreadCount,
+      lastMessage: { seq, requestId: `message-${seq}`, text: seq === 1 ? "Старое сообщение" : "Новое сообщение", mine: false, createdAt: "2026-09-15T15:00:00Z", readAt: null },
+    }], nextCursor: null,
+  } }));
+  await notifications(page);
+  await page.getByRole("button", { name: "Мой район и настройки" }).click();
+  await page.getByRole("button", { name: /Диалоги/ }).click();
+  const row = page.locator(".chat-list-row");
+  await expect(row).toContainText("Старое сообщение");
+  await expect(row).not.toHaveClass(/is-unread/);
+  seq = 2;
+  unreadCount = 1;
+  await incoming(page, seq);
+  // The clock stays paused: SSE must refresh the list without waiting for polling.
+  await expect(row).toContainText("Новое сообщение");
+  await expect(row).toHaveClass(/is-unread/);
+  await expect(row.getByRole("img", { name: "1 непрочитанных сообщений" })).toBeVisible();
+  unreadCount = 0;
+  await page.evaluate(() => window.dispatchEvent(new Event("dogmeet-chat-changed")));
+  await expect(row).not.toHaveClass(/is-unread/);
+});
 
 test("notification expires after five seconds and disables actions during its exit", async ({ page }) => {
   await notifications(page);

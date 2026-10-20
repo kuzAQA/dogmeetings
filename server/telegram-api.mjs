@@ -39,7 +39,7 @@ export async function reserveTelegramRequest(client, chatId, now = Date.now()) {
 
 export async function requestTelegramApi(token, method, body, fetcher = fetch, timeoutMs = 5000, rateDb = withRateDb) {
   if (blockedUntil > Date.now()) throw new TelegramRetryError("Telegram приостановлен после 429.", Math.ceil((blockedUntil - Date.now()) / 1000));
-  const chatId = body instanceof FormData ? body.get("chat_id") : body.chat_id;
+  const chatId = method === "deleteMessage" ? null : body instanceof FormData ? body.get("chat_id") : body.chat_id;
   const delay = await rateDb(client => reserveTelegramRequest(client, chatId));
   if (delay > 0) {
     await new Promise(resolve => setTimeout(resolve, delay));

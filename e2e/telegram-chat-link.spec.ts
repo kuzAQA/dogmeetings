@@ -19,7 +19,7 @@ for (const restoreSession of [false, true]) {
     const requested: string[] = [];
     await page.route("**/api/dialogs**", route => {
       const path = new URL(route.request().url()).pathname;
-      if (!path.endsWith("/messages")) return route.fulfill({ json: { unreadCount: 0 } });
+      if (!path.endsWith("/messages")) return route.fulfill({ json: { unreadCount: 0, dialogs: [] } });
       requested.push(path);
       return route.fulfill({ json: {
         dialog: { id: dialogId, peer: { clientId: "40000000-0000-4000-8000-000000000001", name: "Луна • Анна", photoUrl: null }, hiddenThrough: 0, expiresAt: null },
@@ -38,6 +38,12 @@ for (const restoreSession of [false, true]) {
     await expect(page).not.toHaveURL(/dialog=/);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Луна • Анна", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Назад", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Диалоги", exact: true })).toBeVisible();
+    await page.goForward();
+    await expect(page.getByRole("heading", { name: "Луна • Анна", exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole("heading", { name: "Диалоги", exact: true })).toBeVisible();
   });
 }
 

@@ -127,6 +127,7 @@ export const clientSessions = pgTable(
     hasLocation: boolean("has_location").notNull().default(false),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    hasAddedPet: boolean("has_added_pet").default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },

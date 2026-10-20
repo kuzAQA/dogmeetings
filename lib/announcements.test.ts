@@ -69,6 +69,7 @@ test("announcements use server time and session identity in isolated PostgreSQL"
       await client.query("DELETE FROM announcement_receipts WHERE client_id = $1", [clientId]);
     });
 
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     const { GET, POST } = await import("../app/api/announcements/route");
     const { createClientSession, sessionCookie } = await import("./session");

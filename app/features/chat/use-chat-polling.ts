@@ -36,12 +36,14 @@ export function useChatPolling(key: string | null, poll: (signal: AbortSignal) =
       if (document.visibilityState === "visible") void run();
     }
     refresh.current = () => { void run(); };
+    window.addEventListener("dogmeet-chat-changed", run);
     document.addEventListener("visibilitychange", visibility);
     void run();
     return () => {
       stopped = true;
       controller.abort();
       if (timer) clearTimeout(timer);
+      window.removeEventListener("dogmeet-chat-changed", run);
       document.removeEventListener("visibilitychange", visibility);
       refresh.current = () => {};
     };

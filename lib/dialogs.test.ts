@@ -44,6 +44,7 @@ test("dialogs preserve privacy, receipts and the original retention deadline in 
     await client.query("DELETE FROM dialogs WHERE id=$1", [legacy]);
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     const { createClientSession, sessionCookie } = await import("./session");
     const collection = await import("../app/api/dialogs/route");

@@ -87,6 +87,7 @@ test("SSE uses isolated PostgreSQL, transactional NOTIFY and a real vinext Node 
     await client.query(await readFile(new URL("../drizzle/0045_dialogs.sql", import.meta.url), "utf8"));
     await client.query(await readFile(new URL("../drizzle/0046_dialog_pet_selection.sql", import.meta.url), "utf8"));
     url.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = url.href;
     const { createClientSession, sessionCookie } = await import("./session");
     const repo = await import("../server/infrastructure/chat-repository");

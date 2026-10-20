@@ -43,6 +43,7 @@ test("pet invitations persist location, preserve previews and accept only once",
     }
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     const { createClientSession, sessionCookie } = await import("./session.ts");
     const sessions = await import("../app/api/session/route.ts");

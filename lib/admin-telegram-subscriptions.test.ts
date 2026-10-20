@@ -42,6 +42,7 @@ test("admin Telegram count uses real subscription state in an isolated PostgreSQ
     }
     const isolatedUrl = new URL(databaseUrl!);
     isolatedUrl.searchParams.set("options", `-c search_path=${schema}`);
+    await client.query("ALTER TABLE client_sessions ADD COLUMN has_added_pet boolean DEFAULT false");
     process.env.DATABASE_URL = isolatedUrl.href;
     process.env.ADMIN_SESSION_SECRET = "admin-telegram-test-secret-only-0000000000";
     Object.assign(process.env, { NODE_ENV: "development" });

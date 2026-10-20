@@ -116,7 +116,7 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    mem_limit: 256m
+    mem_limit: 768m
 
   caddy:
     image: caddy:2-alpine

@@ -86,6 +86,16 @@ export async function cleanupExpiredDialogs(client) {
   return client.query("DELETE FROM dialogs WHERE expires_at <= clock_timestamp()");
 }
 
+export async function cleanupPetlessUsers(client) {
+  return client.query(`
+    DELETE FROM client_sessions AS sessions
+    WHERE has_added_pet = false
+      AND created_at <= CURRENT_TIMESTAMP - INTERVAL '3 days'
+      AND NOT EXISTS (SELECT 1 FROM pets WHERE pets.client_id = sessions.client_id)
+      AND NOT EXISTS (SELECT 1 FROM pet_collaborators WHERE pet_collaborators.client_id = sessions.client_id)
+  `);
+}
+
 async function runDialogCleanup() {
   const client = new Client({ connectionString: connectionString(), connectionTimeoutMillis: 5000, statement_timeout: 5000 });
   try {
@@ -177,6 +187,7 @@ async function cleanupExpiredData() {
       WHERE walk_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow')::date
         AND schedule_type IN ('today', 'tomorrow')
     `);
+    const petlessUsersResult = await cleanupPetlessUsers(client);
     const sessionsResult = await client.query(`
       DELETE FROM client_sessions
       WHERE expires_at < CURRENT_TIMESTAMP
@@ -187,7 +198,7 @@ async function cleanupExpiredData() {
     `);
 
     console.info(
-      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${walksResult.rowCount ?? 0}, истёкших сессий — ${sessionsResult.rowCount ?? 0}, истёкших ссылок Telegram — ${intentsResult.rowCount ?? 0}`
+      `[walk-cleanup] ${formatMoscowDateTime(new Date())}: удалено прогулок — ${walksResult.rowCount ?? 0}, пользователей без первого питомца — ${petlessUsersResult.rowCount ?? 0}, истёкших сессий — ${sessionsResult.rowCount ?? 0}, истёкших ссылок Telegram — ${intentsResult.rowCount ?? 0}`
     );
   } finally {
     await client.end();

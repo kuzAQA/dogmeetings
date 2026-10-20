@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
 async function setup(page: Page, pets = [pet, secondPet, invitedPet], options: { petsGate?: Promise<void>; petsFail?: boolean; fromList?: boolean } = {}) {
   const state = { opens: [] as { walkId: string; petId?: string }[], fail: false, gate: null as Promise<void> | null };
-  await mockApp(page, { pets, mine: [] });
+  await mockApp(page, { pets, mine: [], nearby: [{ ...walk, petId: "00000000-0000-4000-8000-000000000004" }] });
   if (options.petsGate || options.petsFail) await page.route("**/api/pets", async route => {
     await options.petsGate;
     if (options.petsFail) return route.fulfill({ status: 500, json: { error: "Не удалось загрузить питомцев." } });
@@ -41,6 +41,21 @@ async function setup(page: Page, pets = [pet, secondPet, invitedPet], options: {
     await page.getByRole("button", { name: "Написать", exact: true }).click();
   }
   return state;
+}
+
+for (const scenario of [
+  { name: "pet owner viewing a collaborator's walk", pets: [pet], mine: [], canWrite: false },
+  { name: "collaborator viewing their own walk", pets: [{ ...pet, isOwner: false }], mine: [walk], canWrite: false },
+  { name: "another user viewing the walk", pets: [secondPet], mine: [], canWrite: true },
+  { name: "collaborator viewing another user's walk", pets: [{ ...pet, isOwner: false }], mine: [], canWrite: true },
+]) {
+  test(`write button visibility for ${scenario.name}`, async ({ page }) => {
+    await mockApp(page, { pets: scenario.pets, mine: scenario.mine });
+    await page.goto("/");
+    await page.locator(".walk-summary").filter({ hasText: walk.pet }).click();
+    await expect(page.getByRole("heading", { name: "Встреча на прогулке" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Написать", exact: true })).toHaveCount(scenario.canWrite ? 1 : 0);
+  });
 }
 
 test("owned pets start unselected, exclude invitations and support single keyboard selection", async ({ page }, testInfo) => {

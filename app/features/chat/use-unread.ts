@@ -41,6 +41,7 @@ function connect() {
       seen.delete(data.dialogId);
       seen.set(data.dialogId, data.messageSeq);
       if (seen.size > 100) seen.delete(seen.keys().next().value!);
+      window.dispatchEvent(new Event("dogmeet-chat-changed"));
       if (data.dialogId !== activeDialog) publish({ ...state, notification: data });
     } catch { /* EventSource owns retries; errors never start HTTP polling. */ }
   });

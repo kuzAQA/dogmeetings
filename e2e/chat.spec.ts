@@ -53,7 +53,7 @@ async function mockChat(page: Page) {
 }
 
 async function openChat(page: Page) {
-  await mockApp(page, { mine: [] });
+  await mockApp(page, { mine: [], nearby: [{ ...walk, petId: "00000000-0000-4000-8000-000000000004" }] });
   await page.goto("/");
   await page.locator(".walk-summary").filter({ hasText: walk.pet }).click();
   await page.getByRole("button", { name: "Написать", exact: true }).click();
@@ -99,7 +99,7 @@ test("dialog focuses once, preserves the caret during updates and restores the d
   const state = await mockChat(page);
   let release!: () => void;
   state.historyGate = new Promise<void>(resolve => { release = resolve; });
-  await mockApp(page, { mine: [] });
+  await mockApp(page, { mine: [], nearby: [{ ...walk, petId: "00000000-0000-4000-8000-000000000004" }] });
   await page.goto("/");
   await page.locator(".walk-summary").filter({ hasText: walk.pet }).click();
   await page.getByRole("button", { name: "Написать", exact: true }).click();
@@ -381,7 +381,7 @@ test("polling never overlaps and pauses in hidden tabs; return refreshes and rea
   const state = await mockChat(page);
   let release = () => {};
   state.historyGate = new Promise<void>(resolve => { release = resolve; });
-  await mockApp(page, { mine: [] });
+  await mockApp(page, { mine: [], nearby: [{ ...walk, petId: "00000000-0000-4000-8000-000000000004" }] });
   await page.goto("/");
   await page.locator(".walk-summary").filter({ hasText: walk.pet }).click();
   await page.getByRole("button", { name: "Написать", exact: true }).click();
@@ -688,12 +688,12 @@ test("dialogs menu row is first, uses the existing description style and opens d
   await page.getByRole("button", { name: "Мой район и настройки" }).click();
   const rows = page.locator(".profile-screen .menu-row");
   await expect(rows.locator("strong")).toHaveText([
-    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Уведомления", "Связь с разработчиком",
+    "Диалоги", "Поделиться сайтом", "Информация", "Мои места", "Питомцы твоего района", "Уведомления", "Связь с разработчиком",
   ]);
   const description = rows.first().locator("small");
   await expect(description).toHaveText("Сообщите своим друзьям что-то важное");
   await expect(description).toBeVisible();
-  await expect(description).toHaveCSS("font-size", "12px");
+  await expect(description).toHaveCSS("font-size", await rows.nth(1).locator("small").evaluate(element => getComputedStyle(element).fontSize));
   const bounds = await description.boundingBox();
   expect(bounds).not.toBeNull();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);

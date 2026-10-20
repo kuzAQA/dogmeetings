@@ -151,7 +151,7 @@ export function WalksWorkspace({ unreadCount, telegramSettings, onNotificationsS
         <div className="place-detail"><MapPin /><div><h3>{selectedWalk.point}</h3><p>{location.complex}<br />{location.city}, {location.district}</p></div></div>
         {selectedWalk.comment && <blockquote>«{selectedWalk.comment}»</blockquote>}
         <div className="note">Узнаете друг друга по питомцу.<br />Встречайтесь в указанном месте.</div>
-        {!ownedWalksById.has(selectedWalk.id) && <button className="button secondary" type="button" onClick={() => onWrite(selectedWalk.id)}>Написать</button>}
+        {!ownedWalksById.has(selectedWalk.id) && !savedPets.some(pet => pet.id === selectedWalk.petId && pet.isOwner) && <button className="button secondary" type="button" onClick={() => onWrite(selectedWalk.id)}>Написать</button>}
         <button className="button" type="button" onClick={() => { const owned = ownedWalksById.get(selectedWalk.id); if (owned) onEditWalk(owned); else onStartWalk(); }}>{ownedWalksById.has(selectedWalk.id) ? "Изменить мою прогулку" : "Сообщить о своей прогулке"}</button>
       </div>
     );

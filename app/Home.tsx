@@ -198,19 +198,21 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
   const { count: unreadCount, notification: chatNotification } = useChatNotifications(sessionReady, screen === "dialog" ? chatDialogId : null);
   const telegramSettings = useTelegramSettings(sessionReady);
 
+  const openNotificationDialog = useCallback((value: unknown) => {
+    if (typeof value !== "string" || !uuidPattern.test(value)) return;
+    if (screen !== "dialogs") pushNavigation("dialogs");
+    pushNavigation("dialog", { chatDialogId: value });
+  }, [pushNavigation, screen]);
+
   useEffect(() => {
     if (!sessionReady) return;
-    function openNotificationDialog(value: unknown) {
-      if (typeof value !== "string" || !uuidPattern.test(value)) return;
-      pushNavigation("dialog", { chatDialogId: value });
-    }
     const url = new URL(window.location.href);
     const requested = url.searchParams.get("dialog");
     if (requested) {
       url.searchParams.delete("dialog"); window.history.replaceState(window.history.state, "", url);
       openNotificationDialog(requested);
     }
-  }, [sessionReady, pushNavigation]);
+  }, [sessionReady, openNotificationDialog]);
   const {
     savedPets,
     setSavedPets,
@@ -1292,7 +1294,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
             key={`${chatNotification.dialogId}:${chatNotification.messageSeq}`}
             onOpen={() => {
               dismissChatNotification();
-              pushNavigation("dialog", { chatDialogId: chatNotification.dialogId });
+              openNotificationDialog(chatNotification.dialogId);
             }}
           />
         )}

@@ -36,6 +36,18 @@ test("shared reservations enforce 20 requests/sec, private chat and group spacin
   assert.equal(new Date(client.limits.get("chat:-123").next_at).getTime(), now + 7050);
 });
 
+test("deleting a message preserves send spacing without reserving another chat slot", async () => {
+  const client = storage(), now = Date.now();
+  await reserveTelegramRequest(client, "123", now);
+  clock += 50;
+  await requestTelegramApi("fake", "deleteMessage", { chat_id: "123", message_id: 42 }, async () => ({
+    ok: true, json: async () => ({ ok: true, result: true })
+  }), 5000, callback => callback(client));
+  assert.equal(client.limits.get("chat:123").next_at.getTime(), now + 1000);
+  assert.equal(client.limits.get("global").next_at.getTime(), now + 100);
+  assert.equal(await reserveTelegramRequest(client, "123", now + 100), 900);
+});
+
 test("429 persists retry_after; another process/new signal cannot issue a request during the pause", async () => {
   const client = storage();
   let calls = 0;
