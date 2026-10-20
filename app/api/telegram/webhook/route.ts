@@ -118,7 +118,7 @@ async function handleTelegramStart(message: Record<string, unknown>) {
   return true;
 }
 
-async function handleTelegramSubscribeCallback(callbackId: string, chatId: string, token: string, purpose: TelegramSubscriptionPurpose = "combined") {
+async function handleTelegramSubscribeCallback(callbackId: string, chatId: string, messageId: number, token: string, purpose: TelegramSubscriptionPurpose = "combined") {
   const result = await activateTelegramComplexSubscription(token, chatId, purpose);
   if (result.status === "expired") {
     await callbackAnswer(callbackId, "Ссылка недействительна или просрочена. Снова откройте бота с сайта Dogmeet.ru.", true);
@@ -126,6 +126,9 @@ async function handleTelegramSubscribeCallback(callbackId: string, chatId: strin
   }
   if (result.status === "processed") { await callbackAnswer(callbackId, "Это действие уже обработано."); return; }
   await callbackAnswer(callbackId, "Настройки сохранены.");
+  if (purpose !== "messages-unsubscribe") {
+    await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: messageId });
+  }
   await telegramBotRequest("sendMessage", { chat_id: chatId,
     text: purpose === "combined" ? `✅ Вы подписались на уведомления о прогулках ЖК „${result.complex}“ и о новых личных сообщениях.`
       : purpose === "messages-subscribe" ? "✅ Вы подписались на уведомления о личных сообщениях." : "✅ Подписка на уведомления о личных сообщениях отключена." });
@@ -226,13 +229,22 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
     try {
-      if (callback.data === "subscriptions:back") { await callbackAnswer(callbackId, "Назад"); await sendTelegramSubscriptionMenu(chatId); }
-      else if (callback.data === "subscriptions:walks") { await callbackAnswer(callbackId, "Прогулки"); await sendTelegramSubscriptions(chatId); }
-      else if (callback.data === "subscriptions:messages") { await callbackAnswer(callbackId, "Сообщения"); await sendTelegramMessagesConfirmation(chatId); }
-      else {
+      if (callback.data === "subscriptions:back") {
+        await callbackAnswer(callbackId, "Назад");
+        await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: messageId });
+        await sendTelegramSubscriptionMenu(chatId);
+      } else if (callback.data === "subscriptions:walks") {
+        await callbackAnswer(callbackId, "Прогулки");
+        await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: messageId });
+        await sendTelegramSubscriptions(chatId);
+      } else if (callback.data === "subscriptions:messages") {
+        await callbackAnswer(callbackId, "Сообщения");
+        await telegramBotRequest("deleteMessage", { chat_id: chatId, message_id: messageId });
+        await sendTelegramMessagesConfirmation(chatId);
+      } else {
         const confirmation = telegramSubscriptionConfirmation(callback.data);
         if (!confirmation) await callbackAnswer(callbackId, "Ссылка недействительна. Снова откройте бота с сайта Dogmeet.ru.", true);
-        else await handleTelegramSubscribeCallback(callbackId, chatId, confirmation.token, confirmation.purpose);
+        else await handleTelegramSubscribeCallback(callbackId, chatId, messageId as number, confirmation.token, confirmation.purpose);
       }
     } catch (error) {
       console.error("[telegram] Не удалось изменить подписку.", error);

@@ -130,7 +130,7 @@ export function WalksWorkspace({ unreadCount, telegramSettings, onNotificationsS
           <AnnouncementPreview />
           <MyPlacesMenuRow onClick={onOpenMyPlaces} />
           <button className="menu-row" type="button" aria-label="Питомцы твоего района" onClick={onOpenDistrictPets}><PawIcon aria-hidden="true" /><span><strong>Питомцы твоего района</strong><small>Знакомьтесь с соседями</small></span><ChevronRight aria-hidden="true" /></button>
-          <button className="menu-row" type="button" onClick={onNotificationsSettings}><Bell aria-hidden="true" /><span><strong>Уведомления</strong><small>Новые сообщения в Telegram</small></span><small className={telegramSettings?.status === "inactive" ? "telegram-disabled" : ""}>{notificationsStatus}</small></button>
+          <button className="menu-row" type="button" onClick={onNotificationsSettings}><Bell aria-hidden="true" /><span><strong>Уведомления</strong><small>Новые сообщения в Telegram</small></span><small className={telegramSettings?.status === "active" ? "telegram-enabled" : telegramSettings?.status === "inactive" ? "telegram-disabled" : ""}>{notificationsStatus}</small></button>
           <button className="menu-row" type="button" onClick={onOpenContact}><ExternalLink aria-hidden="true" /><span><strong>Связь с разработчиком</strong><small>Telegram · @kuznetsoviv</small></span><ChevronRight aria-hidden="true" /></button>
         </div>
         <p className="small-note">Данные привязаны к этому браузеру. Сохраните ссылку на питомца, чтобы поделиться доступом.</p>

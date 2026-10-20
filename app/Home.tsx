@@ -5,6 +5,7 @@ import { TelegramNotificationsDialog } from "./features/telegram/TelegramNotific
 
 import Image from "next/image";
 import { uuidPattern } from "../server/domain/pet";
+import { ChatNotification } from "./features/chat/ChatNotification";
 import { dismissChatNotification, useChatNotifications } from "./features/chat/use-unread";
 import { Announcements } from "./features/announcements/Announcements";
 import { DogmeetState } from "./components/ui/DogmeetState";
@@ -1286,14 +1287,15 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
       </section>
       </main>
       <div className="chat-notification" role="status" aria-live="polite">
-        {chatNotification && chatNotification.dialogId !== (screen === "dialog" ? chatDialogId : null) && <>
-          <span>Новое сообщение</span>
-          <button className="button secondary" type="button" onClick={() => {
-            dismissChatNotification();
-            pushNavigation("dialog", { chatDialogId: chatNotification.dialogId });
-          }}>Открыть диалог</button>
-          <button className="button secondary" type="button" aria-label="Закрыть уведомление" onClick={dismissChatNotification}>Закрыть</button>
-        </>}
+        {chatNotification && chatNotification.dialogId !== (screen === "dialog" ? chatDialogId : null) && (
+          <ChatNotification
+            key={`${chatNotification.dialogId}:${chatNotification.messageSeq}`}
+            onOpen={() => {
+              dismissChatNotification();
+              pushNavigation("dialog", { chatDialogId: chatNotification.dialogId });
+            }}
+          />
+        )}
       </div>
       <Announcements enabled={sessionReady && hasLocation && petsLoaded && savedPets.length > 0 && screen === "walks" && !menuOpen && !dockWalkOpen && !notificationsOpen} />
       {notificationsOpen && <TelegramNotificationsDialog settings={telegramSettings} onDismiss={() => setNotificationsOpen(false)} />}
