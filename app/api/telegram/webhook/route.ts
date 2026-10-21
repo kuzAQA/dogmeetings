@@ -109,6 +109,14 @@ async function handleTelegramStart(message: Record<string, unknown>) {
   } else if (result.purpose === "messages-unsubscribe") {
     await sendTelegramMessagesConfirmation(chatId, token!);
   } else {
+    if (result.purpose === "combined") {
+      const subscriptions = await listTelegramComplexSubscriptions(chatId);
+      if (subscriptions.length) {
+        await telegramBotRequest("sendMessage", { chat_id: chatId,
+          text: `Подписка на уведомления о прогулках уже активна. Ваши ЖК: ${subscriptions.map(subscription => `„${subscription.complex}“`).join(", ")}.` });
+        return true;
+      }
+    }
     await telegramBotRequest("sendMessage", { chat_id: chatId,
       text: result.purpose === "combined"
         ? `Получайте уведомления о новых прогулках в ЖК „${result.complex}“ и о новых сообщениях от других владельцев собак`
