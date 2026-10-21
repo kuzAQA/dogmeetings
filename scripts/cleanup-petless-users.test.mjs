@@ -6,7 +6,7 @@ import { setTimeout } from "node:timers/promises";
 import pg from "pg";
 import { cleanupPetlessUsers } from "./cleanup-expired-walks.mjs";
 
-test("cleanup only removes users who never added a pet after 72 hours", {
+test("cleanup preserves owned pets, current shared access and pet history after 72 hours", {
   skip: !process.env.DATABASE_URL && "Set DATABASE_URL to a local test database."
 }, async () => {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -19,7 +19,8 @@ test("cleanup only removes users who never added a pet after 72 hours", {
     await client.query(`
       CREATE TABLE client_sessions (client_id uuid PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE pets (id uuid PRIMARY KEY, client_id uuid NOT NULL);
-      CREATE TABLE pet_collaborators (pet_id uuid, client_id uuid);
+      CREATE TABLE pet_collaborators (pet_id uuid REFERENCES pets(id) ON DELETE CASCADE, client_id uuid);
+      CREATE TABLE pet_share_links (token text PRIMARY KEY, pet_id uuid REFERENCES pets(id) ON DELETE CASCADE);
     `);
     const legacy = randomUUID();
     const legacyOwner = randomUUID();
@@ -27,27 +28,39 @@ test("cleanup only removes users who never added a pet after 72 hours", {
     await client.query("INSERT INTO pets VALUES ($1, $2)", [randomUUID(), legacyOwner]);
     await client.query(await readFile(new URL("../drizzle/0051_petless_user_cleanup.sql", import.meta.url), "utf8"));
 
-    const [old, boundary, recent, owner, formerOwner, collaborator, rolledBack] = Array.from({ length: 7 }, () => randomUUID());
-    for (const id of [old, boundary, recent, owner, formerOwner, collaborator, rolledBack]) {
+    const [old, boundary, recent, owner, formerOwner, collaborator, rolledBack, activeCollaborator, revoked, recentlyRevoked] = Array.from({ length: 10 }, () => randomUUID());
+    for (const id of [old, boundary, recent, owner, formerOwner, collaborator, rolledBack, activeCollaborator, revoked, recentlyRevoked]) {
       await client.query("INSERT INTO client_sessions (client_id, created_at) VALUES ($1, CURRENT_TIMESTAMP - INTERVAL '4 days')", [id]);
     }
     await client.query("UPDATE client_sessions SET created_at = CURRENT_TIMESTAMP - INTERVAL '3 days' WHERE client_id = $1", [boundary]);
     await client.query("UPDATE client_sessions SET created_at = CURRENT_TIMESTAMP - INTERVAL '3 days' + INTERVAL '1 second' WHERE client_id = $1", [recent]);
-    await client.query("INSERT INTO pets VALUES ($1, $2), ($3, $4)", [randomUUID(), owner, randomUUID(), formerOwner]);
+    await client.query("UPDATE client_sessions SET created_at = CURRENT_TIMESTAMP - INTERVAL '3 days' + INTERVAL '1 second' WHERE client_id = $1", [recentlyRevoked]);
+    const sharedPet = randomUUID();
+    await client.query("INSERT INTO pets VALUES ($1, $2), ($3, $4)", [sharedPet, owner, randomUUID(), formerOwner]);
     await client.query("DELETE FROM pets WHERE client_id IN ($1, $2)", [formerOwner, legacyOwner]);
-    await client.query("INSERT INTO pet_collaborators VALUES ($1, $2)", [randomUUID(), collaborator]);
+    await client.query("INSERT INTO pet_share_links VALUES ('unaccepted', $1)", [sharedPet]);
+    for (const id of [collaborator, activeCollaborator, revoked, recentlyRevoked]) {
+      await client.query("INSERT INTO pet_collaborators VALUES ($1, $2)", [sharedPet, id]);
+    }
     await client.query("DELETE FROM pet_collaborators WHERE client_id = $1", [collaborator]);
+    // Exercise the current-access guard independently of the permanent pet-history guard.
+    await client.query("UPDATE client_sessions SET has_added_pet = false WHERE client_id IN ($1, $2, $3)", [activeCollaborator, revoked, recentlyRevoked]);
+    await client.query("DELETE FROM pet_collaborators WHERE client_id IN ($1, $2)", [revoked, recentlyRevoked]);
     await client.query("SAVEPOINT pet_creation");
     await client.query("INSERT INTO pets VALUES ($1, $2)", [randomUUID(), rolledBack]);
     await client.query("ROLLBACK TO SAVEPOINT pet_creation");
 
-    assert.equal((await cleanupPetlessUsers(client)).rowCount, 3);
+    assert.equal((await cleanupPetlessUsers(client)).rowCount, 4);
     const { rows } = await client.query("SELECT client_id, has_added_pet FROM client_sessions");
-    assert.deepEqual(rows.map((row) => row.client_id).sort(), [legacy, legacyOwner, recent, owner, formerOwner, collaborator].sort());
+    assert.deepEqual(rows.map((row) => row.client_id).sort(), [legacy, legacyOwner, recent, owner, formerOwner, collaborator, activeCollaborator, recentlyRevoked].sort());
     assert.equal(rows.find((row) => row.client_id === legacy).has_added_pet, null);
     for (const id of [legacyOwner, owner, formerOwner, collaborator]) {
       assert.equal(rows.find((row) => row.client_id === id).has_added_pet, true);
     }
+    assert.equal(rows.find((row) => row.client_id === activeCollaborator).has_added_pet, false);
+    assert.deepEqual((await client.query("SELECT client_id FROM pets")).rows, [{ client_id: owner }]);
+    assert.deepEqual((await client.query("SELECT pet_id, client_id FROM pet_collaborators")).rows, [{ pet_id: sharedPet, client_id: activeCollaborator }]);
+    assert.equal((await client.query("SELECT token FROM pet_share_links")).rows[0].token, "unaccepted");
     assert.equal((await cleanupPetlessUsers(client)).rowCount, 0);
   } finally {
     await client.query("ROLLBACK");
