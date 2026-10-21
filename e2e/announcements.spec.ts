@@ -180,7 +180,7 @@ test("first visit waits for ЖК selection and entering the home screen", async 
   expect(state.gets()).toBe(1);
 });
 
-test("no pets keeps automatic banners disabled even after focus and polling", async ({ page }) => {
+test("no pets still hides general announcements after focus and polling", async ({ page }) => {
   const now = new Date("2031-01-01T00:00:00Z");
   await page.clock.install({ time: now });
   await page.clock.pauseAt(now);
@@ -191,7 +191,7 @@ test("no pets keeps automatic banners disabled even after focus and polling", as
   await page.clock.runFor(65_000);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
-  expect(state.gets()).toBe(0);
+  expect(state.gets()).toBeGreaterThan(0);
 });
 
 test("adding the first pet starts a fresh banner delay on returning home", async ({ page }) => {
@@ -206,6 +206,7 @@ test("adding the first pet starts a fresh banner delay on returning home", async
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Кто сегодня на прогулку?", exact: true })).toBeVisible();
   await page.clock.runFor(5000);
+  await expect.poll(state.gets).toBe(1);
   await page.getByRole("button", { name: "Питомцы", exact: true }).click();
   await page.clock.runFor(500);
   await page.getByRole("button", { name: "Добавить питомца", exact: true }).filter({ hasNot: page.locator("svg") }).click();
@@ -217,15 +218,15 @@ test("adding the first pet starts a fresh banner delay on returning home", async
   await page.clock.runFor(500);
   await page.clock.runFor(5000);
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
-  expect(state.gets()).toBe(0);
+  expect(state.gets()).toBe(1);
   await page.getByRole("button", { name: "Назад", exact: true }).click();
   await page.getByRole("button", { name: "Рядом", exact: true }).click();
   await page.clock.runFor(2999);
   await expect(page.getByRole("dialog", { name: title })).toHaveCount(0);
-  expect(state.gets()).toBe(0);
+  expect(state.gets()).toBe(1);
   await page.clock.runFor(1);
   await expect(page.getByRole("dialog", { name: title })).toBeVisible();
-  expect(state.gets()).toBe(1);
+  expect(state.gets()).toBe(2);
 });
 
 test("a saved ЖК waits three seconds before showing the banner", async ({ page }) => {

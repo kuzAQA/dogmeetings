@@ -121,6 +121,8 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    sysctls:
+      net.ipv4.tcp_mtu_probing: "2"
     environment:
       ACME_EMAIL: ${ACME_EMAIL}
     ports:

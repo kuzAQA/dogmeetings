@@ -3,6 +3,7 @@
 import { Clock3, GalleryHorizontalEnd, Menu, SlidersHorizontal, Sun, Sunrise, Sunset, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Announcement, AnnouncementsResponse } from "../../../lib/announcement-types";
+import { telegramReconnectCampaignId } from "../../../lib/announcement-types";
 import { DogmeetBrand, trapDialogTab } from "../../components/ui/DogmeetFrame";
 import { BottomDockExample } from "../home/BottomDock";
 import { ShareMenuRow } from "../../components/ui/ShareMenuRow";
@@ -10,11 +11,14 @@ import { MyPlacesMenuRow } from "../../components/ui/MyPlacesMenuRow";
 import { ApiRequestError, requestJson } from "../api/client";
 
 type TimedAnnouncement = Announcement & { deadline: number };
+const reconnectSeenKey = `dogmeet.announcementSeen.${telegramReconnectCampaignId}`;
 
-async function loadAnnouncements(information = false): Promise<TimedAnnouncement[]> {
+async function loadAnnouncements(information = false, reconnectOnly = false): Promise<TimedAnnouncement[]> {
   const started = performance.now();
   const data = await requestJson<AnnouncementsResponse>(`/api/announcements${information ? "?information=1" : ""}`, { cache: "no-store" });
-  return data.banners.filter((banner) => banner.id !== "pet-owner-contact-2026-10" && !banner.pages.some((page) => page.example === "pet-contact")).map((banner) => ({
+  let reconnectSeen = false;
+  try { reconnectSeen = localStorage.getItem(reconnectSeenKey) === "1"; } catch { /* Server receipts still prevent repeats when storage is blocked. */ }
+  return data.banners.filter((banner) => (!reconnectOnly || banner.id === telegramReconnectCampaignId) && (information || !reconnectSeen || banner.id !== telegramReconnectCampaignId) && banner.id !== "pet-owner-contact-2026-10" && !banner.pages.some((page) => page.example === "pet-contact")).map((banner) => ({
     ...banner,
     // A slow response must shorten the remaining lifetime, never extend it.
     deadline: information || !banner.endsAt ? Infinity : started + Date.parse(banner.endsAt) - Date.parse(data.serverTime)
@@ -46,7 +50,7 @@ export function AnnouncementPreview() {
   </>;
 }
 
-export function Announcements({ enabled }: { enabled: boolean }) {
+export function Announcements({ enabled, reconnectOnly = false }: { enabled: boolean; reconnectOnly?: boolean }) {
   const [banners, setBanners] = useState<TimedAnnouncement[]>([]);
   const dismissed = useRef(new Set<string>());
   useEffect(() => {
@@ -58,7 +62,7 @@ export function Announcements({ enabled }: { enabled: boolean }) {
       if (loading) return;
       loading = true;
       try {
-        const banners = await loadAnnouncements();
+        const banners = await loadAnnouncements(false, reconnectOnly);
         if (!active) return;
         setBanners(banners.filter((banner) => !dismissed.current.has(banner.id)));
       } catch (error) {
@@ -80,7 +84,7 @@ export function Announcements({ enabled }: { enabled: boolean }) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [enabled]);
+  }, [enabled, reconnectOnly]);
 
   const dismiss = useCallback((ids: string[]) => {
     ids.forEach((id) => dismissed.current.add(id));
@@ -96,11 +100,46 @@ function AnnouncementDialog({ banners, onDismiss, manual = false }: { manual?: b
   const savingRef = useRef(false);
   const [selectedSlide, setSelectedSlide] = useState<string | null>(null);
   const acknowledged = useRef(new Set<string>());
+  const reconnectDisplayed = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const pages = banners.flatMap((banner) => banner.pages.map((page, index) => ({ ...page, key: `${banner.id}:${index}` })));
   const pageIndex = Math.max(0, pages.findIndex((page) => page.key === selectedSlide));
   const lastPage = pageIndex === pages.length - 1;
+  const reconnectVisible = pages[pageIndex]?.key.startsWith(`${telegramReconnectCampaignId}:`);
+  const reconnectDeadline = banners.find(banner => banner.id === telegramReconnectCampaignId)?.deadline ?? 0;
+
+  useEffect(() => {
+    if (manual || !reconnectVisible) return;
+    let frame = 0;
+    let recording = false;
+    const rememberDisplay = () => {
+      if (document.hidden || recording || acknowledged.current.has(telegramReconnectCampaignId)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          if (document.hidden || !dialogRef.current?.open || performance.now() >= reconnectDeadline) return;
+          reconnectDisplayed.current = true;
+          try { localStorage.setItem(reconnectSeenKey, "1"); } catch { /* Persist through the trusted session below. */ }
+          recording = true;
+          void requestJson<{ acknowledged: boolean }>("/api/announcements", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: telegramReconnectCampaignId })
+          }).then(result => {
+            if (result.acknowledged) acknowledged.current.add(telegramReconnectCampaignId);
+          }).catch(() => { /* Retry while the slide remains visible. */ }).finally(() => { recording = false; });
+        });
+      });
+    };
+    rememberDisplay();
+    const retry = window.setInterval(rememberDisplay, 5000);
+    document.addEventListener("visibilitychange", rememberDisplay);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearInterval(retry);
+      document.removeEventListener("visibilitychange", rememberDisplay);
+    };
+  }, [manual, reconnectVisible, reconnectDeadline]);
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -181,6 +220,7 @@ function AnnouncementDialog({ banners, onDismiss, manual = false }: { manual?: b
     setError("");
     try {
       for (const banner of banners) {
+        if (banner.id === telegramReconnectCampaignId && !reconnectDisplayed.current) continue;
         if (acknowledged.current.has(banner.id)) continue;
         try {
           const result = await requestJson<{ acknowledged: boolean }>("/api/announcements", {

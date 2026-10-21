@@ -7,6 +7,9 @@ www.dogmeet.ru {
 }
 
 dogmeet.ru {
+	tls {
+		curves x25519 secp256r1 secp384r1
+	}
 	encode zstd gzip
 	reverse_proxy app:3000 {
 		header_up X-Dogmeet-Client-IP {remote_host}

@@ -179,7 +179,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
     const initialScreen: Screen = sharedPetNavigation.sharedPetId || sharedPetNavigation.sharedPetAlreadyAddedId
       ? "my-pets"
       : data.hasLocation && data.location ? "walks" : "welcome";
-    const initialNavigation = createNavigationState(initialScreen);
+    const initialNavigation = createNavigationState(initialScreen, { petsSource: initialScreen === "my-pets" ? "dock" : null });
 
     setHighlightedPetId("");
     setPendingSharedPetHighlightId(sharedPetNavigation.sharedPetId);
@@ -1299,7 +1299,7 @@ export default function Home({ hasSessionCookie, announcementPreviewEnabled = fa
           />
         )}
       </div>
-      <Announcements enabled={sessionReady && hasLocation && petsLoaded && savedPets.length > 0 && screen === "walks" && !menuOpen && !dockWalkOpen && !notificationsOpen} />
+      <Announcements reconnectOnly={savedPets.length === 0} enabled={sessionReady && hasLocation && petsLoaded && screen === "walks" && !menuOpen && !dockWalkOpen && !notificationsOpen} />
       {notificationsOpen && <TelegramNotificationsDialog settings={telegramSettings} onDismiss={() => setNotificationsOpen(false)} />}
     </DogmeetFrame>
   );

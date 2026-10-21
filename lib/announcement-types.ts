@@ -1,3 +1,5 @@
+export const telegramReconnectCampaignId = "telegram-reconnect-2026-10-21";
+
 export type AnnouncementPage = {
   title: string;
   text: string;

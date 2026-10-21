@@ -24,6 +24,8 @@ COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/scripts/cleanup-expired-walks.mjs ./scripts/cleanup-expired-walks.mjs
+COPY --from=builder --chown=node:node /app/scripts/reset-telegram.mjs ./scripts/reset-telegram.mjs
+COPY --from=builder --chown=node:node /app/lib/announcement-types.ts ./lib/announcement-types.ts
 COPY --from=builder --chown=node:node /app/scripts/migrate-pet-photos.mjs ./scripts/migrate-pet-photos.mjs
 COPY --from=builder --chown=node:node /app/scripts/migrate-pet-photo-algorithm.mjs ./scripts/migrate-pet-photo-algorithm.mjs
 COPY --from=builder --chown=node:node /app/server/pet-photo-migration.mjs ./server/pet-photo-migration.mjs

@@ -479,7 +479,10 @@ to { transform: translateX(calc(-1 * var(--motion-screen-offset))); }
 .production .my-places-list .icon-button { flex: none; min-width: 44px; min-height: 44px; }
 
 .production .sheet--share .sheet-footer > .small-note { text-align: center; }
-.production .pet-share-qr-frame { position: relative; width: min(100%, 240px, 32dvh); aspect-ratio: 1; margin: 8px auto; }
+.production .pet-share-link { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.production .pet-share-link > a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.production .pet-share-link > .icon-button { flex: none; }
+.production .pet-share-qr-frame { position: relative; width: min(100%, 240px, 26dvh); aspect-ratio: 1; margin: 8px auto; }
 .production .pet-share-qr { display: block; width: 100%; height: auto; }
 .production .pet-share-qr-frame[aria-busy="true"] .pet-share-qr { filter: blur(4px); opacity: .45; }
 .production .pet-share-qr-loading { position: absolute; inset: 0; display: grid; place-items: center; }

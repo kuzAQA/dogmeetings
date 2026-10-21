@@ -31,6 +31,12 @@ test("clean invitation creates session with token, skips onboarding and resumes 
   await page.getByRole("button", { name: "Добавить к моим питомцам" }).click();
   await expect(page.getByRole("heading", { name: "Теперь вы гуляете вместе" })).toBeVisible();
   expect(accepts).toBe(1);
+  await page.route("**/api/session", route => route.fulfill({ json: { hasLocation: true, location } }));
+  await page.getByRole("button", { name: "Готово", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Мои питомцы", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Собака Луна/ })).toBeVisible();
+  await expect(page.locator(".dock-item--pets")).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".pets-screen")).toHaveClass(/collection-screen--dock/);
 });
 
 test("QR uses invitation URL, retries errors and changes on rotation on mobile", async ({ page }, info) => {
@@ -54,11 +60,11 @@ test("QR uses invitation URL, retries errors and changes on rotation on mobile",
   const qr = dialog.getByRole("img", { name: "Одноразовый QR-код" });
   await expect(qr).toHaveAttribute("data-value", `https://dogmeet.ru/share/${token}`);
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
-  await expect(dialog.getByRole("button", { name: "Скопировать ссылку" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Скопировать ссылку" })).toBeVisible();
   await expect(qr.locator("rect")).toHaveCount(0);
   await expect(qr).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(dialog.getByText("Одноразовый QR-код", { exact: true })).toHaveCount(0);
-  await expect(dialog.getByText("QR-код действует для одного добавления питомца")).toHaveCSS("text-align", "center");
+  await expect(dialog.getByText("QR-код и ссылка действуют для одного добавления питомца")).toHaveCSS("text-align", "center");
   const firstPath = await qr.locator("path").getAttribute("d");
   await expect.poll(async () => {
     const bounds = (await qr.boundingBox())!;
@@ -66,11 +72,13 @@ test("QR uses invitation URL, retries errors and changes on rotation on mobile",
   }).toBe(true);
   await page.screenshot({ path: info.outputPath("pet-share-mobile.png") });
   const initialHeight = (await dialog.boundingBox())!.height;
-  await dialog.getByRole("button", { name: "Получить новый QR-код" }).click();
+  await dialog.getByRole("button", { name: "Получить новые QR-код и ссылку" }).click();
   try {
     await expect(dialog.getByRole("status", { name: "Обновляем QR-код" })).toBeVisible();
     await expect(qr).toHaveAttribute("data-value", `https://dogmeet.ru/share/${token}`);
     await expect(qr).toHaveCSS("filter", "blur(4px)");
+    await expect(dialog.getByRole("button", { name: "Скопировать ссылку", exact: true })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Поделиться", exact: true })).toBeDisabled();
     await expect(dialog.locator(".pet-share-qr-loading .loader")).toHaveCSS("animation-name", "spin");
     expect(Math.abs((await dialog.boundingBox())!.height - initialHeight)).toBeLessThan(1);
     await expect(dialog.getByRole("button", { name: "Обновляем…" })).toBeDisabled();

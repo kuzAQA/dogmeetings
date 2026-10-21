@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { withDb, type Database } from "../db";
 import { announcementCampaigns, locations } from "../db/schema";
 import type { AdminAnnouncement, AnnouncementLocation, AnnouncementsResponse } from "./announcement-types";
+import { telegramReconnectCampaignId } from "./announcement-types";
 import { allowsAnnouncement } from "./announcement-settings";
 
 export async function syncAnnouncementLocations(db: Pick<Database, "select" | "update">, target: AnnouncementLocation & { level: "city" | "district" | "complex" }, name?: string) {
@@ -47,9 +48,17 @@ export function listAnnouncements(clientId: string, includeAcknowledged = false,
       ), '[]'::jsonb) AS banners
     `);
     const row = result.rows[0];
-    const banners = (row.banners as AdminAnnouncement[])
+    let banners = (row.banners as AdminAnnouncement[])
       .filter((banner) => allowsAnnouncement(banner.exclusions, location))
       .map(({ id, startsAt, endsAt, pages, permanent }) => ({ id, startsAt, endsAt, pages, permanent }));
+    if (banners.some(banner => banner.id === telegramReconnectCampaignId)) {
+      const subscriptions = await tx.execute(sql`SELECT EXISTS (
+        SELECT 1 FROM telegram_chat_settings n JOIN telegram_complex_subscriptions s
+          ON s.telegram_chat_id = n.telegram_chat_id AND s.active
+        WHERE n.client_id = ${clientId}::uuid AND n.enabled
+      ) AS complete`);
+      if (subscriptions.rows[0]?.complete) banners = banners.filter(banner => banner.id !== telegramReconnectCampaignId);
+    }
     return { serverTime: row.serverTime, banners } as AnnouncementsResponse;
   }));
 }

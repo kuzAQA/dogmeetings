@@ -290,7 +290,7 @@ test("passport, edit, share, immediate rotation and delete preserve permissions"
   await expect(page.getByRole("img", { name: "Одноразовый QR-код" })).toHaveAttribute("data-value", "http://localhost:3000/share/test-0");
   const firstQr = await page.locator(".pet-share-qr path").getAttribute("d");
   await capture(page, info, "share");
-  await page.getByRole("button", { name: "Получить новый QR-код", exact: false }).click();
+  await page.getByRole("button", { name: "Получить новые QR-код и ссылку", exact: false }).click();
   await expect(page.getByRole("heading", { name: "Заменить QR-код?" })).toHaveCount(0);
   await expect(page.getByRole("img", { name: "Одноразовый QR-код" })).toHaveAttribute("data-value", "http://localhost:3000/share/test-1");
   expect(await page.locator(".pet-share-qr path").getAttribute("d")).not.toBe(firstQr);
